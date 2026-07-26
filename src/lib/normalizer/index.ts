@@ -93,18 +93,18 @@ const MERCHANT_DB: Record<string, { name: string; category: string; keywords: st
   bienvenue: { name: "Bienvenue", category: "Supermarket", keywords: ["bienvenue"] },
   figue: { name: "Figue", category: "Supermarket", keywords: ["figue"] },
   market: { name: "Market", category: "Supermarket", keywords: ["market", "market place", "open market"] },
-  chicken: { name: "Chicken Republic", category: "Food & Dining", keywords: ["chicken republic", "chicken rep"] },
-  kfc: { name: "KFC", category: "Food & Dining", keywords: ["kfc", "kfc Nigeria"] },
-  dominos: { name: "Dominos Pizza", category: "Food & Dining", keywords: ["dominos", "domino pizza", "dominos pizza"] },
-  pizza: { name: "Pizza", category: "Food & Dining", keywords: ["pizza", "pizza hut", "papa john"] },
-  burger: { name: "Burger", category: "Food & Dining", keywords: ["burger", "burger king", "mc donald"] },
-  taco: { name: "Taco Bell", category: "Food & Dining", keywords: ["taco", "taco bell"] },
-  subway: { name: "Subway", category: "Food & Dining", keywords: ["subway"] },
-  starbucks: { name: "Starbucks", category: "Food & Dining", keywords: ["starbucks"] },
-  coffee: { name: "Coffee Shop", category: "Food & Dining", keywords: ["coffee", "cafe", "cafeone", "buka"] },
-  restaurant: { name: "Restaurant", category: "Food & Dining", keywords: ["restaurant", "restuarant", "eatery", "buka", "canteen", "bar", "lounge", "pub", "tavern"] },
-  food: { name: "Food Purchase", category: "Food & Dining", keywords: ["food", "meal", "lunch", "dinner", "breakfast", "snack", "chops"] },
-  
+  chicken: { name: "Chicken Republic", category: "Food", keywords: ["chicken republic", "chicken rep"] },
+  kfc: { name: "KFC", category: "Food", keywords: ["kfc", "kfc Nigeria"] },
+  dominos: { name: "Dominos Pizza", category: "Food", keywords: ["dominos", "domino pizza", "dominos pizza"] },
+  pizza: { name: "Pizza", category: "Food", keywords: ["pizza", "pizza hut", "papa john"] },
+  burger: { name: "Burger", category: "Food", keywords: ["burger", "burger king", "mc donald"] },
+  taco: { name: "Taco Bell", category: "Food", keywords: ["taco", "taco bell"] },
+  subway: { name: "Subway", category: "Food", keywords: ["subway"] },
+  starbucks: { name: "Starbucks", category: "Food", keywords: ["starbucks"] },
+  coffee: { name: "Coffee Shop", category: "Food", keywords: ["coffee", "cafe", "cafeone", "buka"] },
+  restaurant: { name: "Restaurant", category: "Food", keywords: ["restaurant", "restuarant", "eatery", "buka", "canteen", "bar", "lounge", "pub", "tavern"] },
+  food: { name: "Food Purchase", category: "Food", keywords: ["food", "meal", "lunch", "dinner", "breakfast", "snack", "chops"] },
+
   // Transport & Ride Hailing
   uber: { name: "Uber", category: "Transport", keywords: ["uber", "uber trip", "uber eats", "uber bv"] },
   bolt: { name: "Bolt", category: "Transport", keywords: ["bolt", "bolt ride", "taxify"] },
@@ -114,41 +114,41 @@ const MERCHANT_DB: Record<string, { name: string; category: string; keywords: st
   lagbus: { name: "LagBus", category: "Transport", keywords: ["lagbus", "lag bus"] },
   BRT: { name: "BRT", category: "Transport", keywords: ["brt", "brt lagos"] },
   fuel: { name: "Fuel Station", category: "Fuel", keywords: ["fuel", "petrol", "petrol station", "filling station", "total", "total Nigeria", "mobil", "mobil Nigeria", " NNPC", " NNPC filling", "oando", "oando Nigeria", "atmc", "atmc Nigeria"] },
-  
+
   // Telecoms
-  mtn: { name: "MTN", category: "Bills & Subscriptions", keywords: ["mtn", "mtn ng", "mtn nigeria", "mtn airtime", "mtn data"] },
-  airtel: { name: "Airtel", category: "Bills & Subscriptions", keywords: ["airtel", "airtel ng", "airtel nigeria"] },
-  glo: { name: "Glo", category: "Bills & Subscriptions", keywords: ["glo", "glo ng", "glo nigeria", "glo data"] },
-  mobile9: { name: "9mobile", category: "Bills & Subscriptions", keywords: ["9mobile", "etisalat", "etisalat nigeria"] },
-  
+  mtn: { name: "MTN", category: "Bills", keywords: ["mtn", "mtn ng", "mtn nigeria", "mtn airtime", "mtn data"] },
+  airtel: { name: "Airtel", category: "Bills", keywords: ["airtel", "airtel ng", "airtel nigeria"] },
+  glo: { name: "Glo", category: "Bills", keywords: ["glo", "glo ng", "glo nigeria", "glo data"] },
+  mobile9: { name: "9mobile", category: "Bills", keywords: ["9mobile", "etisalat", "etisalat nigeria"] },
+
   // Electricity
-  ikeja_electric: { name: "Ikeja Electric", category: "Bills & Subscriptions", keywords: ["ikeja electric", "ikedc", "ikeja disco"] },
-  eko_electric: { name: "Eko Electric", category: "Bills & Subscriptions", keywords: ["eko electric", "ekedc", "eko disco"] },
-  abuja_electric: { name: "Abuja Electric", category: "Bills & Subscriptions", keywords: ["abuja electric", "aedc", "abuja disco"] },
-  ph_electric: { name: "Port Harcourt Electric", category: "Bills & Subscriptions", keywords: ["port harcourt electric", "phedc", "ph disco"] },
-  ibadan_electric: { name: "Ibadan Electric", category: "Bills & Subscriptions", keywords: ["ibadan electric", "ibedc"] },
-  kaduna_electric: { name: "Kaduna Electric", category: "Bills & Subscriptions", keywords: ["kaduna electric", "kaduna"] },
-  enugu_electric: { name: "Enugu Electric", category: "Bills & Subscriptions", keywords: ["enugu electric", "eedc"] },
-  benin_electric: { name: "Benin Electric", category: "Bills & Subscriptions", keywords: ["benin electric", "bedc"] },
-  warri_electric: { name: "Warri Electric", category: "Bills & Subscriptions", keywords: ["warri electric", "wedc"] },
-  jos_electric: { name: "Jos Electric", category: "Bills & Subscriptions", keywords: ["jos electric", "jedc"] },
-  kano_electric: { name: "Kano Electric", category: "Bills & Subscriptions", keywords: ["kano electric", "kedco"] },
-  preyda: { name: "Prepaid Meter", category: "Bills & Subscriptions", keywords: ["prepaid", "prepaid meter", "preyda"] },
-  
+  ikeja_electric: { name: "Ikeja Electric", category: "Bills", keywords: ["ikeja electric", "ikedc", "ikeja disco"] },
+  eko_electric: { name: "Eko Electric", category: "Bills", keywords: ["eko electric", "ekedc", "eko disco"] },
+  abuja_electric: { name: "Abuja Electric", category: "Bills", keywords: ["abuja electric", "aedc", "abuja disco"] },
+  ph_electric: { name: "Port Harcourt Electric", category: "Bills", keywords: ["port harcourt electric", "phedc", "ph disco"] },
+  ibadan_electric: { name: "Ibadan Electric", category: "Bills", keywords: ["ibadan electric", "ibedc"] },
+  kaduna_electric: { name: "Kaduna Electric", category: "Bills", keywords: ["kaduna electric", "kaduna"] },
+  enugu_electric: { name: "Enugu Electric", category: "Bills", keywords: ["enugu electric", "eedc"] },
+  benin_electric: { name: "Benin Electric", category: "Bills", keywords: ["benin electric", "bedc"] },
+  warri_electric: { name: "Warri Electric", category: "Bills", keywords: ["warri electric", "wedc"] },
+  jos_electric: { name: "Jos Electric", category: "Bills", keywords: ["jos electric", "jedc"] },
+  kano_electric: { name: "Kano Electric", category: "Bills", keywords: ["kano electric", "kedco"] },
+  preyda: { name: "Prepaid Meter", category: "Bills", keywords: ["prepaid", "prepaid meter", "preyda"] },
+
   // Streaming & Subscriptions
   netflix: { name: "Netflix", category: "Entertainment", keywords: ["netflix"] },
   spotify: { name: "Spotify", category: "Entertainment", keywords: ["spotify"] },
-  dstv: { name: "Dstv", category: "Entertainment", keywords: ["dstv", "dstvng", "dstv ng", "multichoice", "multichoice Nigeria"] },
+  dstv: { name: "Dstv", category: "Subscription", keywords: ["dstv", "dstvng", "dstv ng", "multichoice", "multichoice Nigeria"] },
   showmax: { name: "Showmax", category: "Entertainment", keywords: ["showmax", "show max"] },
   youtube: { name: "YouTube", category: "Entertainment", keywords: ["youtube", "youtube premium"] },
   apple: { name: "Apple", category: "Entertainment", keywords: ["apple", "apple music", "apple tv", "itunes"] },
   amazon: { name: "Amazon", category: "Shopping", keywords: ["amazon", "amazon prime", "amazon web"] },
-  
+
   // Shopping & E-commerce
   jumia: { name: "Jumia", category: "Shopping", keywords: ["jumia", "jumia food", "jumia pay", "jumia Nigeria"] },
   konga: { name: "Konga", category: "Shopping", keywords: ["konga", "konga pay"] },
   payport: { name: "PayPorte", category: "Shopping", keywords: ["payporte", "pay porte"] },
-  
+
   // Fintech & Payments
   flutterwave: { name: "Flutterwave", category: "Financial Services", keywords: ["flutterwave", "rave", "flutter wave"] },
   paystack: { name: "Paystack", category: "Financial Services", keywords: ["paystack", "pay stack"] },
@@ -170,64 +170,64 @@ const MERCHANT_DB: Record<string, { name: string; category: string; keywords: st
   quidax: { name: "Quidax", category: "Financial Services", keywords: ["quidax"] },
   yellowcard: { name: "YellowCard", category: "Financial Services", keywords: ["yellowcard", "yellow card"] },
   chipper: { name: "Chipper Cash", category: "Financial Services", keywords: ["chipper", "chipper cash"] },
-  
+
   // Betting & Gaming
-  bet9ja: { name: "Bet9ja", category: "Others", keywords: ["bet9ja", "bet 9ja", "bet9ja old mobile"] },
-  sportybet: { name: "Sportybet", category: "Others", keywords: ["sportybet", "sporty bet", "sportybet ng"] },
-  betway: { name: "Betway", category: "Others", keywords: ["betway", "bet way"] },
-  nairaBet: { name: "NairaBet", category: "Others", keywords: ["nairabet", "naira bet"] },
-  merryBet: { name: "MerryBet", category: "Others", keywords: ["merrybet", "merry bet"] },
-  betKing: { name: "BetKing", category: "Others", keywords: ["betking", "bet king"] },
-  
+  bet9ja: { name: "Bet9ja", category: "Entertainment", keywords: ["bet9ja", "bet 9ja", "bet9ja old mobile"] },
+  sportybet: { name: "Sportybet", category: "Entertainment", keywords: ["sportybet", "sporty bet", "sportybet ng"] },
+  betway: { name: "Betway", category: "Entertainment", keywords: ["betway", "bet way"] },
+  nairaBet: { name: "NairaBet", category: "Entertainment", keywords: ["nairabet", "naira bet"] },
+  merryBet: { name: "MerryBet", category: "Entertainment", keywords: ["merrybet", "merry bet"] },
+  betKing: { name: "BetKing", category: "Entertainment", keywords: ["betking", "bet king"] },
+
   // Bills & Utilities
-  dstv_payment: { name: "Dstv Subscription", category: "Bills & Subscriptions", keywords: ["dstv subscription", "dstv payment", "multichoice payment"] },
-  gotv: { name: "GoTV", category: "Bills & Subscriptions", keywords: ["gotv", "go tv"] },
-  startimes: { name: "StarTimes", category: "Bills & Subscriptions", keywords: ["startimes", "start times"] },
-  waec: { name: "WAEC", category: "Bills & Subscriptions", keywords: ["waec", "waec result", "waec registration"] },
-  jamb: { name: "JAMB", category: "Bills & Subscriptions", keywords: ["jamb", "jamb registration", "jamb utme"] },
-  nimc: { name: "NIMC", category: "Bills & Subscriptions", keywords: ["nimc", "nimc national id", "nin"] },
-  
+  dstv_payment: { name: "Dstv Subscription", category: "Subscription", keywords: ["dstv subscription", "dstv payment", "multichoice payment"] },
+  gotv: { name: "GoTV", category: "Subscription", keywords: ["gotv", "go tv"] },
+  startimes: { name: "StarTimes", category: "Subscription", keywords: ["startimes", "start times"] },
+  waec: { name: "WAEC", category: "Education", keywords: ["waec", "waec result", "waec registration"] },
+  jamb: { name: "JAMB", category: "Education", keywords: ["jamb", "jamb registration", "jamb utme"] },
+  nimc: { name: "NIMC", category: "Government", keywords: ["nimc", "nimc national id", "nin"] },
+
   // Healthcare
-  hospital: { name: "Hospital", category: "Healthcare", keywords: ["hospital", "medical", "clinic", "health care", "healthcare"] },
-  pharmacy: { name: "Pharmacy", category: "Healthcare", keywords: ["pharmacy", "pharm", "drug", "medication"] },
-  lab: { name: "Laboratory", category: "Healthcare", keywords: ["lab", "laboratory", "diagnostic", "test"] },
-  health: { name: "Health Service", category: "Healthcare", keywords: ["health", "wellness", "therapy", "dental"] },
-  
+  hospital: { name: "Hospital", category: "Health", keywords: ["hospital", "medical", "clinic", "health care", "healthcare"] },
+  pharmacy: { name: "Pharmacy", category: "Health", keywords: ["pharmacy", "pharm", "drug", "medication"] },
+  lab: { name: "Laboratory", category: "Health", keywords: ["lab", "laboratory", "diagnostic", "test"] },
+  health: { name: "Health Service", category: "Health", keywords: ["health", "wellness", "therapy", "dental"] },
+
   // Education
   school: { name: "School Fees", category: "Education", keywords: ["school", "tuition", "fees", "university", "college", "academy"] },
   course: { name: "Online Course", category: "Education", keywords: ["course", "udemy", "coursera", "training", "certification"] },
-  
+
   // Rent & Housing
   rent: { name: "Rent Payment", category: "Housing", keywords: ["rent", "house rent", "accommodation", "apartment"] },
   estate: { name: "Estate Payment", category: "Housing", keywords: ["estate", "property", "landlord", "agent"] },
-  
+
   // Salary & Income
   salary: { name: "Salary", category: "Income", keywords: ["salary", "sal", "wage", "payroll", "income", "stipend", "allowance"] },
   freelance: { name: "Freelance Payment", category: "Income", keywords: ["freelance", "contract", "consulting", "service payment"] },
-  
+
   // ATM & POS
-  atm: { name: "ATM Withdrawal", category: "ATM & POS", keywords: ["atm", "atm withdrawal", "atm cash"] },
-  pos: { name: "POS Transaction", category: "ATM & POS", keywords: ["pos", "pos purchase", "pos terminal", "pos trans"] },
-  
+  atm: { name: "ATM Withdrawal", category: "ATM", keywords: ["atm", "atm withdrawal", "atm cash"] },
+  pos: { name: "POS Transaction", category: "POS", keywords: ["pos", "pos purchase", "pos terminal", "pos trans"] },
+
   // Transfers
   transfer: { name: "Transfer", category: "Transfer", keywords: ["transfer", "trf", "sent", "received", "funding", "self", "own", "wallet"] },
-  
+
   // Gift & Donations
   gift: { name: "Gift", category: "Gift", keywords: ["gift", "present", "donation", "charity", "tithe", "offering"] },
-  
+
   // Loan & Credit
   loan: { name: "Loan", category: "Financial Services", keywords: ["loan", "credit", "borrow", "repay", "interest"] },
-  
+
   // Government
-  government: { name: "Government Payment", category: "Government", keywords: ["government", "tax", "levy", "fee", "penalty", "fine", "customs"] },
-  
+  government: { name: "Government Payment", category: "Tax", keywords: ["government", "tax", "levy", "fee", "penalty", "fine", "customs"] },
+
   // Insurance
   insurance: { name: "Insurance", category: "Insurance", keywords: ["insurance", "premium", "coverage", "policy"] },
-  
+
   // Miscellaneous
   cashback: { name: "Cashback", category: "Income", keywords: ["cashback", "cash back", "reward", "bonus"] },
   refund: { name: "Refund", category: "Income", keywords: ["refund", "reversal", "chargeback"] },
-  subscription: { name: "Subscription", category: "Bills & Subscriptions", keywords: ["subscription", "renewal", "membership"] },
+  subscription: { name: "Subscription", category: "Subscription", keywords: ["subscription", "renewal", "membership"] },
   commission: { name: "Commission", category: "Income", keywords: ["commission", "referral", "affiliate"] },
 };
 
@@ -334,15 +334,15 @@ function guessMerchant(merchant: string): { name: string; category: string } | u
 function guessCategory(merchantGuess: string | undefined, desc: string): string | undefined {
   const lower = (merchantGuess || desc).toLowerCase();
 
-  // Food & Dining patterns
+  // Food patterns
   if (lower.includes("restaurant") || lower.includes("eatery") || lower.includes("buka") || 
       lower.includes("canteen") || lower.includes("bar ") || lower.includes("lounge") ||
       lower.includes("food") || lower.includes("meal") || lower.includes("snack") ||
       lower.includes("chops") || lower.includes("dinner") || lower.includes("lunch") ||
       lower.includes("breakfast") || lower.includes("pizza") || lower.includes("burger") ||
-      lower.includes("chicken") || lower.includes("grill") || lower.includes("酒") ||
-      lower.includes("sharwama") || lower.includes("shawarma")) {
-    return "Food & Dining";
+      lower.includes("chicken") || lower.includes("grill") || lower.includes("sharwama") || 
+      lower.includes("shawarma")) {
+    return "Food";
   }
 
   // Transport patterns
@@ -353,19 +353,23 @@ function guessCategory(merchantGuess: string | undefined, desc: string): string 
     return "Transport";
   }
 
-  // Bills & Subscriptions
+  // Bills patterns
   if (lower.includes("mtn") || lower.includes("airtel") || lower.includes("glo") ||
       lower.includes("9mobile") || lower.includes("etisalat") ||
       lower.includes("electric") || lower.includes("ikedc") || lower.includes("ekedc") ||
       lower.includes("aedc") || lower.includes("phedc") || lower.includes("ibedc") ||
       lower.includes("prepaid") || lower.includes("meter") ||
-      lower.includes("dstv") || lower.includes("gotv") || lower.includes("startimes") ||
-      lower.includes("netflix") || lower.includes("spotify") || lower.includes("youtube") ||
-      lower.includes("subscription") || lower.includes("renewal")) {
-    return "Bills & Subscriptions";
+      lower.includes("dstv") || lower.includes("gotv") || lower.includes("startimes")) {
+    return "Bills";
   }
 
-  // Shopping
+  // Subscription patterns
+  if (lower.includes("netflix") || lower.includes("spotify") || lower.includes("youtube") ||
+      lower.includes("subscription") || lower.includes("renewal")) {
+    return "Subscription";
+  }
+
+  // Shopping patterns
   if (lower.includes("shoprite") || lower.includes("spar") || lower.includes("hubmart") ||
       lower.includes("jumia") || lower.includes("konga") || lower.includes("amazon") ||
       lower.includes("store") || lower.includes("shop") || lower.includes("mall") ||
@@ -373,7 +377,7 @@ function guessCategory(merchantGuess: string | undefined, desc: string): string 
     return "Shopping";
   }
 
-  // Financial Services
+  // Financial Services patterns
   if (lower.includes("flutterwave") || lower.includes("paystack") || lower.includes("interswitch") ||
       lower.includes("moniepoint") || lower.includes("opay") || lower.includes("palmpay") ||
       lower.includes("kuda") || lower.includes("carbon") || lower.includes("fairmoney") ||
@@ -383,55 +387,54 @@ function guessCategory(merchantGuess: string | undefined, desc: string): string 
     return "Financial Services";
   }
 
-  // Healthcare
+  // Health patterns
   if (lower.includes("hospital") || lower.includes("pharmacy") || lower.includes("medical") ||
       lower.includes("health") || lower.includes("drug") || lower.includes("clinic") ||
       lower.includes("lab") || lower.includes("diagnostic") || lower.includes("dental")) {
-    return "Healthcare";
+    return "Health";
   }
 
-  // Education
+  // Education patterns
   if (lower.includes("school") || lower.includes("tuition") || lower.includes("university") ||
       lower.includes("college") || lower.includes("academy") || lower.includes("course") ||
       lower.includes("udemy") || lower.includes("coursera") || lower.includes("training")) {
     return "Education";
   }
 
-  // Housing
+  // Housing patterns
   if (lower.includes("rent") || lower.includes("house") || lower.includes("estate") ||
       lower.includes("property") || lower.includes("landlord") || lower.includes("agent")) {
     return "Housing";
   }
 
-  // ATM & POS
-  if (lower.includes("atm") || lower.includes("pos")) {
-    return "ATM & POS";
-  }
+  // ATM & POS patterns
+  if (lower.includes("atm")) return "ATM";
+  if (lower.includes("pos")) return "POS";
 
-  // Salary & Income
+  // Income patterns
   if (lower.includes("salary") || lower.includes("sal") || lower.includes("wage") ||
       lower.includes("payroll") || lower.includes("income") || lower.includes("stipend")) {
     return "Income";
   }
 
-  // Gift & Donations
+  // Gift patterns
   if (lower.includes("gift") || lower.includes("donation") || lower.includes("charity") ||
       lower.includes("tithe") || lower.includes("offering")) {
     return "Gift";
   }
 
-  // Government
+  // Tax patterns
   if (lower.includes("government") || lower.includes("tax") || lower.includes("levy") ||
       lower.includes("customs") || lower.includes("penalty") || lower.includes("fine")) {
-    return "Government";
+    return "Tax";
   }
 
-  // Insurance
+  // Insurance patterns
   if (lower.includes("insurance") || lower.includes("premium") || lower.includes("coverage")) {
     return "Insurance";
   }
 
-  // Entertainment
+  // Entertainment patterns
   if (lower.includes("entertainment") || lower.includes("game") || lower.includes("gaming") ||
       lower.includes("bet") || lower.includes("casino") || lower.includes("betting")) {
     return "Entertainment";

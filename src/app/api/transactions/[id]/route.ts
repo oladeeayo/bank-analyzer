@@ -35,9 +35,28 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    // Get the current transaction first
+    const currentTx = await db.transaction.findUnique({
+      where: { id },
+      include: { bank: { select: { userId: true } } },
+    });
+
+    if (!currentTx) {
+      return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+    }
+
+    const userId = currentTx.bank.userId;
+
+    // Update the transaction
     const transaction = await db.transaction.update({
       where: { id },
-      data: body,
+      data: {
+        merchantId: body.merchantId || undefined,
+        categoryId: body.categoryId || undefined,
+        normalizedDescription: body.normalizedDescription || undefined,
+        isTransfer: body.isTransfer || undefined,
+        isSelfTransfer: body.isSelfTransfer || undefined,
+      },
       include: {
         bank: true,
         merchant: true,
@@ -45,13 +64,19 @@ export async function PUT(
       },
     });
 
-    // If merchant or category was updated, save as manual override
+    // Save as manual override so future uploads remember this classification
     if (body.merchantId || body.categoryId) {
-      const existingOverride = await db.manualOverride.findFirst({
-        where: { description: transaction.description },
+      const existingOverride = await db.manualOverride.findUnique({
+        where: {
+          userId_description: {
+            userId,
+            description: transaction.description,
+          },
+        },
       });
 
       if (existingOverride) {
+        // Update existing override
         await db.manualOverride.update({
           where: { id: existingOverride.id },
           data: {
@@ -59,19 +84,58 @@ export async function PUT(
             categoryId: body.categoryId || existingOverride.categoryId,
           },
         });
-      } else if (body.merchantId && body.categoryId) {
+      } else {
+        // Create new override (only requires userId + description)
         await db.manualOverride.create({
           data: {
+            userId,
             description: transaction.description,
-            merchantId: body.merchantId,
-            categoryId: body.categoryId,
+            merchantId: body.merchantId || null,
+            categoryId: body.categoryId || null,
           },
         });
       }
     }
 
+    // Auto-classify similar transactions (same description pattern)
+    if (body.merchantId || body.categoryId) {
+      const similarTransactions = await db.transaction.findMany({
+        where: {
+          bank: { userId },
+          id: { not: transaction.id },
+          OR: [
+            // Exact match
+            { description: transaction.description },
+            // Fuzzy match: description contains the edited text or vice versa
+            { description: { contains: transaction.description, mode: "insensitive" } },
+            { normalizedDescription: { contains: transaction.description, mode: "insensitive" } },
+          ],
+        },
+        select: { id: true, description: true },
+      });
+
+      if (similarTransactions.length > 0) {
+        await db.transaction.updateMany({
+          where: {
+            id: { in: similarTransactions.map(t => t.id) },
+          },
+          data: {
+            merchantId: body.merchantId || undefined,
+            categoryId: body.categoryId || undefined,
+            normalizedDescription: body.normalizedDescription || undefined,
+          },
+        });
+      }
+
+      return NextResponse.json({
+        transaction,
+        updatedSimilarCount: similarTransactions.length,
+      });
+    }
+
     return NextResponse.json(transaction);
   } catch (error) {
+    console.error("Update transaction error:", error);
     return NextResponse.json({ error: "Failed to update transaction" }, { status: 500 });
   }
 }

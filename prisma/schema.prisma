@@ -21,6 +21,7 @@ model User {
   banks             Bank[]
   categories        Category[]
   classificationRules ClassificationRule[]
+  manualOverrides   ManualOverride[]
   budgets           Budget[]
   goals             Goal[]
 
@@ -224,14 +225,16 @@ model ClassificationRule {
 
 model ManualOverride {
   id           String   @id @default(cuid())
+  userId       String
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   description  String
-  merchantId   String
-  merchant     Merchant @relation(fields: [merchantId], references: [id])
-  categoryId   String
-  category     Category @relation(fields: [categoryId], references: [id])
+  merchantId   String?
+  merchant     Merchant? @relation(fields: [merchantId], references: [id])
+  categoryId   String?
+  category     Category? @relation(fields: [categoryId], references: [id])
   createdAt    DateTime @default(now())
 
-  @@unique([description, merchantId])
+  @@unique([userId, description])
 }
 
 // ─── Recurring Transactions ─────────────────────────────

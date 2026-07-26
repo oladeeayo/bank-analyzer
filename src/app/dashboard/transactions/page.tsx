@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Search, Edit, ArrowUpRight, ArrowDownRight, Calendar, Building2, DollarSign, Wand2, ChevronLeft, ChevronRight, Zap } from "lucide-react";
+import { Search, Edit, ArrowUpRight, ArrowDownRight, Calendar, Building2, DollarSign, Wand2, ChevronLeft, ChevronRight, Zap, Check, AlertCircle } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
-import { CATEGORIES } from "@/lib/constants";
 
 interface Transaction {
   id: string;
@@ -22,11 +21,23 @@ interface Transaction {
   bank: { bankName: string; nickname: string | null };
   merchant: { displayName: string; icon: string; color: string } | null;
   category: { name: string; icon: string; color: string } | null;
+  categoryId: string | null;
+  merchantId: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  isSystem: boolean;
+  _count?: { transactions: number };
 }
 
 export default function TransactionsPage() {
   const { user, loading: userLoading } = useUser();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
@@ -34,16 +45,22 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [ruleForm, setRuleForm] = useState({
     normalizedMerchant: "",
-    category: "Groceries",
+    categoryId: "",
     regexExact: true,
     ignoreNumbers: false,
     markTransfer: false,
   });
 
   useEffect(() => {
-    if (user) fetchTransactions();
+    if (user) {
+      fetchTransactions();
+      fetchCategories();
+    }
   }, [search, filterType, filterBank, page, user]);
 
   if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
@@ -72,23 +89,105 @@ export default function TransactionsPage() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch(`/api/categories?userId=${user?.id || ""}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch categories:", err);
+    }
+  };
+
   const handleRuleApply = async () => {
     if (!selectedTx) return;
-    // Future: POST to classification-rules API
-    console.log("Applying rule:", ruleForm, "to transaction:", selectedTx.id);
-    setSelectedTx(null);
+
+    setSaving(true);
+    setSaveMessage(null);
+
+    try {
+      const res = await fetch(`/api/transactions/${selectedTx.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          merchantId: null, // Will be resolved by backend from merchant name
+          categoryId: ruleForm.categoryId || null,
+          normalizedDescription: ruleForm.normalizedMerchant || undefined,
+          isTransfer: ruleForm.markTransfer,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setSaveMessage({
+          type: "success",
+          text: `Saved! ${data.updatedSimilarCount > 0 ? `Updated ${data.updatedSimilarCount} similar transactions.` : "No similar transactions found."}`,
+        });
+        fetchTransactions();
+        setTimeout(() => {
+          setSelectedTx(null);
+          setSaveMessage(null);
+        }, 2000);
+      } else {
+        setSaveMessage({ type: "error", text: "Failed to save. Please try again." });
+      }
+    } catch (err) {
+      setSaveMessage({ type: "error", text: "Network error. Please try again." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBulkCategory = async (categoryId: string) => {
+    if (selectedIds.size === 0) return;
+
+    setSaving(true);
+    try {
+      const promises = Array.from(selectedIds).map(id =>
+        fetch(`/api/transactions/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ categoryId }),
+        })
+      );
+
+      await Promise.all(promises);
+      setSelectedIds(new Set());
+      fetchTransactions();
+    } catch (err) {
+      console.error("Bulk update failed:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const selectTransaction = (tx: Transaction) => {
     setSelectedTx(tx);
     setRuleForm({
       normalizedMerchant: tx.merchant?.displayName || tx.normalizedDescription || "",
-      category: tx.category?.name || "Groceries",
+      categoryId: tx.categoryId || "",
       regexExact: true,
       ignoreNumbers: false,
       markTransfer: false,
     });
+    setSaveMessage(null);
   };
+
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Group categories by parent for better UX
+  const parentCategories = categories.filter(c => !categories.some(p => p.name === c.name && categories.some(sub => sub.name === p.name)));
+  const getCategoryDisplay = (cat: Category) => `${cat.icon} ${cat.name}`;
 
   return (
     <div className="space-y-6">
@@ -113,13 +212,21 @@ export default function TransactionsPage() {
           <span className="text-sm text-ink-black">All Amounts</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
+          {selectedIds.size > 0 && (
+            <select
+              onChange={(e) => handleBulkCategory(e.target.value)}
+              className="bg-paper-white border border-[#ececec] rounded-lg px-3 py-1.5 text-sm"
+              value=""
+            >
+              <option value="">Bulk: Set Category ({selectedIds.size} selected)</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{getCategoryDisplay(cat)}</option>
+              ))}
+            </select>
+          )}
+          <Button variant="outline" size="sm" className="gap-2" disabled={selectedIds.size === 0}>
             <Edit className="h-4 w-4" />
             Bulk Edit
-          </Button>
-          <Button variant="default" size="sm" className="gap-2">
-            <span className="text-lg leading-none">+</span>
-            Create New Rule
           </Button>
         </div>
       </div>
@@ -133,7 +240,18 @@ export default function TransactionsPage() {
               <thead>
                 <tr className="bg-mist-gray border-b border-[#ececec]">
                   <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">
-                    <input type="checkbox" className="rounded border-[#ececec]" />
+                    <input
+                      type="checkbox"
+                      className="rounded border-[#ececec]"
+                      checked={selectedIds.size === transactions.length && transactions.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(new Set(transactions.map(t => t.id)));
+                        } else {
+                          setSelectedIds(new Set());
+                        }
+                      }}
+                    />
                   </th>
                   <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">Date</th>
                   <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">Original Description</th>
@@ -156,7 +274,13 @@ export default function TransactionsPage() {
                       onClick={() => selectTransaction(tx)}
                     >
                       <td className="px-4 py-3">
-                        <input type="checkbox" className="rounded border-[#ececec]" onClick={(e) => e.stopPropagation()} />
+                        <input
+                          type="checkbox"
+                          className="rounded border-[#ececec]"
+                          checked={selectedIds.has(tx.id)}
+                          onClick={(e) => toggleSelect(tx.id, e)}
+                          onChange={() => {}}
+                        />
                       </td>
                       <td className="px-4 py-3 font-mono text-sm text-ink-black whitespace-nowrap">{formatDate(tx.date)}</td>
                       <td className="px-4 py-3 font-mono text-xs text-slate-gray max-w-[200px] truncate">{tx.description}</td>
@@ -225,6 +349,22 @@ export default function TransactionsPage() {
 
           {selectedTx ? (
             <>
+              {/* Save Message */}
+              {saveMessage && (
+                <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${
+                  saveMessage.type === "success"
+                    ? "bg-lime-vibrant/20 text-forest"
+                    : "bg-error/10 text-error"
+                }`}>
+                  {saveMessage.type === "success" ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4" />
+                  )}
+                  {saveMessage.text}
+                </div>
+              )}
+
               {/* Detected Pattern */}
               <div className="p-4 bg-mist-gray rounded-lg border border-[#ececec]">
                 <p className="text-xs text-ash-gray mb-1">Detected Pattern</p>
@@ -248,12 +388,13 @@ export default function TransactionsPage() {
                 <div>
                   <Label className="text-xs font-semibold text-ink-black mb-1 block">Category Assignment</Label>
                   <select
-                    value={ruleForm.category}
-                    onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}
+                    value={ruleForm.categoryId}
+                    onChange={(e) => setRuleForm({ ...ruleForm, categoryId: e.target.value })}
                     className="w-full bg-paper-white border border-[#ececec] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-lime-vibrant/50"
                   >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat.name} value={cat.name}>{cat.icon} {cat.name}</option>
+                    <option value="">Select category...</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
                     ))}
                   </select>
                 </div>
@@ -298,11 +439,11 @@ export default function TransactionsPage() {
 
               {/* Actions */}
               <div className="pt-4 flex flex-col gap-3 border-t border-[#ececec]">
-                <Button onClick={handleRuleApply} className="w-full">
-                  Apply to Similar Transactions
+                <Button onClick={handleRuleApply} className="w-full" disabled={saving}>
+                  {saving ? "Saving..." : "Apply to Similar Transactions"}
                 </Button>
-                <Button variant="outline" className="w-full">
-                  Preview Results
+                <Button variant="outline" className="w-full" onClick={() => setSelectedTx(null)}>
+                  Cancel
                 </Button>
               </div>
             </>

@@ -23,6 +23,38 @@ function isTransferDescription(desc: string): boolean {
   return TRANSFER_KEYWORDS.some(kw => lower.includes(kw));
 }
 
+function normalizeForMatch(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function namesMatch(name1: string, name2: string): boolean {
+  const normalized1 = normalizeForMatch(name1);
+  const normalized2 = normalizeForMatch(name2);
+
+  const words1 = normalized1.split(" ").filter(w => w.length > 2);
+  const words2 = normalized2.split(" ").filter(w => w.length > 2);
+
+  if (words1.length === 0 || words2.length === 0) return false;
+
+  let matchCount = 0;
+  for (const w1 of words1) {
+    for (const w2 of words2) {
+      if (w1 === w2 || w1.includes(w2) || w2.includes(w1)) {
+        matchCount++;
+        break;
+      }
+    }
+  }
+
+  // At least 2 words must match, or 1 word if both descriptions are short
+  const minMatches = Math.min(2, Math.min(words1.length, words2.length));
+  return matchCount >= minMatches;
+}
+
 function timeDiffMinutes(d1: Date, d2: Date): number {
   return Math.abs(d1.getTime() - d2.getTime()) / (1000 * 60);
 }
@@ -63,17 +95,31 @@ export function detectSelfTransfers(
       const minutesDiff = timeDiffMinutes(debitDate, creditDate);
       if (minutesDiff > 360) continue; // 6 hours
 
-      // At least one has transfer keyword
+      // Check for transfer indicators
       const debitIsTransfer = isTransferDescription(debit.description);
       const creditIsTransfer = isTransferDescription(credit.description);
+      const isNameMatch = namesMatch(debit.description, credit.description);
 
-      if (!debitIsTransfer && !creditIsTransfer) continue;
+      // Must have at least one transfer indicator OR name match
+      if (!debitIsTransfer && !creditIsTransfer && !isNameMatch) continue;
 
       // Calculate confidence
       let confidence = 0.5;
-      if (amountDiff === 0) confidence += 0.3;
-      if (minutesDiff < 30) confidence += 0.1;
+
+      // Amount match quality
+      if (amountDiff === 0) confidence += 0.2;
+      else if (amountDiff < 0.005) confidence += 0.1;
+
+      // Time proximity
+      if (minutesDiff < 30) confidence += 0.15;
+      else if (minutesDiff < 120) confidence += 0.1;
+
+      // Transfer keywords
       if (debitIsTransfer && creditIsTransfer) confidence += 0.1;
+      else if (debitIsTransfer || creditIsTransfer) confidence += 0.05;
+
+      // Name matching (strong indicator)
+      if (isNameMatch) confidence += 0.15;
 
       transfers.push({
         debitTx: debit,

@@ -70,8 +70,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Batch create all transactions in one query
-    const transactionData = normalized.map((tx) => {
-      const key = `${tx.date}_${tx.description}_${tx.amount}`;
+    const transactionData = normalized.map((tx, idx) => {
+      // Use index-based key to match classifier (avoids collisions for same-day same-amount)
+      const key = `${idx}_${tx.date}_${tx.description}_${tx.amount}`;
       const classification = classifications.get(key);
 
       return {
