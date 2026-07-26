@@ -79,6 +79,8 @@ export default function TransactionsPage() {
     categoryId: "",
     markTransfer: false,
   });
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -243,6 +245,62 @@ export default function TransactionsPage() {
     setSimilarTxs(similar);
     setShowSimilar(similar.length > 0);
   }, [transactions]);
+
+  const handleAiClassify = async () => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const txData = transactions.map(t => ({
+        id: t.id,
+        description: t.description,
+        amount: t.amount,
+        type: t.type as "credit" | "debit",
+      }));
+
+      const res = await fetch("/api/ai/classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "classify", transactions: txData }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "AI classification failed");
+      }
+
+      const { results } = await res.json();
+
+      // Apply AI results to transactions
+      let applied = 0;
+      for (const [txId, classification] of Object.entries(results) as any) {
+        // Find matching category
+        const parentCat = categories.find(c => c.name.toLowerCase() === classification.category.toLowerCase() && !c.parentId);
+        const subCat = parentCat ? categories.find(c => c.parentId === parentCat.id && c.name.toLowerCase() === classification.subcategory.toLowerCase()) : null;
+
+        if (subCat) {
+          await fetch(`/api/transactions/${txId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              categoryId: subCat.id,
+              normalizedDescription: classification.merchant,
+            }),
+          });
+          applied++;
+        }
+      }
+
+      setSaveMessage({ type: "success", text: `AI classified ${applied} transactions` });
+      setRefreshKey(k => k + 1);
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (err: any) {
+      setAiError(err.message);
+      setSaveMessage({ type: "error", text: err.message });
+      setTimeout(() => { setSaveMessage(null); setAiError(null); }, 5000);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
 
@@ -442,6 +500,16 @@ export default function TransactionsPage() {
               })}
             </select>
           )}
+            <Button
+              onClick={handleAiClassify}
+              disabled={aiLoading}
+              variant="outline"
+              size="sm"
+              className="gap-1.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white border-0 hover:from-violet-600 hover:to-purple-600"
+            >
+              <Wand2 className={`h-3.5 w-3.5 ${aiLoading ? "animate-spin" : ""}`} />
+              {aiLoading ? "Classifying..." : "AI Classify"}
+            </Button>
         </div>
         </div>
         {/* Row 2: Date Range + Amount Range */}
