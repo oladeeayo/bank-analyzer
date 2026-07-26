@@ -62,18 +62,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
-      {/* Pro Card */}
-      <div className="mt-auto">
-        <div className="bg-gradient-to-br from-emerald-400/20 to-emerald-600/20 rounded-2xl p-5 border border-emerald-400/20">
-          <p className="text-emerald-100/80 text-sm leading-relaxed mb-4">
-            Analyze spending, gain financial control.
-          </p>
-          <button className="w-full bg-emerald-400 text-[#1a3a2a] py-2.5 rounded-xl text-sm font-semibold hover:bg-emerald-300 transition-colors">
-            Get Pro
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
