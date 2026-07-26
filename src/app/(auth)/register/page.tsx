@@ -22,7 +22,7 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/sign-up", {
+      const res = await fetch("/api/auth/sign-up/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
