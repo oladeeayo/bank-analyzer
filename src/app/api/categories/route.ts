@@ -5,29 +5,38 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
+    const nested = searchParams.get("nested") === "true";
 
-    let categories;
-    if (userId) {
-      categories = await db.category.findMany({
-        where: {
-          OR: [
-            { userId },
-            { isSystem: true },
-          ],
-        },
-        include: {
-          _count: { select: { transactions: true } },
-        },
-        orderBy: { name: "asc" },
-      });
-    } else {
-      categories = await db.category.findMany({
-        where: { isSystem: true },
-        include: {
-          _count: { select: { transactions: true } },
-        },
-        orderBy: { name: "asc" },
-      });
+    const where = userId
+      ? { OR: [{ userId }, { isSystem: true }] }
+      : { isSystem: true };
+
+    const categories = await db.category.findMany({
+      where,
+      include: {
+        _count: { select: { transactions: true } },
+      },
+      orderBy: { name: "asc" },
+    });
+
+    if (nested) {
+      // Build tree structure
+      const rootCategories = categories.filter(c => !c.parentId);
+      const buildTree = (parentId: string) => {
+        return categories
+          .filter(c => c.parentId === parentId)
+          .map(c => ({
+            ...c,
+            children: buildTree(c.id),
+          }));
+      };
+
+      const tree = rootCategories.map(c => ({
+        ...c,
+        children: buildTree(c.id),
+      }));
+
+      return NextResponse.json(tree);
     }
 
     return NextResponse.json(categories);
@@ -39,7 +48,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, name, icon, color } = body;
+    const { userId, name, icon, color, parentId } = body;
 
     if (!name) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
@@ -50,6 +59,7 @@ export async function POST(request: NextRequest) {
       const existing = await db.category.findFirst({
         where: {
           name,
+          parentId: parentId || null,
           OR: [
             { userId },
             { isSystem: true },
@@ -69,6 +79,7 @@ export async function POST(request: NextRequest) {
         name,
         icon: icon || "📁",
         color: color || "#6B7280",
+        parentId: parentId || undefined,
       },
     });
 

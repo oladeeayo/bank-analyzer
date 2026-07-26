@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Search, Edit, ArrowUpRight, ArrowDownRight, Calendar, Building2, DollarSign, Wand2, ChevronLeft, ChevronRight, Zap, Check, AlertCircle, Plus, X, Link } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Calendar, Wand2, ChevronLeft, ChevronRight, Check, AlertCircle, Plus, X, Link, Edit } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
 
@@ -31,6 +31,8 @@ interface Category {
   icon: string;
   color: string;
   isSystem: boolean;
+  parentId: string | null;
+  children?: Category[];
   _count?: { transactions: number };
 }
 
@@ -60,6 +62,9 @@ export default function TransactionsPage() {
   const [showSimilar, setShowSimilar] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newSubcategoryName, setNewSubcategoryName] = useState("");
+  const [showNewSubcategory, setShowNewSubcategory] = useState(false);
+  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState("");
   const [editingMerchant, setEditingMerchant] = useState(false);
   const [merchantName, setMerchantName] = useState("");
   const [ruleForm, setRuleForm] = useState({
@@ -124,7 +129,6 @@ export default function TransactionsPage() {
       const otherDesc = other.normalizedDescription || other.description;
       const otherWords = otherDesc.toLowerCase().split(/\s+/).filter(w => w.length > 2);
 
-      // Count matching words
       let matchCount = 0;
       const matchedWords: string[] = [];
       for (const tw of txWords) {
@@ -137,7 +141,6 @@ export default function TransactionsPage() {
         }
       }
 
-      // Same type (debit/credit) and meaningful word match
       if (tx.type === other.type && matchCount >= 2) {
         similar.push({
           id: other.id,
@@ -145,11 +148,9 @@ export default function TransactionsPage() {
           amount: other.amount,
           type: other.type,
           date: other.date,
-          matchReason: `Matches: ${matchedWords.join(", ")}`,
+          matchReason: `Words: ${matchedWords.join(", ")}`,
         });
-      }
-      // Same type and same merchant
-      else if (tx.type === other.type && tx.merchantId && tx.merchantId === other.merchantId) {
+      } else if (tx.type === other.type && tx.merchantId && tx.merchantId === other.merchantId) {
         similar.push({
           id: other.id,
           description: otherDesc,
@@ -158,9 +159,7 @@ export default function TransactionsPage() {
           date: other.date,
           matchReason: "Same merchant",
         });
-      }
-      // Transfer detection: opposite type, same amount
-      else if (tx.type !== other.type && Math.abs(tx.amount - other.amount) / tx.amount < 0.01) {
+      } else if (tx.type !== other.type && Math.abs(tx.amount - other.amount) / tx.amount < 0.01) {
         similar.push({
           id: other.id,
           description: otherDesc,
@@ -183,8 +182,9 @@ export default function TransactionsPage() {
     setSaveMessage(null);
 
     try {
-      // Create new category if needed
       let categoryId = ruleForm.categoryId;
+
+      // Create new category if needed
       if (showNewCategory && newCategoryName) {
         const catRes = await fetch("/api/categories", {
           method: "POST",
@@ -199,6 +199,26 @@ export default function TransactionsPage() {
         if (catRes.ok) {
           const newCat = await catRes.json();
           categoryId = newCat.id;
+          fetchCategories();
+        }
+      }
+
+      // Create new subcategory if needed
+      if (showNewSubcategory && newSubcategoryName && selectedParentCategoryId) {
+        const subRes = await fetch("/api/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user?.id,
+            name: newSubcategoryName,
+            icon: "📁",
+            color: "#6B7280",
+            parentId: selectedParentCategoryId,
+          }),
+        });
+        if (subRes.ok) {
+          const newSub = await subRes.json();
+          categoryId = newSub.id;
           fetchCategories();
         }
       }
@@ -218,13 +238,15 @@ export default function TransactionsPage() {
         const data = await res.json();
         setSaveMessage({
           type: "success",
-          text: `Saved! ${data.updatedSimilarCount > 0 ? `Updated ${data.updatedSimilarCount} similar transactions.` : ""}`,
+          text: `Saved! ${data.updatedSimilarCount > 0 ? `${data.updatedSimilarCount} similar updated.` : ""}`,
         });
         fetchTransactions();
         setTimeout(() => {
           setSelectedTx(null);
           setSaveMessage(null);
           setShowSimilar(false);
+          setShowNewCategory(false);
+          setShowNewSubcategory(false);
         }, 2000);
       } else {
         setSaveMessage({ type: "error", text: "Failed to save." });
@@ -269,6 +291,9 @@ export default function TransactionsPage() {
     setSaveMessage(null);
     setNewCategoryName("");
     setShowNewCategory(false);
+    setNewSubcategoryName("");
+    setShowNewSubcategory(false);
+    setSelectedParentCategoryId("");
     findSimilarTransactions(tx);
   };
 
@@ -282,8 +307,46 @@ export default function TransactionsPage() {
     });
   };
 
-  const parentCategories = categories.filter(c => c.isSystem);
-  const userCategories = categories.filter(c => !c.isSystem);
+  // Build nested category options
+  const renderCategoryOptions = () => {
+    const options: JSX.Element[] = [];
+    
+    // Root categories (no parentId)
+    const rootCats = categories.filter(c => !c.parentId);
+    
+    for (const root of rootCats) {
+      // Add root category
+      options.push(
+        <option key={root.id} value={root.id}>
+          {root.icon} {root.name}
+        </option>
+      );
+      
+      // Add children (subcategories)
+      const children = categories.filter(c => c.parentId === root.id);
+      for (const child of children) {
+        options.push(
+          <option key={child.id} value={child.id}>
+            &nbsp;&nbsp;└ {child.icon} {child.name}
+          </option>
+        );
+        
+        // Add grandchildren
+        const grandchildren = categories.filter(c => c.parentId === child.id);
+        for (const gc of grandchildren) {
+          options.push(
+            <option key={gc.id} value={gc.id}>
+              &nbsp;&nbsp;&nbsp;&nbsp;└ {gc.icon} {gc.name}
+            </option>
+          );
+        }
+      }
+    }
+    
+    return options;
+  };
+
+  const parentCategories = categories.filter(c => !c.parentId && c.isSystem);
 
   return (
     <div className="space-y-6">
@@ -292,7 +355,6 @@ export default function TransactionsPage() {
         <p className="text-sm text-ash-gray">Standardizing messy transaction data</p>
       </div>
 
-      {/* Filter Bar */}
       <div className="bg-paper-white border border-[#ececec] rounded-cards p-4 flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-mist-gray rounded-lg border border-[#ececec]">
           <Calendar className="h-4 w-4 text-slate-gray" />
@@ -306,15 +368,12 @@ export default function TransactionsPage() {
               value=""
             >
               <option value="">Bulk: Set Category ({selectedIds.size} selected)</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-              ))}
+              {renderCategoryOptions()}
             </select>
           )}
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="grid grid-cols-12 gap-6">
         {/* Transaction Table */}
         <div className="col-span-12 lg:col-span-8 bg-paper-white border border-[#ececec] rounded-cards overflow-hidden">
@@ -390,7 +449,7 @@ export default function TransactionsPage() {
                           {tx.type === "credit" ? "CREDIT" : "DEBIT"}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-right font-mono font-medium text-ink-black">
+                      <td className="px-4 py-4 text-right font-mono font-medium">
                         <span className={tx.type === "credit" ? "text-forest" : "text-error"}>
                           {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
                         </span>
@@ -428,7 +487,6 @@ export default function TransactionsPage() {
 
           {selectedTx ? (
             <>
-              {/* Save Message */}
               {saveMessage && (
                 <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${
                   saveMessage.type === "success" ? "bg-lime-vibrant/20 text-forest" : "bg-error/10 text-error"
@@ -453,7 +511,7 @@ export default function TransactionsPage() {
                 </p>
               </div>
 
-              {/* Merchant Name (editable) */}
+              {/* Merchant Name */}
               <div>
                 <Label className="text-xs font-semibold text-ink-black mb-1 block">Merchant Name</Label>
                 {editingMerchant ? (
@@ -464,10 +522,7 @@ export default function TransactionsPage() {
                       placeholder="e.g. Shoprite"
                       className="bg-paper-white border-[#ececec] rounded-lg text-sm"
                     />
-                    <Button size="sm" onClick={() => {
-                      setRuleForm({ ...ruleForm, normalizedMerchant: merchantName });
-                      setEditingMerchant(false);
-                    }}>
+                    <Button size="sm" onClick={() => { setRuleForm({ ...ruleForm, normalizedMerchant: merchantName }); setEditingMerchant(false); }}>
                       <Check className="h-4 w-4" />
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => setEditingMerchant(false)}>
@@ -488,28 +543,28 @@ export default function TransactionsPage() {
               <div>
                 <Label className="text-xs font-semibold text-ink-black mb-1 block">Category</Label>
                 <select
-                  value={showNewCategory ? "__new__" : ruleForm.categoryId}
+                  value={showNewCategory ? "__new__" : showNewSubcategory ? "__new_sub__" : ruleForm.categoryId}
                   onChange={(e) => {
                     if (e.target.value === "__new__") {
                       setShowNewCategory(true);
+                      setShowNewSubcategory(false);
+                      setRuleForm({ ...ruleForm, categoryId: "" });
+                    } else if (e.target.value === "__new_sub__") {
+                      setShowNewSubcategory(true);
+                      setShowNewCategory(false);
                       setRuleForm({ ...ruleForm, categoryId: "" });
                     } else {
                       setShowNewCategory(false);
+                      setShowNewSubcategory(false);
                       setRuleForm({ ...ruleForm, categoryId: e.target.value });
                     }
                   }}
                   className="w-full bg-paper-white border border-[#ececec] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-lime-vibrant/50"
                 >
                   <option value="">Select category...</option>
-                  {parentCategories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-                  ))}
-                  {userCategories.length > 0 && <optgroup label="Your Categories">
-                    {userCategories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-                    ))}
-                  </optgroup>}
+                  {renderCategoryOptions()}
                   <option value="__new__">+ Create New Category</option>
+                  <option value="__new_sub__">+ Create New Subcategory</option>
                 </select>
 
                 {showNewCategory && (
@@ -517,16 +572,38 @@ export default function TransactionsPage() {
                     <Input
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="Category name"
+                      placeholder="New category name"
                       className="bg-paper-white border-[#ececec] rounded-lg text-sm"
                     />
-                    <Button size="sm" onClick={() => {
-                      if (newCategoryName) {
-                        setShowNewCategory(false);
-                      }
-                    }}>
+                    <Button size="sm" onClick={() => { if (newCategoryName) setShowNewCategory(false); }}>
                       <Plus className="h-4 w-4" />
                     </Button>
+                  </div>
+                )}
+
+                {showNewSubcategory && (
+                  <div className="space-y-2 mt-2">
+                    <select
+                      value={selectedParentCategoryId}
+                      onChange={(e) => setSelectedParentCategoryId(e.target.value)}
+                      className="w-full bg-paper-white border border-[#ececec] rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">Select parent category...</option>
+                      {parentCategories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newSubcategoryName}
+                        onChange={(e) => setNewSubcategoryName(e.target.value)}
+                        placeholder="Subcategory name"
+                        className="bg-paper-white border-[#ececec] rounded-lg text-sm"
+                      />
+                      <Button size="sm" onClick={() => { if (newSubcategoryName && selectedParentCategoryId) setShowNewSubcategory(false); }}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -550,7 +627,7 @@ export default function TransactionsPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <Link className="h-4 w-4 text-blue-600" />
                     <p className="text-xs font-semibold text-blue-800">
-                      {similarTxs.length} Similar Transaction{similarTxs.length > 1 ? "s" : ""} Found
+                      {similarTxs.length} Similar Found
                     </p>
                   </div>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -566,7 +643,6 @@ export default function TransactionsPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-[10px] text-blue-600 mt-2">These will be updated with the same category.</p>
                 </div>
               )}
 
