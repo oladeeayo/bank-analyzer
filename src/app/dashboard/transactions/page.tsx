@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -310,32 +309,27 @@ export default function TransactionsPage() {
 
   // Build nested category options
   const renderCategoryOptions = () => {
-    const options: React.ReactElement[] = [];
-    
-    // Root categories (no parentId)
     const rootCats = categories.filter(c => !c.parentId);
+    const opts: React.ReactNode[] = [];
     
     for (const root of rootCats) {
-      // Add root category
-      options.push(
+      opts.push(
         <option key={root.id} value={root.id}>
           {root.icon} {root.name}
         </option>
       );
       
-      // Add children (subcategories)
       const children = categories.filter(c => c.parentId === root.id);
       for (const child of children) {
-        options.push(
+        opts.push(
           <option key={child.id} value={child.id}>
             &nbsp;&nbsp;└ {child.icon} {child.name}
           </option>
         );
         
-        // Add grandchildren
         const grandchildren = categories.filter(c => c.parentId === child.id);
         for (const gc of grandchildren) {
-          options.push(
+          opts.push(
             <option key={gc.id} value={gc.id}>
               &nbsp;&nbsp;&nbsp;&nbsp;└ {gc.icon} {gc.name}
             </option>
@@ -344,7 +338,7 @@ export default function TransactionsPage() {
       }
     }
     
-    return options;
+    return opts;
   };
 
   const parentCategories = categories.filter(c => !c.parentId && c.isSystem);
