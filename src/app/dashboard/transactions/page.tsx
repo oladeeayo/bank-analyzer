@@ -45,7 +45,7 @@ export default function TransactionsPage() {
     if (user) fetchTransactions();
   }, [search, filterType, page, user]);
 
-  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-gray-400">Loading...</div></div>;
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -92,23 +92,23 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-white">Transactions</h1>
+      <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
 
       {/* Filters */}
       <div className="flex gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search transactions..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="pl-10 bg-slate-800 border-slate-700 text-white"
+            className="pl-10 bg-white border-gray-200 text-gray-700 rounded-xl"
           />
         </div>
         <select
           value={filterType}
           onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
-          className="bg-slate-800 border border-slate-700 text-white rounded-md px-3 py-2"
+          className="bg-white border border-gray-200 text-gray-700 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
         >
           <option value="">All Types</option>
           <option value="debit">Debits</option>
@@ -117,43 +117,43 @@ export default function TransactionsPage() {
       </div>
 
       {/* Transactions List */}
-      <Card className="bg-slate-800 border-slate-700">
+      <Card className="bg-white border-gray-100">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-slate-400">Loading transactions...</div>
+            <div className="p-8 text-center text-gray-400">Loading transactions...</div>
           ) : transactions.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">No transactions found</div>
+            <div className="p-8 text-center text-gray-400">No transactions found</div>
           ) : (
-            <div className="divide-y divide-slate-700">
+            <div className="divide-y divide-gray-100">
               {transactions.map((tx) => (
-                <div key={tx.id} className="p-4 hover:bg-slate-700/50 flex items-center gap-4">
-                  <div className={`p-2 rounded-full ${tx.type === "credit" ? "bg-emerald-500/20" : "bg-red-500/20"}`}>
+                <div key={tx.id} className="p-4 hover:bg-gray-50/50 flex items-center gap-4 transition-colors">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === "credit" ? "bg-emerald-100" : "bg-red-100"}`}>
                     {tx.type === "credit" ? (
-                      <ArrowUpRight className="h-4 w-4 text-emerald-400" />
+                      <ArrowUpRight className="h-5 w-5 text-emerald-600" />
                     ) : (
-                      <ArrowDownRight className="h-4 w-4 text-red-400" />
+                      <ArrowDownRight className="h-5 w-5 text-red-600" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm text-white truncate">
+                    <div className="text-sm font-medium text-gray-900 truncate">
                       {tx.merchant?.displayName || tx.normalizedDescription || tx.description}
                     </div>
-                    <div className="text-xs text-slate-400 truncate">
+                    <div className="text-xs text-gray-500 truncate">
                       {tx.bank.nickname || tx.bank.bankName} • {formatDate(tx.date)}
                     </div>
                   </div>
                   {tx.category && (
-                    <Badge variant="secondary" className="bg-slate-700 text-slate-300">
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-600 rounded-lg">
                       {tx.category.icon} {tx.category.name}
                     </Badge>
                   )}
-                  <div className={`text-right font-medium ${tx.type === "credit" ? "text-emerald-400" : "text-red-400"}`}>
+                  <div className={`text-right font-medium ${tx.type === "credit" ? "text-emerald-600" : "text-red-600"}`}>
                     {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-slate-400 hover:text-white"
+                    className="text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                     onClick={() => setEditTx(tx)}
                   >
                     <Edit className="h-4 w-4" />
@@ -167,7 +167,7 @@ export default function TransactionsPage() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-slate-400">
+        <div className="text-sm text-gray-500">
           Showing {(page - 1) * 50 + 1}-{Math.min(page * 50, total)} of {total}
         </div>
         <div className="flex gap-2">
@@ -176,7 +176,7 @@ export default function TransactionsPage() {
             size="sm"
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="border-slate-700 text-white"
+            className="border-gray-200 text-gray-700 rounded-xl"
           >
             Previous
           </Button>
@@ -185,7 +185,7 @@ export default function TransactionsPage() {
             size="sm"
             onClick={() => setPage(p => p + 1)}
             disabled={page * 50 >= total}
-            className="border-slate-700 text-white"
+            className="border-gray-200 text-gray-700 rounded-xl"
           >
             Next
           </Button>
@@ -194,37 +194,37 @@ export default function TransactionsPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editTx} onOpenChange={() => setEditTx(null)}>
-        <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogContent className="bg-white rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-white">Edit Transaction</DialogTitle>
+            <DialogTitle className="text-gray-900">Edit Transaction</DialogTitle>
           </DialogHeader>
           {editTx && (
             <div className="space-y-4">
-              <div className="p-3 bg-slate-700/50 rounded-lg">
-                <div className="text-white">{editTx.description}</div>
-                <div className="text-sm text-slate-400">
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <div className="text-gray-900">{editTx.description}</div>
+                <div className="text-sm text-gray-500">
                   {formatCurrency(editTx.amount)} • {formatDate(editTx.date)}
                 </div>
               </div>
               <div>
-                <Label className="text-slate-300">Category ID</Label>
+                <Label className="text-gray-700">Category ID</Label>
                 <Input
                   value={editForm.categoryId}
                   onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
                   placeholder="Category ID"
                 />
               </div>
               <div>
-                <Label className="text-slate-300">Merchant ID</Label>
+                <Label className="text-gray-700">Merchant ID</Label>
                 <Input
                   value={editForm.merchantId}
                   onChange={(e) => setEditForm({ ...editForm, merchantId: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
                   placeholder="Merchant ID"
                 />
               </div>
-              <Button onClick={handleEdit} className="w-full bg-emerald-600 hover:bg-emerald-700">
+              <Button onClick={handleEdit} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
                 Save Changes
               </Button>
             </div>

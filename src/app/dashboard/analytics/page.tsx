@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
     if (user) fetchAnalytics();
   }, [month, year, user]);
 
-  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-gray-400">Loading...</div></div>;
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -47,11 +47,11 @@ export default function AnalyticsPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-slate-400">Loading analytics...</div>;
+    return <div className="flex items-center justify-center h-64 text-gray-400">Loading analytics...</div>;
   }
 
   if (!data) {
-    return <div className="text-center py-16 text-slate-400">No data available</div>;
+    return <div className="text-center py-16 text-gray-400">No data available</div>;
   }
 
   const { summary, categoryBreakdown, merchantRanking, dailySpending } = data;
@@ -61,12 +61,12 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Analytics</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
         <div className="flex gap-2">
           <select
             value={month}
             onChange={(e) => setMonth(parseInt(e.target.value))}
-            className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2"
+            className="bg-white border border-gray-200 text-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           >
             {Array.from({ length: 12 }, (_, i) => (
               <option key={i + 1} value={i + 1}>
@@ -77,7 +77,7 @@ export default function AnalyticsPage() {
           <select
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value))}
-            className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2"
+            className="bg-white border border-gray-200 text-gray-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           >
             {[2024, 2025, 2026].map((y) => (
               <option key={y} value={y}>{y}</option>
@@ -88,30 +88,30 @@ export default function AnalyticsPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardContent className="p-4">
-            <div className="text-sm text-slate-400">Net Cash Flow</div>
-            <div className={`text-2xl font-bold ${summary.netCashFlow >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+            <div className="text-sm text-gray-500">Net Cash Flow</div>
+            <div className={`text-2xl font-bold ${summary.netCashFlow >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {formatCurrency(summary.netCashFlow)}
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardContent className="p-4">
-            <div className="text-sm text-slate-400">Avg Daily Spend</div>
-            <div className="text-2xl font-bold text-white">{formatCurrency(summary.averageDailySpend)}</div>
+            <div className="text-sm text-gray-500">Avg Daily Spend</div>
+            <div className="text-2xl font-bold text-gray-900">{formatCurrency(summary.averageDailySpend)}</div>
           </CardContent>
         </Card>
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardContent className="p-4">
-            <div className="text-sm text-slate-400">Savings Rate</div>
-            <div className="text-2xl font-bold text-blue-400">{summary.savingsRate.toFixed(1)}%</div>
+            <div className="text-sm text-gray-500">Savings Rate</div>
+            <div className="text-2xl font-bold text-blue-600">{summary.savingsRate.toFixed(1)}%</div>
           </CardContent>
         </Card>
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardContent className="p-4">
-            <div className="text-sm text-slate-400">Biggest Expense</div>
-            <div className="text-2xl font-bold text-orange-400">
+            <div className="text-sm text-gray-500">Biggest Expense</div>
+            <div className="text-2xl font-bold text-orange-600">
               {summary.biggestExpense ? formatCurrency(summary.biggestExpense.amount) : "—"}
             </div>
           </CardContent>
@@ -119,9 +119,9 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Daily Spending Chart (text-based) */}
-      <Card className="bg-slate-800 border-slate-700">
+      <Card className="bg-white border-gray-100">
         <CardHeader>
-          <CardTitle className="text-white">Daily Spending</CardTitle>
+          <CardTitle className="text-gray-900">Daily Spending</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-end gap-1 h-40">
@@ -140,7 +140,7 @@ export default function AnalyticsPage() {
               );
             })}
           </div>
-          <div className="flex justify-between mt-2 text-xs text-slate-500">
+          <div className="flex justify-between mt-2 text-xs text-gray-400">
             <span>1</span>
             <span>{daysInMonth}</span>
           </div>
@@ -149,9 +149,9 @@ export default function AnalyticsPage() {
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Category Breakdown */}
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardHeader>
-            <CardTitle className="text-white">By Category</CardTitle>
+            <CardTitle className="text-gray-900">By Category</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -162,14 +162,14 @@ export default function AnalyticsPage() {
                     <span>{cat.icon}</span>
                     <div className="flex-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-white">{cat.name}</span>
-                        <span className="text-slate-300">{formatCurrency(cat.amount)}</span>
+                        <span className="text-gray-900">{cat.name}</span>
+                        <span className="text-gray-600">{formatCurrency(cat.amount)}</span>
                       </div>
-                      <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
+                      <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
                         <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: cat.color }} />
                       </div>
                     </div>
-                    <span className="text-xs text-slate-400 w-10 text-right">{pct.toFixed(0)}%</span>
+                    <span className="text-xs text-gray-400 w-10 text-right">{pct.toFixed(0)}%</span>
                   </div>
                 );
               })}
@@ -178,9 +178,9 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Merchant Ranking */}
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardHeader>
-            <CardTitle className="text-white">Top Merchants</CardTitle>
+            <CardTitle className="text-gray-900">Top Merchants</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -189,11 +189,11 @@ export default function AnalyticsPage() {
                   <div className="flex items-center gap-3">
                     <span className="text-lg">{m.icon}</span>
                     <div>
-                      <div className="text-sm text-white">{m.name}</div>
-                      <div className="text-xs text-slate-400">{m.count} visits</div>
+                      <div className="text-sm font-medium text-gray-900">{m.name}</div>
+                      <div className="text-xs text-gray-500">{m.count} visits</div>
                     </div>
                   </div>
-                  <div className="text-sm font-medium text-white">{formatCurrency(m.amount)}</div>
+                  <div className="text-sm font-medium text-gray-900">{formatCurrency(m.amount)}</div>
                 </div>
               ))}
             </div>

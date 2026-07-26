@@ -29,7 +29,7 @@ export default function BudgetsPage() {
     if (user) fetchBudgets();
   }, [user]);
 
-  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-gray-400">Loading...</div></div>;
 
   const fetchBudgets = async () => {
     try {
@@ -69,36 +69,36 @@ export default function BudgetsPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Budgets</h1>
-        <Button onClick={() => setShowForm(!showForm)} className="bg-emerald-600 hover:bg-emerald-700">
+        <h1 className="text-3xl font-bold text-gray-900">Budgets</h1>
+        <Button onClick={() => setShowForm(!showForm)} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
           <Plus className="h-4 w-4 mr-2" /> Set Budget
         </Button>
       </div>
 
       {showForm && (
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardContent className="p-4">
             <div className="flex gap-4 items-end">
               <div className="flex-1">
-                <Label className="text-slate-300">Category ID</Label>
+                <Label className="text-gray-700">Category ID</Label>
                 <Input
                   value={form.categoryId}
                   onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
                   placeholder="Category ID"
                 />
               </div>
               <div className="flex-1">
-                <Label className="text-slate-300">Monthly Limit (₦)</Label>
+                <Label className="text-gray-700">Monthly Limit (₦)</Label>
                 <Input
                   type="number"
                   value={form.limit}
                   onChange={(e) => setForm({ ...form, limit: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
                   placeholder="150000"
                 />
               </div>
-              <Button onClick={handleCreate} className="bg-emerald-600 hover:bg-emerald-700">
+              <Button onClick={handleCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
                 Save
               </Button>
             </div>
@@ -107,33 +107,33 @@ export default function BudgetsPage() {
       )}
 
       {loading ? (
-        <div className="text-center py-16 text-slate-400">Loading budgets...</div>
+        <div className="text-center py-16 text-gray-400">Loading budgets...</div>
       ) : budgets.length === 0 ? (
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardContent className="py-16 text-center">
-            <p className="text-slate-400 mb-4">No budgets set for this month</p>
-            <p className="text-sm text-slate-500">Create a budget to track your spending limits</p>
+            <p className="text-gray-500 mb-4">No budgets set for this month</p>
+            <p className="text-sm text-gray-400">Create a budget to track your spending limits</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 gap-6">
           {budgets.map((budget) => {
-            const spent = 0; // Would need to query actual spending
+            const spent = 0;
             const percentage = budget.limit > 0 ? (spent / budget.limit) * 100 : 0;
             return (
-              <Card key={budget.id} className="bg-slate-800 border-slate-700">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{budget.category.icon}</span>
-                      <span className="font-medium text-white">{budget.category.name}</span>
+              <Card key={budget.id} className="bg-white border-gray-100 hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{budget.category.icon}</span>
+                      <span className="font-medium text-gray-900">{budget.category.name}</span>
                     </div>
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm text-gray-500">
                       {formatCurrency(spent)} / {formatCurrency(budget.limit)}
                     </span>
                   </div>
                   <Progress value={Math.min(percentage, 100)} className="h-2" />
-                  <div className="flex justify-between mt-2 text-xs text-slate-400">
+                  <div className="flex justify-between mt-2 text-xs text-gray-500">
                     <span>{percentage.toFixed(0)}% used</span>
                     <span>{formatCurrency(budget.limit - spent)} remaining</span>
                   </div>

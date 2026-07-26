@@ -31,7 +31,7 @@ export default function GoalsPage() {
     if (user) fetchGoals();
   }, [user]);
 
-  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-gray-400">Loading...</div></div>;
 
   const fetchGoals = async () => {
     try {
@@ -70,46 +70,46 @@ export default function GoalsPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Savings Goals</h1>
-        <Button onClick={() => setShowForm(!showForm)} className="bg-emerald-600 hover:bg-emerald-700">
+        <h1 className="text-3xl font-bold text-gray-900">Savings Goals</h1>
+        <Button onClick={() => setShowForm(!showForm)} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
           <Plus className="h-4 w-4 mr-2" /> New Goal
         </Button>
       </div>
 
       {showForm && (
-        <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="p-4">
+        <Card className="bg-white border-gray-100">
+          <CardContent className="p-6">
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label className="text-slate-300">Goal Name</Label>
+                <Label className="text-gray-700">Goal Name</Label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
                   placeholder="e.g., Emergency Fund"
                 />
               </div>
               <div>
-                <Label className="text-slate-300">Target Amount (₦)</Label>
+                <Label className="text-gray-700">Target Amount (₦)</Label>
                 <Input
                   type="number"
                   value={form.targetAmount}
                   onChange={(e) => setForm({ ...form, targetAmount: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
                   placeholder="1000000"
                 />
               </div>
               <div>
-                <Label className="text-slate-300">Deadline</Label>
+                <Label className="text-gray-700">Deadline</Label>
                 <Input
                   type="date"
                   value={form.deadline}
                   onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
                 />
               </div>
             </div>
-            <Button onClick={handleCreate} className="mt-4 bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={handleCreate} className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
               Create Goal
             </Button>
           </CardContent>
@@ -117,28 +117,28 @@ export default function GoalsPage() {
       )}
 
       {loading ? (
-        <div className="text-center py-16 text-slate-400">Loading goals...</div>
+        <div className="text-center py-16 text-gray-400">Loading goals...</div>
       ) : goals.length === 0 ? (
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardContent className="py-16 text-center">
-            <Target className="h-12 w-12 text-slate-500 mx-auto mb-4" />
-            <p className="text-slate-400 mb-4">No savings goals yet</p>
-            <p className="text-sm text-slate-500">Create a goal to start tracking your progress</p>
+            <Target className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 mb-4">No savings goals yet</p>
+            <p className="text-sm text-gray-400">Create a goal to start tracking your progress</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 gap-6">
           {goals.map((goal) => {
             const percentage = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
             return (
-              <Card key={goal.id} className="bg-slate-800 border-slate-700">
-                <CardContent className="p-4">
+              <Card key={goal.id} className="bg-white border-gray-100 hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <span className="text-2xl">{goal.icon}</span>
                     <div>
-                      <div className="font-medium text-white">{goal.name}</div>
+                      <div className="font-medium text-gray-900">{goal.name}</div>
                       {goal.deadline && (
-                        <div className="text-xs text-slate-400">
+                        <div className="text-xs text-gray-500">
                           Deadline: {new Date(goal.deadline).toLocaleDateString()}
                         </div>
                       )}
@@ -146,10 +146,10 @@ export default function GoalsPage() {
                   </div>
                   <Progress value={Math.min(percentage, 100)} className="h-3" />
                   <div className="flex justify-between mt-2 text-sm">
-                    <span className="text-slate-300">{formatCurrency(goal.currentAmount)}</span>
-                    <span className="text-slate-400">{formatCurrency(goal.targetAmount)}</span>
+                    <span className="text-gray-700">{formatCurrency(goal.currentAmount)}</span>
+                    <span className="text-gray-500">{formatCurrency(goal.targetAmount)}</span>
                   </div>
-                  <div className="text-center mt-2 text-sm text-emerald-400 font-medium">
+                  <div className="text-center mt-2 text-sm text-emerald-600 font-medium">
                     {percentage.toFixed(1)}% saved
                   </div>
                 </CardContent>

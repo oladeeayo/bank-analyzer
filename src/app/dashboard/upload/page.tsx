@@ -35,7 +35,7 @@ export default function UploadPage() {
     if (user) fetchBanks();
   }, [user]);
 
-  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-gray-400">Loading...</div></div>;
 
   const fetchBanks = async () => {
     try {
@@ -98,21 +98,21 @@ export default function UploadPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-white">Upload Statement</h1>
+      <h1 className="text-3xl font-bold text-gray-900">Upload Statement</h1>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Upload Form */}
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardHeader>
-            <CardTitle className="text-white">Upload New Statement</CardTitle>
+            <CardTitle className="text-gray-900">Upload New Statement</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm text-slate-300 mb-2 block">Select Bank</label>
+              <label className="text-sm text-gray-600 mb-2 block">Select Bank</label>
               <select
                 value={selectedBank}
                 onChange={(e) => setSelectedBank(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 text-white rounded-md px-3 py-2"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               >
                 <option value="">Choose a bank</option>
                 {banks.map((bank) => (
@@ -124,18 +124,18 @@ export default function UploadPage() {
             </div>
 
             <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                dragActive ? "border-emerald-400 bg-emerald-400/10" : "border-slate-600"
+              className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${
+                dragActive ? "border-emerald-400 bg-emerald-50" : "border-gray-200 hover:border-gray-300"
               }`}
               onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
               onDragLeave={() => setDragActive(false)}
               onDrop={handleDrop}
             >
-              <Upload className="h-10 w-10 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-300 mb-2">
+              <Upload className="h-10 w-10 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-700 mb-2">
                 Drag and drop your statement here
               </p>
-              <p className="text-sm text-slate-500 mb-4">or</p>
+              <p className="text-sm text-gray-400 mb-4">or</p>
               <input
                 ref={inputRef}
                 type="file"
@@ -146,38 +146,38 @@ export default function UploadPage() {
               />
               <label
                 htmlFor="file-upload"
-                className="inline-flex items-center px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 cursor-pointer"
+                className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 cursor-pointer transition-colors"
               >
                 Choose File
               </label>
               {file && (
-                <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-300">
+                <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-700">
                   <FileText className="h-4 w-4" />
                   {file.name}
                 </div>
               )}
             </div>
 
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-gray-400">
               Supported formats: CSV, Excel (.xlsx, .xls), PDF
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded text-sm flex items-center gap-2">
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 {error}
               </div>
             )}
 
             {result && (
-              <div className="bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 px-4 py-3 rounded text-sm">
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-3 rounded-xl text-sm">
                 <div className="flex items-center gap-2 mb-1">
                   <CheckCircle className="h-4 w-4" />
                   <span className="font-medium">Upload successful!</span>
                 </div>
                 <div>{result.transactionCount} transactions imported</div>
                 {result.errorCount > 0 && (
-                  <div className="text-yellow-400 mt-1">
+                  <div className="text-amber-600 mt-1">
                     {result.errorCount} rows had errors during parsing
                   </div>
                 )}
@@ -187,7 +187,7 @@ export default function UploadPage() {
             <Button
               onClick={handleUpload}
               disabled={!file || !selectedBank || uploading}
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
             >
               {uploading ? "Uploading..." : "Upload Statement"}
             </Button>
@@ -195,23 +195,23 @@ export default function UploadPage() {
         </Card>
 
         {/* Recent Uploads */}
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardHeader>
-            <CardTitle className="text-white">Recent Uploads</CardTitle>
+            <CardTitle className="text-gray-900">Recent Uploads</CardTitle>
           </CardHeader>
           <CardContent>
             {banks.length === 0 ? (
               <div className="text-center py-8">
-                <Building2 className="h-8 w-8 text-slate-500 mx-auto mb-2" />
-                <p className="text-slate-400 text-sm">Add a bank first to upload statements</p>
+                <Building2 className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-500 text-sm">Add a bank first to upload statements</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {banks.map((bank) => (
-                  <div key={bank.id} className="p-3 bg-slate-700/50 rounded-lg">
+                  <div key={bank.id} className="p-3 bg-gray-50 rounded-xl">
                     <div className="flex items-center justify-between">
-                      <span className="text-white text-sm">{bank.nickname || bank.bankName}</span>
-                      <Badge variant="secondary" className="bg-slate-600 text-slate-300">
+                      <span className="text-gray-900 text-sm font-medium">{bank.nickname || bank.bankName}</span>
+                      <Badge variant="secondary" className="bg-gray-100 text-gray-600 rounded-lg">
                         {bank.nickname || bank.bankName}
                       </Badge>
                     </div>

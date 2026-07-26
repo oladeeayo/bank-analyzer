@@ -45,7 +45,7 @@ export default function BanksPage() {
     if (user) fetchBanks();
   }, [user]);
 
-  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-gray-400">Loading...</div></div>;
 
   const fetchBanks = async () => {
     try {
@@ -96,24 +96,24 @@ export default function BanksPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">My Banks</h1>
+        <h1 className="text-3xl font-bold text-gray-900">My Banks</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
               <Plus className="h-4 w-4 mr-2" /> Add Bank
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-slate-800 border-slate-700">
+          <DialogContent className="bg-white rounded-2xl">
             <DialogHeader>
-              <DialogTitle className="text-white">Add New Bank</DialogTitle>
+              <DialogTitle className="text-gray-900">Add New Bank</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label className="text-slate-300">Bank Name</Label>
+                <Label className="text-gray-700">Bank Name</Label>
                 <select
                   value={form.bankName}
                   onChange={(e) => setForm({ ...form, bankName: e.target.value })}
-                  className="w-full mt-1 bg-slate-700 border border-slate-600 text-white rounded-md px-3 py-2"
+                  className="w-full mt-1 bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 >
                   <option value="">Select bank</option>
                   {BANKS.map((b) => (
@@ -122,43 +122,43 @@ export default function BanksPage() {
                 </select>
               </div>
               <div>
-                <Label className="text-slate-300">Account Name</Label>
+                <Label className="text-gray-700">Account Name</Label>
                 <Input
                   value={form.accountName}
                   onChange={(e) => setForm({ ...form, accountName: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
                   placeholder="e.g., John Doe Savings"
                 />
               </div>
               <div>
-                <Label className="text-slate-300">Account Number</Label>
+                <Label className="text-gray-700">Account Number</Label>
                 <Input
                   value={form.accountNumber}
                   onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
                   placeholder="0123456789"
                 />
               </div>
               <div>
-                <Label className="text-slate-300">Nickname</Label>
+                <Label className="text-gray-700">Nickname</Label>
                 <Input
                   value={form.nickname}
                   onChange={(e) => setForm({ ...form, nickname: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
                   placeholder="e.g., GT Salary"
                 />
               </div>
               <div>
-                <Label className="text-slate-300">Opening Balance (₦)</Label>
+                <Label className="text-gray-700">Opening Balance (₦)</Label>
                 <Input
                   type="number"
                   value={form.openingBalance}
                   onChange={(e) => setForm({ ...form, openingBalance: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
                   placeholder="0"
                 />
               </div>
-              <Button onClick={handleCreate} className="w-full bg-emerald-600 hover:bg-emerald-700">
+              <Button onClick={handleCreate} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
                 Add Bank
               </Button>
             </div>
@@ -167,26 +167,28 @@ export default function BanksPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-slate-400">Loading banks...</div>
+        <div className="text-center py-16 text-gray-400">Loading banks...</div>
       ) : banks.length === 0 ? (
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-white border-gray-100">
           <CardContent className="py-16 text-center">
-            <Building2 className="h-12 w-12 text-slate-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">No banks added yet</h3>
-            <p className="text-slate-400 mb-4">Add your first bank to start tracking transactions</p>
+            <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No banks added yet</h3>
+            <p className="text-gray-500 mb-4">Add your first bank to start tracking transactions</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {banks.map((bank) => (
-            <Card key={bank.id} className="bg-slate-800 border-slate-700">
+            <Card key={bank.id} className="bg-white border-gray-100 hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-emerald-400" />
-                    <CardTitle className="text-white text-lg">{bank.nickname || bank.bankName}</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                      <Building2 className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <CardTitle className="text-gray-900 text-lg">{bank.nickname || bank.bankName}</CardTitle>
                   </div>
-                  <Badge variant="secondary" className="bg-slate-700 text-slate-300">
+                  <Badge variant="secondary" className="bg-gray-100 text-gray-600 rounded-lg">
                     {bank.bankName}
                   </Badge>
                 </div>
@@ -194,17 +196,17 @@ export default function BanksPage() {
               <CardContent>
                 <div className="space-y-2 text-sm">
                   {bank.accountName && (
-                    <div className="text-slate-300">{bank.accountName}</div>
+                    <div className="text-gray-700">{bank.accountName}</div>
                   )}
                   {bank.accountNumber && (
-                    <div className="text-slate-400">••••{bank.accountNumber.slice(-4)}</div>
+                    <div className="text-gray-500">••••{bank.accountNumber.slice(-4)}</div>
                   )}
                   <div className="flex items-center gap-4 mt-4">
-                    <div className="flex items-center gap-1 text-slate-400">
+                    <div className="flex items-center gap-1 text-gray-500">
                       <ArrowLeftRight className="h-4 w-4" />
                       <span>{bank._count.transactions} transactions</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-400">
+                    <div className="flex items-center gap-1 text-gray-500">
                       <FileText className="h-4 w-4" />
                       <span>{bank._count.statements} statements</span>
                     </div>
@@ -213,7 +215,7 @@ export default function BanksPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-red-400 hover:text-red-300"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
                       onClick={() => handleDelete(bank.id)}
                     >
                       Delete
