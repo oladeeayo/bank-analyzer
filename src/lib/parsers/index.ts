@@ -21,12 +21,15 @@ export async function parseStatement(
   }
 
   if (ext === "xlsx" || ext === "xls") {
-    const buffer = Buffer.isBuffer(file)
-      ? file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
-      : file instanceof ArrayBuffer
-        ? file
-        : await (file as File).arrayBuffer();
-    return parseExcel(buffer as ArrayBuffer, fileName);
+    let arrayBuffer: ArrayBuffer;
+    if (file instanceof ArrayBuffer) {
+      arrayBuffer = file;
+    } else if (Buffer.isBuffer(file)) {
+      arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
+    } else {
+      arrayBuffer = await (file as File).arrayBuffer();
+    }
+    return parseExcel(arrayBuffer, fileName);
   }
 
   if (ext === "pdf") {

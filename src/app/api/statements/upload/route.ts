@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse the file
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const result = await parseStatement(buffer, file.name);
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await parseStatement(arrayBuffer, file.name);
 
     if (result.transactions.length === 0) {
       return NextResponse.json(
@@ -104,9 +104,10 @@ export async function POST(request: NextRequest) {
       errorCount: result.errors.length,
       errors: result.errors.slice(0, 10), // First 10 errors
     }, { status: 201 });
-  } catch (_error) {
+  } catch (error: any) {
+    console.error("Upload error:", error?.message || error);
     return NextResponse.json(
-      { error: "Failed to upload statement" },
+      { error: "Failed to upload statement", details: error?.message },
       { status: 500 }
     );
   }

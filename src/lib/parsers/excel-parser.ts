@@ -87,8 +87,11 @@ function mapColumns(headers: string[]): Record<string, number> {
 
 export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
   try {
-    const workbook = XLSX.read(buffer, { type: "buffer" });
+    console.log(`[ExcelParser] Parsing ${fileName}, buffer size: ${buffer.byteLength}`);
+    const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
     const sheetName = workbook.SheetNames[0];
+
+    console.log(`[ExcelParser] Sheets: ${workbook.SheetNames.join(", ")}`);
 
     if (!sheetName) {
       return {
@@ -101,6 +104,11 @@ export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
     const sheet = workbook.Sheets[sheetName];
     const allRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
+    console.log(`[ExcelParser] Rows: ${allRows.length}`);
+    if (allRows.length > 0) console.log(`[ExcelParser] Row 0:`, JSON.stringify(allRows[0]?.slice(0, 8)));
+    if (allRows.length > 4) console.log(`[ExcelParser] Row 4:`, JSON.stringify(allRows[4]?.slice(0, 8)));
+    if (allRows.length > 5) console.log(`[ExcelParser] Row 5:`, JSON.stringify(allRows[5]?.slice(0, 8)));
+
     if (allRows.length === 0) {
       return {
         transactions: [],
@@ -110,6 +118,7 @@ export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
     }
 
     const headerIdx = findHeaderRow(allRows);
+    console.log(`[ExcelParser] Header row index: ${headerIdx}`);
     if (headerIdx === -1) {
       // Fallback: try CSV conversion
       const csvContent = XLSX.utils.sheet_to_csv(sheet);
@@ -186,6 +195,8 @@ export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
     }
 
     const dates = transactions.map((t) => new Date(t.date).getTime()).sort((a, b) => a - b);
+
+    console.log(`[ExcelParser] Parsed ${transactions.length} transactions, ${errors.length} errors`);
 
     return {
       transactions,
