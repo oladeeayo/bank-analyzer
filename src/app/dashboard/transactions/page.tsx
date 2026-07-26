@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, ArrowDownRight, Calendar, Wand2, ChevronLeft, ChevronRight, Check, AlertCircle, Plus, X, Link, Edit } from "lucide-react";
+import { Calendar, Wand2, ChevronLeft, ChevronRight, Check, AlertCircle, Plus, X, Link, Edit } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
 
@@ -118,8 +118,6 @@ export default function TransactionsPage() {
     loadCategories();
   }, [user, search, filterType, page, refreshKey]);
 
-  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
-
   const findSimilarTransactions = useCallback((tx: Transaction) => {
     const similar: SimilarTransaction[] = [];
     const txDesc = tx.normalizedDescription || tx.description;
@@ -161,7 +159,7 @@ export default function TransactionsPage() {
           date: other.date,
           matchReason: "Same merchant",
         });
-      } else if (tx.type !== other.type && Math.abs(tx.amount - other.amount) / tx.amount < 0.01) {
+      } else if (tx.type !== other.type && tx.amount !== 0 && other.amount !== 0 && Math.abs(tx.amount - other.amount) / tx.amount < 0.01) {
         similar.push({
           id: other.id,
           description: otherDesc,
@@ -176,6 +174,8 @@ export default function TransactionsPage() {
     setSimilarTxs(similar);
     setShowSimilar(similar.length > 0);
   }, [transactions]);
+
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
 
   const handleSave = async () => {
     if (!selectedTx) return;
