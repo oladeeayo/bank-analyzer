@@ -54,6 +54,11 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
@@ -87,6 +92,11 @@ export default function TransactionsPage() {
         });
         if (search) params.set("search", search);
         if (filterType) params.set("type", filterType);
+        if (filterCategory) params.set("categoryId", filterCategory);
+        if (startDate) params.set("startDate", startDate);
+        if (endDate) params.set("endDate", endDate);
+        if (minAmount) params.set("minAmount", minAmount);
+        if (maxAmount) params.set("maxAmount", maxAmount);
         const res = await fetch(`/api/transactions?${params}`);
         if (res.ok) {
           const data = await res.json();
@@ -114,7 +124,7 @@ export default function TransactionsPage() {
 
     loadTransactions();
     loadCategories();
-  }, [user, search, filterType, page, refreshKey]);
+  }, [user, search, filterType, filterCategory, startDate, endDate, minAmount, maxAmount, page, refreshKey]);
 
   const findSimilarTransactions = useCallback((tx: Transaction) => {
     const STOP_WORDS = new Set(["from", "to", "the", "and", "for", "with", "that", "this", "was", "are", "has", "have", "not", "but", "can", "will", "just", "been", "its", "may", "who", "did", "get", "got", "let", "say", "she", "him", "his", "her", "our", "your", "all", "any", "few", "more", "most", "other", "some", "such", "than", "too", "very", "because", "through", "about", "before", "after", "above", "below", "between", "under", "again", "once", "here", "there", "when", "where", "why", "how", "each", "every", "both", "few", "own", "same", "also", "back", "even", "still", "new", "well", "only", "into", "over", "such", "take", "come", "make", "like", "long", "look", "many", "much", "must", "need", "next", "only", "same", "than", "them", "then", "these", "they", "those", "upon", "what", "when", "your"]);
@@ -310,38 +320,56 @@ export default function TransactionsPage() {
         <p className="text-sm text-ash-gray">Standardizing messy transaction data</p>
       </div>
 
-      <div className="bg-paper-white border border-[#ececec] rounded-cards p-4 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-mist-gray rounded-lg border border-[#ececec]">
-          <Calendar className="h-4 w-4 text-slate-gray" />
-          <span className="text-sm text-ink-black">Oct 1, 2023 - Oct 31, 2023</span>
-        </div>
-        <div className="relative flex-1 max-w-xs">
-          <Input
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search transactions..."
-            className="bg-paper-white border-[#ececec] rounded-lg text-sm pl-8"
-          />
-          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ash-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-mist-gray rounded"
-            >
-              <X className="h-3 w-3 text-ash-gray" />
-            </button>
-          )}
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          {selectedIds.size > 0 && (
-            <select
-              onChange={(e) => handleBulkCategory(e.target.value)}
-              className="bg-paper-white border border-[#ececec] rounded-lg px-3 py-1.5 text-sm"
-              value=""
-            >
-              <option value="">Bulk: Set Category ({selectedIds.size} selected)</option>
+      <div className="bg-paper-white border border-[#ececec] rounded-cards p-4 space-y-3">
+        {/* Row 1: Search + Type */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Search transactions..."
+              className="bg-paper-white border-[#ececec] rounded-lg text-sm pl-8"
+            />
+            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ash-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-mist-gray rounded">
+                <X className="h-3 w-3 text-ash-gray" />
+              </button>
+            )}
+          </div>
+          <select
+            value={filterType}
+            onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
+            className="bg-paper-white border border-[#ececec] rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="">All Types</option>
+            <option value="credit">Credit</option>
+            <option value="debit">Debit</option>
+          </select>
+          <select
+            value={filterCategory}
+            onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
+            className="bg-paper-white border border-[#ececec] rounded-lg px-3 py-2 text-sm max-w-[200px]"
+          >
+            <option value="">All Categories</option>
+            {categories.filter(c => !c.parentId).map(parent => (
+              <optgroup key={parent.id} label={`${parent.icon} ${parent.name}`}>
+                {categories.filter(c => c.parentId === parent.id).map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <div className="ml-auto flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <select
+                onChange={(e) => handleBulkCategory(e.target.value)}
+                className="bg-paper-white border border-[#ececec] rounded-lg px-3 py-1.5 text-sm"
+                value=""
+              >
+                <option value="">Bulk: Set Category ({selectedIds.size} selected)</option>
               {categories.filter(c => c.parentId && categories.some(p => p.id === c.parentId)).map(c => {
                 const parent = categories.find(p => p.id === c.parentId);
                 return (
@@ -351,6 +379,62 @@ export default function TransactionsPage() {
                 );
               })}
             </select>
+          )}
+        </div>
+        </div>
+        {/* Row 2: Date Range + Amount Range */}
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[#ececec]">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-slate-gray" />
+            <span className="text-xs text-ash-gray">Date:</span>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+              className="bg-paper-white border-[#ececec] rounded-lg px-2 py-1 text-xs w-[140px]"
+            />
+            <span className="text-xs text-ash-gray">to</span>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+              className="bg-paper-white border-[#ececec] rounded-lg px-2 py-1 text-xs w-[140px]"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-ash-gray">Amount:</span>
+            <Input
+              type="number"
+              value={minAmount}
+              onChange={(e) => { setMinAmount(e.target.value); setPage(1); }}
+              placeholder="Min"
+              className="bg-paper-white border-[#ececec] rounded-lg px-2 py-1 text-xs w-[80px]"
+            />
+            <span className="text-xs text-ash-gray">to</span>
+            <Input
+              type="number"
+              value={maxAmount}
+              onChange={(e) => { setMaxAmount(e.target.value); setPage(1); }}
+              placeholder="Max"
+              className="bg-paper-white border-[#ececec] rounded-lg px-2 py-1 text-xs w-[80px]"
+            />
+          </div>
+          {(startDate || endDate || minAmount || maxAmount || filterType || filterCategory || search) && (
+            <button
+              onClick={() => {
+                setSearch("");
+                setFilterType("");
+                setFilterCategory("");
+                setStartDate("");
+                setEndDate("");
+                setMinAmount("");
+                setMaxAmount("");
+                setPage(1);
+              }}
+              className="text-xs text-ash-gray hover:text-ink-black flex items-center gap-1"
+            >
+              <X className="h-3 w-3" /> Clear filters
+            </button>
           )}
         </div>
       </div>
