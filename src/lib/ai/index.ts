@@ -85,7 +85,7 @@ Respond in JSON only:
 }`;
 
 async function callGemini(prompt: string, data: string): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   const result = await model.generateContent(`${prompt}\n\nData:\n${data}`);
   const response = result.response;
   return response.text();
