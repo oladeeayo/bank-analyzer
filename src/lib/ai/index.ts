@@ -32,22 +32,54 @@ Transfers: Personal Transfer, Family Support, Business Transfer, Self Transfer, 
 Government: Tax, Fine, Registration, License, Other Government
 Others: Uncategorized, Miscellaneous, Unknown`;
 
-const MERCHANT_PROMPT = `You are a Nigerian bank transaction analyzer. Extract the merchant/person name and classify the transaction.
+const MERCHANT_PROMPT = `You are an expert Nigerian bank transaction analyzer. Your job is to extract the merchant/person name and categorize the transaction intelligently.
 
-RULES:
-- For "Transfer to/from NAME | BANK | ACCOUNT" → the merchant is NAME (the person/entity)
-- For "Mobile Data | NUMBER | CARRIER | PLAN" → merchant is the CARRIER (e.g., "MTN")
-- For "Electricity | NUMBER | PROVIDER | KWH" → merchant is the PROVIDER (e.g., "IBEDC")
-- For "OPay Card Payment | MERCHANT" → merchant is the second part
-- For POS/ATM: extract the terminal name or location
-- For subscriptions: extract the service name (Spotify, Netflix, etc.)
+PATTERN RECOGNITION RULES:
+1. TRANSFERS: "Transfer to/from NAME | BANK | ACCOUNT"
+   - Merchant = NAME (the person or business receiving/sending)
+   - Type = "person" for individuals, "business" for companies
+   - Category = "Transfers" → subcategory: "Personal Transfer" (individuals), "Business Transfer" (companies)
 
-CLASSIFY the merchant type:
-- "person": Individual person (for transfers)
-- "business": Named business/company
-- "service": Utility/service provider (MTN, IBEDC, etc.)
-- "platform": Payment platform (OPay, PalmPay, Paystack, etc.)
+2. BILLS: "Electricity | NUMBER | PROVIDER | KWH" or "Water | NUMBER | PROVIDER"
+   - Merchant = PROVIDER (e.g., "IBEDC", "IKEJA ELECTRIC", "PHED")
+   - Type = "service"
+   - Category = "Bills" → subcategory: "Electricity" or "Water"
+
+3. DATA/AIRTIME: "Mobile Data | NUMBER | CARRIER | PLAN" or "Airtime | NUMBER | CARRIER"
+   - Merchant = CARRIER (e.g., "MTN", "GLO", "AIRTEL", "9MOBILE")
+   - Type = "service"
+   - Category = "Bills" → subcategory: "Phone" or "Internet"
+
+4. SUBSCRIPTIONS: "OPay Card Payment | SERVICE" or descriptions with "Spotify", "Netflix", etc.
+   - Merchant = SERVICE name
+   - Type = "business" or "platform"
+   - Category = "Entertainment" → subcategory: "Streaming"
+
+5. POS/ATM: Terminal name or location
+   - Merchant = terminal name/location
+   - Category = appropriate based on context
+
+6. SALARY: "SALARY", "WAGES", "PAYROLL"
+   - Merchant = "Salary"
+   - Category = "Income" → subcategory: "Salary"
+
+7. SAVINGS: "AUTOSAVE", "SAVE", "OWEALTH"
+   - Merchant = "Savings"
+   - Category = "Savings" → subcategory: "AutoSave"
+
+MERCHANT TYPE CLASSIFICATION:
+- "person": Individual human (e.g., "OLADEJI ISAIAH", "FAITH EREZIOGHENE")
+- "business": Registered company (e.g., "IKEOLUWA UNIQUE ENTERPRISE", "CHECKOUT LIMITED")
+- "service": Utility/service (MTN, IBEDC, DSTV, Spotify)
+- "platform": Payment platform (OPay, PalmPay, Paystack, Flutterwave)
 - "unknown": Cannot determine
+
+CONFIDENCE SCORING:
+- 0.9-1.0: Clear pattern match (exact bank format)
+- 0.7-0.8: Strong keyword match
+- 0.5-0.6: Partial match, some ambiguity
+- 0.3-0.4: Weak match, needs review
+- 0.1-0.2: Guessing
 
 Respond in JSON only:
 {
@@ -56,7 +88,7 @@ Respond in JSON only:
   "category": "Category from the list",
   "subcategory": "Subcategory from the list",
   "confidence": 0.0-1.0,
-  "reason": "Brief explanation"
+  "reason": "Brief explanation of how you determined this"
 }
 
 Available categories and subcategories:
@@ -118,24 +150,35 @@ export async function batchClassify(
     const batch = transactions.slice(i, i + BATCH_SIZE);
     const data = JSON.stringify(batch, null, 2);
 
-    const prompt = `Classify each transaction. Respond with a JSON object keyed by transaction id.
+    const prompt = `You are an expert Nigerian bank transaction analyzer. Classify each transaction intelligently.
 
-For each transaction:
-- Extract the merchant/person name
-- Classify merchant type (person, business, service, platform, unknown)
-- Suggest category and subcategory from this list:
+PATTERNS TO RECOGNIZE:
+- "Transfer to/from NAME | BANK | ACCOUNT" → Merchant is the NAME (person/business)
+- "Mobile Data | NUMBER | CARRIER | PLAN" → Merchant is CARRIER (MTN, GLO, etc.)
+- "Electricity | NUMBER | PROVIDER | KWH" → Merchant is PROVIDER (IBEDC, etc.)
+- "OPay Card Payment | SERVICE" → Merchant is SERVICE
+- Salary/Payroll payments → Category is Income/Salary
+- Savings/AutoSave → Category is Savings/AutoSave
+
+For each transaction, determine:
+1. WHO is the merchant/person? (extract the actual name)
+2. WHAT type? (person, business, service, platform, unknown)
+3. WHICH category fits best?
+4. HOW confident are you?
+
+Categories:
 ${CATEGORY_LIST}
 
-Respond in JSON only:
+Respond with JSON object keyed by transaction id:
 {
   "results": {
     "tx_id": {
-      "merchant": "NAME",
+      "merchant": "EXTRACTED NAME",
       "merchantType": "person|business|service|platform|unknown",
       "category": "Category",
       "subcategory": "Subcategory",
       "confidence": 0.0-1.0,
-      "reason": "Brief explanation"
+      "reason": "How you determined this"
     }
   }
 }`;
