@@ -73,6 +73,7 @@ export default function TransactionsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [categorySearch, setCategorySearch] = useState("");
   const [selectedParentForPicker, setSelectedParentForPicker] = useState<string | null>(null);
+  const [undoStack, setUndoStack] = useState<Array<{ txId: string; prevCategoryId: string | null; prevMerchantId: string | null; prevNormalizedDesc: string | null }>>([]);
   const [ruleForm, setRuleForm] = useState({
     normalizedMerchant: "",
     categoryId: "",
@@ -228,15 +229,24 @@ export default function TransactionsPage() {
     setSaving(true);
     setSaveMessage(null);
 
-    try {
-      const categoryId = ruleForm.categoryId;
+    // Push current state to undo stack (keep last 3)
+    setUndoStack(prev => {
+      const next = [...prev, {
+        txId: selectedTx.id,
+        prevCategoryId: selectedTx.categoryId || null,
+        prevMerchantId: selectedTx.merchantId || null,
+        prevNormalizedDesc: selectedTx.normalizedDescription || null,
+      }];
+      return next.slice(-3);
+    });
 
+    try {
       const res = await fetch(`/api/transactions/${selectedTx.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           merchantId: selectedTx.merchantId || null,
-          categoryId: categoryId || null,
+          categoryId: ruleForm.categoryId || null,
           normalizedDescription: merchantName || ruleForm.normalizedMerchant || undefined,
           isTransfer: ruleForm.markTransfer,
         }),
@@ -246,21 +256,50 @@ export default function TransactionsPage() {
         const data = await res.json();
         setSelectedTx(data.transaction);
         setMerchantName(data.transaction.merchant?.displayName || merchantName);
-        setSaveMessage({
-          type: "success",
-          text: "Saved!",
-        });
+        setRuleForm(prev => ({ ...prev, categoryId: data.transaction.categoryId || "" }));
+        setSaveMessage({ type: "success", text: "Saved!" });
         setRefreshKey(k => k + 1);
         setTimeout(() => {
-          setSelectedTx(null);
           setSaveMessage(null);
-          setShowSimilar(false);
         }, 2000);
       } else {
         setSaveMessage({ type: "error", text: "Failed to save." });
       }
     } catch (err) {
       setSaveMessage({ type: "error", text: "Network error." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUndo = async () => {
+    if (undoStack.length === 0) return;
+    const last = undoStack[undoStack.length - 1];
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/transactions/${last.txId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          merchantId: last.prevMerchantId,
+          categoryId: last.prevCategoryId,
+          normalizedDescription: last.prevNormalizedDesc || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedTx(data.transaction);
+        setMerchantName(data.transaction.merchant?.displayName || "");
+        setRuleForm(prev => ({ ...prev, categoryId: data.transaction.categoryId || "" }));
+        setSaveMessage({ type: "success", text: "Undone!" });
+        setUndoStack(prev => prev.slice(0, -1));
+        setRefreshKey(k => k + 1);
+        setTimeout(() => setSaveMessage(null), 2000);
+      }
+    } catch (err) {
+      setSaveMessage({ type: "error", text: "Undo failed." });
     } finally {
       setSaving(false);
     }
@@ -833,10 +872,15 @@ export default function TransactionsPage() {
               {/* Actions */}
               <div className="pt-4 flex flex-col gap-3 border-t border-[#ececec]">
                 <Button onClick={handleSave} className="w-full" disabled={saving}>
-                  {saving ? "Saving..." : "Save & Apply to Similar"}
+                  {saving ? "Saving..." : "Save"}
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => { setSelectedTx(null); setShowSimilar(false); }}>
-                  Cancel
+                {undoStack.length > 0 && (
+                  <Button variant="outline" className="w-full" onClick={handleUndo} disabled={saving}>
+                    Undo last change ({undoStack.length})
+                  </Button>
+                )}
+                <Button variant="ghost" className="w-full text-ash-gray" onClick={() => { setSelectedTx(null); setShowSimilar(false); }}>
+                  Close
                 </Button>
               </div>
             </>
