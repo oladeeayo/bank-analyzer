@@ -219,7 +219,7 @@ export default function TransactionsPage() {
           date: other.date,
           matchReason: `Exact: ${exact.join(", ")}${sim.length ? ` Similar: ${sim.join(", ")}` : ""}`,
         });
-      } else if (tx.type === other.type && tx.merchantId && tx.merchantId === other.merchantId) {
+      } else if (!txIsTransfer && !otherIsTransfer && tx.type === other.type && tx.merchantId && tx.merchantId === other.merchantId) {
         similar.push({
           id: other.id,
           description: other.description,
