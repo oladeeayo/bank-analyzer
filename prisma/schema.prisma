@@ -9,53 +9,53 @@ datasource db {
 // ─── Auth ───────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String?
-  email         String    @unique
-  emailVerified Boolean   @default(false)
+  email         String   @unique
+  emailVerified Boolean  @default(false)
   image         String?
   password      String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  banks             Bank[]
-  categories        Category[]
+  banks               Bank[]
+  categories          Category[]
   classificationRules ClassificationRule[]
-  manualOverrides   ManualOverride[]
-  budgets           Budget[]
-  goals             Goal[]
+  manualOverrides     ManualOverride[]
+  budgets             Budget[]
+  goals               Goal[]
 
-  sessions          Session[]
-  accounts          Account[]
+  sessions Session[]
+  accounts Account[]
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  expiresAt   DateTime
-  token       String   @unique
-  ipAddress   String?
-  userAgent   String?
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Account {
-  id                String   @id @default(cuid())
-  accountId         String
-  providerId        String
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken       String?
-  refreshToken      String?
-  idToken           String?
-  accessTokenExpiresAt DateTime?
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
-  scope             String?
-  password          String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
 
 model Verification {
@@ -70,19 +70,19 @@ model Verification {
 // ─── Banks ──────────────────────────────────────────────
 
 model Bank {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bankName      String
-  accountName   String?
-  accountNumber String?
-  nickname      String?
-  openingBalance Float   @default(0)
-  currency      String   @default("NGN")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankName       String
+  accountName    String?
+  accountNumber  String?
+  nickname       String?
+  openingBalance Float    @default(0)
+  currency       String   @default("NGN")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  statements Statement[]
+  statements   Statement[]
   transactions Transaction[]
 
   @@unique([userId, bankName, accountNumber])
@@ -91,18 +91,18 @@ model Bank {
 // ─── Statements ─────────────────────────────────────────
 
 model Statement {
-  id          String   @id @default(cuid())
-  bankId      String
-  bank        Bank     @relation(fields: [bankId], references: [id], onDelete: Cascade)
-  month       Int
-  year        Int
-  filename    String
-  fileType    String
-  status      String   @default("uploaded")
-  transactionCount Int @default(0)
-  uploadedAt  DateTime @default(now())
+  id               String   @id @default(cuid())
+  bankId           String
+  bank             Bank     @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  month            Int
+  year             Int
+  filename         String
+  fileType         String
+  status           String   @default("uploaded")
+  transactionCount Int      @default(0)
+  uploadedAt       DateTime @default(now())
 
-  transactions Transaction[]
+  transactions       Transaction[]
   stagedTransactions StagedTransaction[]
 
   @@unique([bankId, month, year])
@@ -111,22 +111,22 @@ model Statement {
 // ─── Categories ─────────────────────────────────────────
 
 model Category {
-  id          String   @id @default(cuid())
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  icon        String   @default("📁")
-  color       String   @default("#6B7280")
-  isSystem    Boolean  @default(false)
-  parentId    String?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  icon      String   @default("📁")
+  color     String   @default("#6B7280")
+  isSystem  Boolean  @default(false)
+  parentId  String?
+  createdAt DateTime @default(now())
 
-  parent      Category? @relation("CategoryTree", fields: [parentId], references: [id])
-  children    Category[] @relation("CategoryTree")
-  transactions  Transaction[]
-  budgets       Budget[]
+  parent              Category?            @relation("CategoryTree", fields: [parentId], references: [id])
+  children            Category[]           @relation("CategoryTree")
+  transactions        Transaction[]
+  budgets             Budget[]
   classificationRules ClassificationRule[]
-  manualOverrides ManualOverride[]
+  manualOverrides     ManualOverride[]
 
   @@unique([userId, name])
 }
@@ -134,12 +134,12 @@ model Category {
 // ─── Merchants ──────────────────────────────────────────
 
 model Merchant {
-  id              String   @id @default(cuid())
-  normalizedName  String   @unique
-  displayName     String
-  icon            String   @default("🏪")
-  color           String   @default("#6B7280")
-  createdAt       DateTime @default(now())
+  id             String   @id @default(cuid())
+  normalizedName String   @unique
+  displayName    String
+  icon           String   @default("🏪")
+  color          String   @default("#6B7280")
+  createdAt      DateTime @default(now())
 
   transactions        Transaction[]
   manualOverrides     ManualOverride[]
@@ -151,11 +151,11 @@ model Merchant {
 // ─── Transactions ───────────────────────────────────────
 
 model Transaction {
-  id                    String   @id @default(cuid())
+  id                    String    @id @default(cuid())
   statementId           String
   statement             Statement @relation(fields: [statementId], references: [id], onDelete: Cascade)
   bankId                String
-  bank                  Bank     @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  bank                  Bank      @relation(fields: [bankId], references: [id], onDelete: Cascade)
   date                  DateTime
   description           String
   normalizedDescription String?
@@ -164,16 +164,16 @@ model Transaction {
   categoryId            String?
   category              Category? @relation(fields: [categoryId], references: [id])
   amount                Float
-  type                  String   // "debit" | "credit"
+  type                  String // "debit" | "credit"
   balance               Float?
   reference             String?
   narration             String?
-  isTransfer            Boolean  @default(false)
-  isSelfTransfer        Boolean  @default(false)
+  isTransfer            Boolean   @default(false)
+  isSelfTransfer        Boolean   @default(false)
   transferToBankId      String?
-  isRecurring           Boolean  @default(false)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  isRecurring           Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@index([date])
   @@index([bankId])
@@ -185,22 +185,22 @@ model Transaction {
 // ─── Staged Transactions (Import Review) ────────────────
 
 model StagedTransaction {
-  id          String   @id @default(cuid())
-  statementId String
-  statement   Statement @relation(fields: [statementId], references: [id], onDelete: Cascade)
-  date        DateTime
-  description String
-  amount      Float
-  type        String
-  balance     Float?
-  reference   String?
-  narration   String?
-  status      String   @default("pending") // pending | accepted | rejected | edited
+  id                  String    @id @default(cuid())
+  statementId         String
+  statement           Statement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  date                DateTime
+  description         String
+  amount              Float
+  type                String
+  balance             Float?
+  reference           String?
+  narration           String?
+  status              String    @default("pending") // pending | accepted | rejected | edited
   suggestedMerchantId String?
   suggestedCategoryId String?
-  editedMerchantId String?
-  editedCategoryId String?
-  createdAt   DateTime @default(now())
+  editedMerchantId    String?
+  editedCategoryId    String?
+  createdAt           DateTime  @default(now())
 
   @@index([statementId])
 }
@@ -208,34 +208,34 @@ model StagedTransaction {
 // ─── Classification Rules ───────────────────────────────
 
 model ClassificationRule {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  type        String   // "contains" | "equals" | "regex"
-  pattern     String
-  merchantId  String?
-  merchant    Merchant? @relation(fields: [merchantId], references: [id])
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-  priority    Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  type       String // "contains" | "equals" | "regex"
+  pattern    String
+  merchantId String?
+  merchant   Merchant? @relation(fields: [merchantId], references: [id])
+  categoryId String
+  category   Category  @relation(fields: [categoryId], references: [id])
+  priority   Int       @default(0)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 // ─── Manual Overrides ───────────────────────────────────
 
 model ManualOverride {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  description  String
-  merchantId   String?
-  merchant     Merchant? @relation(fields: [merchantId], references: [id])
-  categoryId   String?
-  category     Category? @relation(fields: [categoryId], references: [id])
-  createdAt    DateTime @default(now())
+  id          String    @id @default(cuid())
+  userId      String
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description String
+  merchantId  String?
+  merchant    Merchant? @relation(fields: [merchantId], references: [id])
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime  @default(now())
 
   @@unique([userId, description])
 }
@@ -243,16 +243,16 @@ model ManualOverride {
 // ─── Recurring Transactions ─────────────────────────────
 
 model RecurringTransaction {
-  id             String   @id @default(cuid())
-  merchantId     String
-  merchant       Merchant @relation(fields: [merchantId], references: [id])
-  frequency      String   // "daily" | "weekly" | "monthly" | "yearly"
-  avgAmount      Float
+  id               String    @id @default(cuid())
+  merchantId       String
+  merchant         Merchant  @relation(fields: [merchantId], references: [id])
+  frequency        String // "daily" | "weekly" | "monthly" | "yearly"
+  avgAmount        Float
   nextExpectedDate DateTime?
-  lastSeenDate   DateTime
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  lastSeenDate     DateTime
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 // ─── Budgets ────────────────────────────────────────────
@@ -274,15 +274,15 @@ model Budget {
 // ─── Goals ──────────────────────────────────────────────
 
 model Goal {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  targetAmount Float
-  currentAmount Float   @default(0)
-  deadline    DateTime?
-  icon        String   @default("🎯")
-  isCompleted Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  targetAmount  Float
+  currentAmount Float     @default(0)
+  deadline      DateTime?
+  icon          String    @default("🎯")
+  isCompleted   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }

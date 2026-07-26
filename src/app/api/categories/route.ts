@@ -21,8 +21,19 @@ export async function GET(request: NextRequest) {
 
     if (nested) {
       // Build tree structure
+      interface CategoryNode {
+        id: string;
+        name: string;
+        icon: string;
+        color: string;
+        isSystem: boolean;
+        parentId: string | null;
+        _count?: { transactions: number };
+        children: CategoryNode[];
+      }
+
       const rootCategories = categories.filter(c => !c.parentId);
-      const buildTree = (parentId: string) => {
+      const buildTree = (parentId: string): CategoryNode[] => {
         return categories
           .filter(c => c.parentId === parentId)
           .map(c => ({
@@ -31,7 +42,7 @@ export async function GET(request: NextRequest) {
           }));
       };
 
-      const tree = rootCategories.map(c => ({
+      const tree: CategoryNode[] = rootCategories.map(c => ({
         ...c,
         children: buildTree(c.id),
       }));

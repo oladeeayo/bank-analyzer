@@ -12,19 +12,17 @@ import {
   Settings,
   Target,
   Wallet,
-  CreditCard,
   LogOut,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Payments", href: "/dashboard/transactions", icon: CreditCard },
   { name: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
-  { name: "Invoices", href: "/dashboard/upload", icon: FileSpreadsheet },
-  { name: "Cards", href: "/dashboard/banks", icon: Building2 },
-  { name: "Saving Plans", href: "/dashboard/budgets", icon: Wallet },
-  { name: "Investments", href: "/dashboard/analytics", icon: PieChart },
-  { name: "Insights", href: "/dashboard/goals", icon: Target },
+  { name: "Upload", href: "/dashboard/upload", icon: FileSpreadsheet },
+  { name: "Banks", href: "/dashboard/banks", icon: Building2 },
+  { name: "Budgets", href: "/dashboard/budgets", icon: Wallet },
+  { name: "Analytics", href: "/dashboard/analytics", icon: PieChart },
+  { name: "Goals", href: "/dashboard/goals", icon: Target },
 ];
 
 export function Sidebar() {
