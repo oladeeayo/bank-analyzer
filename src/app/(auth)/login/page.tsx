@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,24 +21,18 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    try {
-      const res = await fetch("/api/auth/sign-in/email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+    const { error: signInError } = await signIn.email({
+      email,
+      password,
+    });
 
-      if (!res.ok) {
-        setError("Invalid email or password");
-        return;
-      }
-
-      router.push("/dashboard");
-    } catch (err) {
-      setError("Something went wrong");
-    } finally {
+    if (signInError) {
+      setError(signInError.message || "Invalid email or password");
       setLoading(false);
+      return;
     }
+
+    router.push("/dashboard");
   };
 
   return (

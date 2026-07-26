@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { signIn } from "@/lib/auth-client";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,9 +29,23 @@ export default function RegisterPage() {
         body: JSON.stringify({ name, email, password }),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || "Registration failed");
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        setError(data.error?.message || data.message || "Registration failed");
+        setLoading(false);
+        return;
+      }
+
+      // Auto sign-in after registration
+      const { error: signInError } = await signIn.email({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError("Account created but sign-in failed. Please go to login.");
+        setLoading(false);
         return;
       }
 
