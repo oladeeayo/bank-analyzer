@@ -6,7 +6,7 @@ export interface ClassificationResult {
   merchantId: string | null;
   categoryId: string | null;
   confidence: number;
-  source: "override" | "rule" | "merchant" | "pattern" | "none";
+  source: "override" | "rule" | "merchant" | "pattern" | "keyword" | "none";
 }
 
 interface ClassificationCache {
@@ -21,6 +21,67 @@ interface ClassificationCache {
   merchantCategoryMap: Map<string, string | null>;
   categoryMap: Map<string, string | null>;
   othersCategoryId: string | null;
+}
+
+const KEYWORD_PATTERNS: Array<{
+  patterns: RegExp[];
+  categoryName: string;
+  confidence: number;
+}> = [
+  // Transfers
+  { patterns: [/transfer\s+(from|to)\s+/i, /transferred?\s+(from|to)\s+/i, /internal\s+transfer/i], categoryName: "Transfer", confidence: 0.9 },
+  // Savings
+  { patterns: [/auto[\s-]?save/i, /savings?\s+(to|from)/i, /save\s+(to|into)\s+/i, /owealth\s+balance/i], categoryName: "Savings", confidence: 0.85 },
+  // Salary / Income
+  { patterns: [/salary/i, /wages?/i, /payroll/i, /income/i], categoryName: "Income", confidence: 0.9 },
+  // Electricity / Utilities
+  { patterns: [/electricity/i, /power\s+(supply|bill|payment)/i, /ikeja\s+electric/i, /bedc/i, /ibedc/i, /aedc/i, /kedco/i, /phcn/i, /prepaid\s+meter/i, /capricorn/i, /kwh/i], categoryName: "Bills & Utilities", confidence: 0.95 },
+  // Water
+  { patterns: [/water\s+(board|supply|bill|payment)/i, /water\s+vendor/i], categoryName: "Bills & Utilities", confidence: 0.9 },
+  // Airtime / Data
+  { patterns: [/airtime/i, /data\s+(bundle|plan|purchase)/i, /recharge/i, /\bvtu\b/i, /glo\s+data/i, /mtn\s+data/i, /9mobile/i, /airtel\s+data/i], categoryName: "Bills & Utilities", confidence: 0.9 },
+  // Subscriptions / Streaming
+  { patterns: [/spotify/i, /netflix/i, /showmax/i, /dstv\s+(explora|subscription)/i, /youtube\s+(premium|music)/i, /apple\s+(music|tv)/i, /prime\s+video/i, /hulu/i, /disney\+/i, /iroll/i, /tv\s+subscription/i], categoryName: "Entertainment", confidence: 0.95 },
+  // Food & Dining
+  { patterns: [/restaurant/i, /food\s+(vendor|court|court|delivery)/i, /chicken\s+republic/i, /pizza/i, /dominos/i, /kfc/i, /burger\s+king/i, /eatwell/i, /buka/i, /mama\s+put/i, /canteen/i], categoryName: "Food & Dining", confidence: 0.85 },
+  // Transport
+  { patterns: [/uber/i, /bolt/i, /taxify/i, /ride\s+(share|hailing)/i, /transport\s+(fare|payment)/i, /bus\s+(fare|ticket)/i, /danfo/i, /keke/i, /okada/i, /uber\s+trip/i], categoryName: "Transport", confidence: 0.9 },
+  // Shopping
+  { patterns: [/shoprite/i, /jumia/i, /konga/i, /slot/i, /computer\s+village/i, /market/i, /mall/i, /store/i, /retail/i], categoryName: "Shopping", confidence: 0.8 },
+  // Healthcare
+  { patterns: [/hospital/i, /pharmacy/i, /clinic/i, /medical/i, /health\s+(care|insurance)/i, /drug/i, /lab\s+(test|result)/i], categoryName: "Healthcare", confidence: 0.85 },
+  // Education
+  { patterns: [/school/i, /university/i, /college/i, /tuition/i, /course/i, /exam/i, /jamb/i, /waec/i, /neco/i], categoryName: "Education", confidence: 0.85 },
+  // Housing
+  { patterns: [/rent/i, /landlord/i, /accommodation/i, /house\s+(rent|payment)/i, /mortgage/i], categoryName: "Housing", confidence: 0.85 },
+  // Investment
+  { patterns: [/investment/i, /dividend/i, /mutual\s+fund/i, /stock/i, /treasury\s+bills/i, /fixed\s+deposit/i, /bond/i, /crypto/i, /bitcoin/i], categoryName: "Investment", confidence: 0.85 },
+];
+
+function matchKeywords(tx: NormalizedTransaction, cache: ClassificationCache): ClassificationResult | null {
+  const desc = tx.description;
+
+  for (const { patterns, categoryName, confidence } of KEYWORD_PATTERNS) {
+    for (const pattern of patterns) {
+      if (pattern.test(desc)) {
+        // Look up category in cache
+        const key = `system_${categoryName}`;
+        const keyLower = `system_${categoryName.toLowerCase()}`;
+        const categoryId = cache.categoryMap.get(key) || cache.categoryMap.get(keyLower) || null;
+
+        if (categoryId) {
+          return {
+            merchantId: null,
+            categoryId,
+            confidence,
+            source: "keyword",
+          };
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
 async function buildClassificationCache(userId: string): Promise<ClassificationCache> {
@@ -251,12 +312,17 @@ export async function classifyBatch(
       result = matchRule(tx, cache);
     }
 
-    // 3. Check if merchant already exists in DB
+    // 3. Check keyword patterns (auto-categorize by description)
+    if (!result) {
+      result = matchKeywords(tx, cache);
+    }
+
+    // 4. Check if merchant already exists in DB
     if (!result) {
       result = matchMerchant(tx, cache);
     }
 
-    // 4. If merchant guess exists but not in DB, create it
+    // 5. If merchant guess exists but not in DB, create it
     if (!result && tx.merchantGuess) {
       const merchantId = await findOrCreateMerchant(tx.merchantGuess, cache);
       if (merchantId && tx.categoryGuess) {
@@ -282,12 +348,12 @@ export async function classifyBatch(
       }
     }
 
-    // 5. Try pattern-based category guess
+    // 6. Try pattern-based category guess
     if (!result) {
       result = matchCategory(tx, cache);
     }
 
-    // 6. Fallback to Others
+    // 7. Fallback to Others
     if (!result) {
       result = {
         merchantId: null,
