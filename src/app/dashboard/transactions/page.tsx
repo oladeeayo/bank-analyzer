@@ -28,8 +28,10 @@ interface Transaction {
 interface Category {
   id: string;
   name: string;
+  slug: string;
   icon: string;
   color: string;
+  sortOrder: number;
   isSystem: boolean;
   parentId: string | null;
   children?: Category[];

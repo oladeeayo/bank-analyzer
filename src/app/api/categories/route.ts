@@ -16,16 +16,17 @@ export async function GET(request: NextRequest) {
       include: {
         _count: { select: { transactions: true } },
       },
-      orderBy: { name: "asc" },
+      orderBy: { sortOrder: "asc" },
     });
 
     if (nested) {
-      // Build tree structure
       interface CategoryNode {
         id: string;
         name: string;
+        slug: string;
         icon: string;
         color: string;
+        sortOrder: number;
         isSystem: boolean;
         parentId: string | null;
         _count?: { transactions: number };
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
       const buildTree = (parentId: string): CategoryNode[] => {
         return categories
           .filter(c => c.parentId === parentId)
+          .sort((a, b) => a.sortOrder - b.sortOrder)
           .map(c => ({
             ...c,
             children: buildTree(c.id),
@@ -65,7 +67,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
     }
 
-    // Check if category already exists for this user
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
     if (userId) {
       const existing = await db.category.findFirst({
         where: {
@@ -88,6 +91,7 @@ export async function POST(request: NextRequest) {
         userId: userId || undefined,
         isSystem: !userId,
         name,
+        slug,
         icon: icon || "📁",
         color: color || "#6B7280",
         parentId: parentId || undefined,

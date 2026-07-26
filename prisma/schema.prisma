@@ -115,8 +115,10 @@ model Category {
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
+  slug      String
   icon      String   @default("📁")
   color     String   @default("#6B7280")
+  sortOrder Int      @default(0)
   isSystem  Boolean  @default(false)
   parentId  String?
   createdAt DateTime @default(now())
@@ -128,7 +130,7 @@ model Category {
   classificationRules ClassificationRule[]
   manualOverrides     ManualOverride[]
 
-  @@unique([userId, name])
+  @@unique([parentId, name])
 }
 
 // ─── Merchants ──────────────────────────────────────────
