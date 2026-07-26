@@ -122,59 +122,71 @@ export default function TransactionsPage() {
   const findSimilarTransactions = useCallback((tx: Transaction) => {
     const STOP_WORDS = new Set(["from", "to", "the", "and", "for", "with", "that", "this", "was", "are", "has", "have", "not", "but", "can", "will", "just", "been", "its", "may", "who", "did", "get", "got", "let", "say", "she", "him", "his", "her", "our", "your", "all", "any", "few", "more", "most", "other", "some", "such", "than", "too", "very", "because", "through", "about", "before", "after", "above", "below", "between", "under", "again", "once", "here", "there", "when", "where", "why", "how", "each", "every", "both", "few", "own", "same", "also", "back", "even", "still", "new", "well", "only", "into", "over", "such", "take", "come", "make", "like", "long", "look", "many", "much", "must", "need", "next", "only", "same", "than", "them", "then", "these", "they", "those", "upon", "what", "when", "your"]);
 
-    const extractWords = (desc: string): string[] => {
+    const BANK_WORDS = new Set(["BANK", "OPAY", "PALMPAY", "TRANSFER", "LOAN", "REPAYMENT", "SAVE", "WITHDRAWAL", "DEPOSIT", "PAYMENT", "POS", "ATM", "USSD", "WEB", "APP", "NIP", "NIBSS", "AUTOSAVE", "EASEMONI", "CASHBACK", "REVERSAL", "CHARGE", "FEE", "INTEREST", "COMMISSION", "TAX", "VAT", "SANDBOX", "LIMIT", "BALANCE", "ACCOUNT", "WALLET", "OLADAYO", "OLADIPUPO"]);
+
+    const extractMeaningfulWords = (desc: string): string[] => {
       return desc
-        .toLowerCase()
+        .toUpperCase()
         .split(/[\s,.\-;:!?/()]+/)
-        .filter(w => w.length > 2 && !STOP_WORDS.has(w));
+        .filter(w => w.length >= 3 && !STOP_WORDS.has(w.toLowerCase()) && !BANK_WORDS.has(w) && !/^\d+$/.test(w));
     };
 
-    const extractNames = (desc: string): string[] => {
-      const words = desc.toUpperCase().split(/[\s,.\-;:!?/()]+/);
-      const nameWords = words.filter(w =>
-        w.length >= 3 &&
-        !STOP_WORDS.has(w.toLowerCase()) &&
-        !/^\d+$/.test(w) &&
-        !["BANK", "OPAY", "PALMPAY", "TRANSFER", "LOAN", "REPAYMENT", "SAVE", "WITHDRAWAL", "DEPOSIT", "PAYMENT", "POS", "ATM", "USSD", "WEB", "APP", "NIP", "NIBSS", "AUTOSAVE", "AUTOSAVE", "EASEMONI", "EASEMONI", "CASHBACK", "REVERSAL", "CHARGE", "FEE", "INTEREST", "COMMISSION", "TAX", "VAT", "CHARGE", "SANDBOX", "LIMIT", "BALANCE", "ACCOUNT", "WALLET"].includes(w)
-      );
-      return nameWords;
+    const wordSimilarity = (a: string, b: string): number => {
+      if (a === b) return 1;
+      const shorter = a.length <= b.length ? a : b;
+      const longer = a.length <= b.length ? b : a;
+      if (longer.startsWith(shorter) || longer.endsWith(shorter)) return 0.85;
+      const threshold = shorter.length <= 4 ? 0.8 : 0.6;
+      const longerRatio = longer.length / shorter.length;
+      if (longerRatio > 1.5) return 0;
+      const aSet = new Set(a.split(""));
+      const bSet = new Set(b.split(""));
+      const intersection = [...aSet].filter(c => bSet.has(c)).length;
+      return intersection / Math.max(aSet.size, bSet.size);
     };
 
-    const exactWords = extractWords(tx.description);
-    const txNames = extractNames(tx.description);
+    const matchWords = (txWords: string[], otherWords: string[]): { exact: string[]; similar: string[] } => {
+      const exact: string[] = [];
+      const similar: string[] = [];
+      for (const tw of txWords) {
+        let found = false;
+        for (const ow of otherWords) {
+          if (tw === ow) {
+            exact.push(tw);
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          for (const ow of otherWords) {
+            if (wordSimilarity(tw, ow) >= 0.7) {
+              similar.push(`${tw}≈${ow}`);
+              break;
+            }
+          }
+        }
+      }
+      return { exact, similar };
+    };
 
+    const txWords = extractMeaningfulWords(tx.description);
     const similar: SimilarTransaction[] = [];
 
     for (const other of transactions) {
       if (other.id === tx.id) continue;
 
-      const otherExactWords = extractWords(other.description);
-      const otherNames = extractNames(other.description);
+      const otherWords = extractMeaningfulWords(other.description);
+      const { exact, similar: sim } = matchWords(txWords, otherWords);
+      const totalScore = exact.length + sim.length * 0.75;
 
-      const exactMatches: string[] = [];
-      for (const tw of exactWords) {
-        if (otherExactWords.includes(tw)) {
-          exactMatches.push(tw);
-        }
-      }
-
-      const nameMatches: string[] = [];
-      for (const tn of txNames) {
-        if (otherNames.includes(tn)) {
-          nameMatches.push(tn);
-        }
-      }
-
-      const totalExact = exactMatches.length + nameMatches.length;
-
-      if (tx.type === other.type && nameMatches.length >= 1 && exactMatches.length >= 1) {
+      if (tx.type === other.type && totalScore >= 2) {
         similar.push({
           id: other.id,
           description: other.description,
           amount: other.amount,
           type: other.type,
           date: other.date,
-          matchReason: `Exact: ${[...new Set([...exactMatches, ...nameMatches])].join(", ")}`,
+          matchReason: `Exact: ${exact.join(", ")}${sim.length ? ` Similar: ${sim.join(", ")}` : ""}`,
         });
       } else if (tx.type === other.type && tx.merchantId && tx.merchantId === other.merchantId) {
         similar.push({
@@ -185,14 +197,14 @@ export default function TransactionsPage() {
           date: other.date,
           matchReason: "Same merchant",
         });
-      } else if (tx.type !== other.type && tx.amount !== 0 && other.amount !== 0 && Math.abs(tx.amount - other.amount) / tx.amount < 0.01 && nameMatches.length >= 1) {
+      } else if (tx.type !== other.type && tx.amount !== 0 && other.amount !== 0 && Math.abs(tx.amount - other.amount) / tx.amount < 0.01 && totalScore >= 1.5) {
         similar.push({
           id: other.id,
           description: other.description,
           amount: other.amount,
           type: other.type,
           date: other.date,
-          matchReason: `Transfer: ${nameMatches.join(", ")} (${tx.type === "credit" ? "in" : "out"} → ${other.type === "credit" ? "in" : "out"})`,
+          matchReason: `Transfer: ${[...exact, ...sim].join(", ")} (${tx.type === "credit" ? "in" : "out"} → ${other.type === "credit" ? "in" : "out"})`,
         });
       }
     }
