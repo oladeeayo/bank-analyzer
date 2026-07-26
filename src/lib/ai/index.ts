@@ -32,54 +32,39 @@ Transfers: Personal Transfer, Family Support, Business Transfer, Self Transfer, 
 Government: Tax, Fine, Registration, License, Other Government
 Others: Uncategorized, Miscellaneous, Unknown`;
 
-const MERCHANT_PROMPT = `You are an expert Nigerian bank transaction analyzer. Your job is to extract the merchant/person name and categorize the transaction intelligently.
+const MERCHANT_PROMPT = `You are an expert Nigerian bank transaction analyzer for OPay/PalmPay banks.
 
-PATTERN RECOGNITION RULES:
-1. TRANSFERS: "Transfer to/from NAME | BANK | ACCOUNT"
-   - Merchant = NAME (the person or business receiving/sending)
-   - Type = "person" for individuals, "business" for companies
-   - Category = "Transfers" → subcategory: "Personal Transfer" (individuals), "Business Transfer" (companies)
+NIGERIAN BANK KNOWLEDGE:
+- OWealth is OPay's savings feature. "OWealth Withdrawal" means money moving FROM savings TO wallet (not income).
+- "OWealth Deposit" means money moving FROM wallet TO savings.
+- "Auto-save to OWealth" means automatic transfer INTO savings.
+- EaseMoni is OPay's loan feature. Credits = loan disbursement, Debits = loan repayment.
+- "Transfer from NAME | BANK | ACCOUNT" = someone sent you money.
+- "Transfer to NAME | BANK | ACCOUNT" = you sent someone money.
+- "Mobile Data | NUMBER | CARRIER | PLAN" = data purchase.
+- "Electricity | NUMBER | PROVIDER | KWH" = electricity token purchase.
+- "OPay Card Payment | MERCHANT" = POS/card payment to a merchant.
+- "Stamp Duty" = CBN bank fee (₦50).
+- "USSD Charge" = bank fee for USSD transactions.
 
-2. BILLS: "Electricity | NUMBER | PROVIDER | KWH" or "Water | NUMBER | PROVIDER"
-   - Merchant = PROVIDER (e.g., "IBEDC", "IKEJA ELECTRIC", "PHED")
-   - Type = "service"
-   - Category = "Bills" → subcategory: "Electricity" or "Water"
-
-3. DATA/AIRTIME: "Mobile Data | NUMBER | CARRIER | PLAN" or "Airtime | NUMBER | CARRIER"
-   - Merchant = CARRIER (e.g., "MTN", "GLO", "AIRTEL", "9MOBILE")
-   - Type = "service"
-   - Category = "Bills" → subcategory: "Phone" or "Internet"
-
-4. SUBSCRIPTIONS: "OPay Card Payment | SERVICE" or descriptions with "Spotify", "Netflix", etc.
-   - Merchant = SERVICE name
-   - Type = "business" or "platform"
-   - Category = "Entertainment" → subcategory: "Streaming"
-
-5. POS/ATM: Terminal name or location
-   - Merchant = terminal name/location
-   - Category = appropriate based on context
-
-6. SALARY: "SALARY", "WAGES", "PAYROLL"
-   - Merchant = "Salary"
-   - Category = "Income" → subcategory: "Salary"
-
-7. SAVINGS: "AUTOSAVE", "SAVE", "OWEALTH"
-   - Merchant = "Savings"
-   - Category = "Savings" → subcategory: "AutoSave"
-
-MERCHANT TYPE CLASSIFICATION:
-- "person": Individual human (e.g., "OLADEJI ISAIAH", "FAITH EREZIOGHENE")
-- "business": Registered company (e.g., "IKEOLUWA UNIQUE ENTERPRISE", "CHECKOUT LIMITED")
-- "service": Utility/service (MTN, IBEDC, DSTV, Spotify)
-- "platform": Payment platform (OPay, PalmPay, Paystack, Flutterwave)
-- "unknown": Cannot determine
+CATEGORY RULES:
+- OWealth Withdrawal → Savings → Other Savings (NOT income, money is leaving savings)
+- OWealth Deposit → Savings → Other Savings (money entering savings)
+- Auto-save to OWealth → Savings → AutoSave
+- EaseMoni credit → Financial Services → Loan Repayment (loan disbursement)
+- EaseMoni debit → Financial Services → Loan Repayment (loan repayment)
+- Transfer from person → Transfers → Personal Transfer
+- Transfer to person → Transfers → Personal Transfer
+- Mobile Data → Bills → Phone
+- Electricity → Bills → Electricity
+- Spotify/Netflix → Entertainment → Streaming
+- Stamp Duty/USSD → Financial Services → Bank Fees
 
 CONFIDENCE SCORING:
-- 0.9-1.0: Clear pattern match (exact bank format)
+- 0.9-1.0: Exact pattern match with known bank format
 - 0.7-0.8: Strong keyword match
-- 0.5-0.6: Partial match, some ambiguity
-- 0.3-0.4: Weak match, needs review
-- 0.1-0.2: Guessing
+- 0.5-0.6: Partial match
+- Below 0.5: Needs review
 
 Respond in JSON only:
 {
@@ -88,7 +73,7 @@ Respond in JSON only:
   "category": "Category from the list",
   "subcategory": "Subcategory from the list",
   "confidence": 0.0-1.0,
-  "reason": "Brief explanation of how you determined this"
+  "reason": "Brief explanation"
 }
 
 Available categories and subcategories:
@@ -150,15 +135,33 @@ export async function batchClassify(
     const batch = transactions.slice(i, i + BATCH_SIZE);
     const data = JSON.stringify(batch, null, 2);
 
-    const prompt = `You are an expert Nigerian bank transaction analyzer. Classify each transaction intelligently.
+    const prompt = `You are an expert Nigerian bank transaction analyzer for OPay/PalmPay banks.
 
-PATTERNS TO RECOGNIZE:
-- "Transfer to/from NAME | BANK | ACCOUNT" → Merchant is the NAME (person/business)
-- "Mobile Data | NUMBER | CARRIER | PLAN" → Merchant is CARRIER (MTN, GLO, etc.)
-- "Electricity | NUMBER | PROVIDER | KWH" → Merchant is PROVIDER (IBEDC, etc.)
-- "OPay Card Payment | SERVICE" → Merchant is SERVICE
-- Salary/Payroll payments → Category is Income/Salary
-- Savings/AutoSave → Category is Savings/AutoSave
+NIGERIAN BANK KNOWLEDGE:
+- OWealth is OPay's savings feature. "OWealth Withdrawal" = money moving FROM savings TO wallet (NOT income).
+- "OWealth Deposit" = money moving FROM wallet TO savings.
+- "Auto-save to OWealth" = automatic transfer INTO savings.
+- EaseMoni is OPay's loan feature. Credits = loan disbursement, Debits = loan repayment.
+- "Transfer from NAME | BANK | ACCOUNT" = someone sent you money.
+- "Transfer to NAME | BANK | ACCOUNT" = you sent someone money.
+- "Mobile Data | NUMBER | CARRIER | PLAN" = data purchase.
+- "Electricity | NUMBER | PROVIDER | KWH" = electricity token purchase.
+- "OPay Card Payment | MERCHANT" = POS/card payment to a merchant.
+- "Stamp Duty" = CBN bank fee (₦50).
+- "USSD Charge" = bank fee for USSD transactions.
+
+CATEGORY RULES:
+- OWealth Withdrawal → Savings → Other Savings (NOT income)
+- OWealth Deposit → Savings → Other Savings
+- Auto-save to OWealth → Savings → AutoSave
+- EaseMoni credit → Financial Services → Loan Repayment
+- EaseMoni debit → Financial Services → Loan Repayment
+- Transfer from person → Transfers → Personal Transfer
+- Transfer to person → Transfers → Personal Transfer
+- Mobile Data → Bills → Phone
+- Electricity → Bills → Electricity
+- Spotify/Netflix → Entertainment → Streaming
+- Stamp Duty/USSD → Financial Services → Bank Fees
 
 For each transaction, determine:
 1. WHO is the merchant/person? (extract the actual name)
