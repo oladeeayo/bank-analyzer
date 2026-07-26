@@ -77,9 +77,11 @@ export default function DashboardPage() {
   const { user, loading: userLoading } = useUser();
 
   useEffect(() => {
-    fetchDashboard();
-    fetchTransactions();
-    fetchMerchantSummary();
+    if (user) {
+      fetchDashboard();
+      fetchTransactions();
+      fetchMerchantSummary();
+    }
   }, [month, year, user]);
 
   if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;

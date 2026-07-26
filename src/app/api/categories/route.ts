@@ -45,6 +45,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
     }
 
+    // Check if category already exists for this user
+    if (userId) {
+      const existing = await db.category.findFirst({
+        where: {
+          name,
+          OR: [
+            { userId },
+            { isSystem: true },
+          ],
+        },
+      });
+
+      if (existing) {
+        return NextResponse.json(existing);
+      }
+    }
+
     const category = await db.category.create({
       data: {
         userId: userId || undefined,

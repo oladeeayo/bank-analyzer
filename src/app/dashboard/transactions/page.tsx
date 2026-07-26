@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Search, Edit, ArrowUpRight, ArrowDownRight, Calendar, Building2, DollarSign, Wand2, ChevronLeft, ChevronRight, Zap, Check, AlertCircle } from "lucide-react";
+import { Search, Edit, ArrowUpRight, ArrowDownRight, Calendar, Building2, DollarSign, Wand2, ChevronLeft, ChevronRight, Zap, Check, AlertCircle, Plus, X, Link } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
 
@@ -18,11 +18,11 @@ interface Transaction {
   type: string;
   balance: number | null;
   reference: string | null;
-  bank: { bankName: string; nickname: string | null };
-  merchant: { displayName: string; icon: string; color: string } | null;
-  category: { name: string; icon: string; color: string } | null;
-  categoryId: string | null;
   merchantId: string | null;
+  categoryId: string | null;
+  bank: { bankName: string; nickname: string | null };
+  merchant: { id: string; displayName: string; icon: string; color: string } | null;
+  category: { id: string; name: string; icon: string; color: string } | null;
 }
 
 interface Category {
@@ -34,6 +34,15 @@ interface Category {
   _count?: { transactions: number };
 }
 
+interface SimilarTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: string;
+  date: string;
+  matchReason: string;
+}
+
 export default function TransactionsPage() {
   const { user, loading: userLoading } = useUser();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -41,18 +50,21 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
-  const [filterBank, setFilterBank] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [similarTxs, setSimilarTxs] = useState<SimilarTransaction[]>([]);
+  const [showSimilar, setShowSimilar] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [editingMerchant, setEditingMerchant] = useState(false);
+  const [merchantName, setMerchantName] = useState("");
   const [ruleForm, setRuleForm] = useState({
     normalizedMerchant: "",
     categoryId: "",
-    regexExact: true,
-    ignoreNumbers: false,
     markTransfer: false,
   });
 
@@ -61,7 +73,7 @@ export default function TransactionsPage() {
       fetchTransactions();
       fetchCategories();
     }
-  }, [search, filterType, filterBank, page, user]);
+  }, [search, filterType, page, user]);
 
   if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
 
@@ -101,20 +113,103 @@ export default function TransactionsPage() {
     }
   };
 
-  const handleRuleApply = async () => {
+  const findSimilarTransactions = useCallback((tx: Transaction) => {
+    const similar: SimilarTransaction[] = [];
+    const txDesc = tx.normalizedDescription || tx.description;
+    const txWords = txDesc.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+
+    for (const other of transactions) {
+      if (other.id === tx.id) continue;
+
+      const otherDesc = other.normalizedDescription || other.description;
+      const otherWords = otherDesc.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+
+      // Count matching words
+      let matchCount = 0;
+      const matchedWords: string[] = [];
+      for (const tw of txWords) {
+        for (const ow of otherWords) {
+          if (tw === ow || tw.includes(ow) || ow.includes(tw)) {
+            matchCount++;
+            matchedWords.push(tw);
+            break;
+          }
+        }
+      }
+
+      // Same type (debit/credit) and meaningful word match
+      if (tx.type === other.type && matchCount >= 2) {
+        similar.push({
+          id: other.id,
+          description: otherDesc,
+          amount: other.amount,
+          type: other.type,
+          date: other.date,
+          matchReason: `Matches: ${matchedWords.join(", ")}`,
+        });
+      }
+      // Same type and same merchant
+      else if (tx.type === other.type && tx.merchantId && tx.merchantId === other.merchantId) {
+        similar.push({
+          id: other.id,
+          description: otherDesc,
+          amount: other.amount,
+          type: other.type,
+          date: other.date,
+          matchReason: "Same merchant",
+        });
+      }
+      // Transfer detection: opposite type, same amount
+      else if (tx.type !== other.type && Math.abs(tx.amount - other.amount) / tx.amount < 0.01) {
+        similar.push({
+          id: other.id,
+          description: otherDesc,
+          amount: other.amount,
+          type: other.type,
+          date: other.date,
+          matchReason: "Potential transfer (same amount)",
+        });
+      }
+    }
+
+    setSimilarTxs(similar);
+    setShowSimilar(similar.length > 0);
+  }, [transactions]);
+
+  const handleSave = async () => {
     if (!selectedTx) return;
 
     setSaving(true);
     setSaveMessage(null);
 
     try {
+      // Create new category if needed
+      let categoryId = ruleForm.categoryId;
+      if (showNewCategory && newCategoryName) {
+        const catRes = await fetch("/api/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user?.id,
+            name: newCategoryName,
+            icon: "📁",
+            color: "#6B7280",
+          }),
+        });
+        if (catRes.ok) {
+          const newCat = await catRes.json();
+          categoryId = newCat.id;
+          fetchCategories();
+        }
+      }
+
       const res = await fetch(`/api/transactions/${selectedTx.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          merchantId: null, // Will be resolved by backend from merchant name
-          categoryId: ruleForm.categoryId || null,
-          normalizedDescription: ruleForm.normalizedMerchant || undefined,
+          merchantId: selectedTx.merchantId || null,
+          categoryId: categoryId || null,
+          normalizedDescription: merchantName || ruleForm.normalizedMerchant || undefined,
           isTransfer: ruleForm.markTransfer,
         }),
       });
@@ -123,18 +218,19 @@ export default function TransactionsPage() {
         const data = await res.json();
         setSaveMessage({
           type: "success",
-          text: `Saved! ${data.updatedSimilarCount > 0 ? `Updated ${data.updatedSimilarCount} similar transactions.` : "No similar transactions found."}`,
+          text: `Saved! ${data.updatedSimilarCount > 0 ? `Updated ${data.updatedSimilarCount} similar transactions.` : ""}`,
         });
         fetchTransactions();
         setTimeout(() => {
           setSelectedTx(null);
           setSaveMessage(null);
+          setShowSimilar(false);
         }, 2000);
       } else {
-        setSaveMessage({ type: "error", text: "Failed to save. Please try again." });
+        setSaveMessage({ type: "error", text: "Failed to save." });
       }
     } catch (err) {
-      setSaveMessage({ type: "error", text: "Network error. Please try again." });
+      setSaveMessage({ type: "error", text: "Network error." });
     } finally {
       setSaving(false);
     }
@@ -142,7 +238,6 @@ export default function TransactionsPage() {
 
   const handleBulkCategory = async (categoryId: string) => {
     if (selectedIds.size === 0) return;
-
     setSaving(true);
     try {
       const promises = Array.from(selectedIds).map(id =>
@@ -152,7 +247,6 @@ export default function TransactionsPage() {
           body: JSON.stringify({ categoryId }),
         })
       );
-
       await Promise.all(promises);
       setSelectedIds(new Set());
       fetchTransactions();
@@ -168,11 +262,14 @@ export default function TransactionsPage() {
     setRuleForm({
       normalizedMerchant: tx.merchant?.displayName || tx.normalizedDescription || "",
       categoryId: tx.categoryId || "",
-      regexExact: true,
-      ignoreNumbers: false,
       markTransfer: false,
     });
+    setMerchantName(tx.merchant?.displayName || "");
+    setEditingMerchant(false);
     setSaveMessage(null);
+    setNewCategoryName("");
+    setShowNewCategory(false);
+    findSimilarTransactions(tx);
   };
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
@@ -185,13 +282,11 @@ export default function TransactionsPage() {
     });
   };
 
-  // Group categories by parent for better UX
-  const parentCategories = categories.filter(c => !categories.some(p => p.name === c.name && categories.some(sub => sub.name === p.name)));
-  const getCategoryDisplay = (cat: Category) => `${cat.icon} ${cat.name}`;
+  const parentCategories = categories.filter(c => c.isSystem);
+  const userCategories = categories.filter(c => !c.isSystem);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="font-signifier text-[28px] text-ink-black">Cleaning Rules Engine</h1>
         <p className="text-sm text-ash-gray">Standardizing messy transaction data</p>
@@ -203,14 +298,6 @@ export default function TransactionsPage() {
           <Calendar className="h-4 w-4 text-slate-gray" />
           <span className="text-sm text-ink-black">Oct 1, 2023 - Oct 31, 2023</span>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-mist-gray rounded-lg border border-[#ececec]">
-          <Building2 className="h-4 w-4 text-slate-gray" />
-          <span className="text-sm text-ink-black">All Banks</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-mist-gray rounded-lg border border-[#ececec]">
-          <DollarSign className="h-4 w-4 text-slate-gray" />
-          <span className="text-sm text-ink-black">All Amounts</span>
-        </div>
         <div className="ml-auto flex items-center gap-2">
           {selectedIds.size > 0 && (
             <select
@@ -220,18 +307,14 @@ export default function TransactionsPage() {
             >
               <option value="">Bulk: Set Category ({selectedIds.size} selected)</option>
               {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{getCategoryDisplay(cat)}</option>
+                <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
               ))}
             </select>
           )}
-          <Button variant="outline" size="sm" className="gap-2" disabled={selectedIds.size === 0}>
-            <Edit className="h-4 w-4" />
-            Bulk Edit
-          </Button>
         </div>
       </div>
 
-      {/* Main Content: Table + Rules Sidebar */}
+      {/* Main Content */}
       <div className="grid grid-cols-12 gap-6">
         {/* Transaction Table */}
         <div className="col-span-12 lg:col-span-8 bg-paper-white border border-[#ececec] rounded-cards overflow-hidden">
@@ -245,25 +328,22 @@ export default function TransactionsPage() {
                       className="rounded border-[#ececec]"
                       checked={selectedIds.size === transactions.length && transactions.length > 0}
                       onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIds(new Set(transactions.map(t => t.id)));
-                        } else {
-                          setSelectedIds(new Set());
-                        }
+                        if (e.target.checked) setSelectedIds(new Set(transactions.map(t => t.id)));
+                        else setSelectedIds(new Set());
                       }}
                     />
                   </th>
                   <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">Date</th>
-                  <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">Original Description</th>
+                  <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">Description</th>
                   <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">Merchant</th>
                   <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">Category</th>
-                  <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">Bank</th>
+                  <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">Type</th>
                   <th className="text-right text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#ececec]">
                 {loading ? (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-ash-gray text-sm">Loading transactions...</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-ash-gray text-sm">Loading...</td></tr>
                 ) : transactions.length === 0 ? (
                   <tr><td colSpan={7} className="px-4 py-8 text-center text-ash-gray text-sm">No transactions found</td></tr>
                 ) : (
@@ -292,10 +372,7 @@ export default function TransactionsPage() {
                               <span className="font-semibold text-sm text-ink-black">{tx.merchant.displayName}</span>
                             </>
                           ) : (
-                            <>
-                              <span className="text-slate-gray">❓</span>
-                              <span className="italic text-slate-gray text-sm">Unnormalized</span>
-                            </>
+                            <span className="italic text-slate-gray text-sm">—</span>
                           )}
                         </div>
                       </td>
@@ -307,13 +384,16 @@ export default function TransactionsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-3 w-3 text-forest" />
-                          <span className="text-sm text-slate-gray">{tx.bank.nickname || tx.bank.bankName}</span>
-                        </div>
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          tx.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-error/10 text-error"
+                        }`}>
+                          {tx.type === "credit" ? "CREDIT" : "DEBIT"}
+                        </span>
                       </td>
                       <td className="px-4 py-4 text-right font-mono font-medium text-ink-black">
-                        {formatCurrency(tx.amount)}
+                        <span className={tx.type === "credit" ? "text-forest" : "text-error"}>
+                          {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
+                        </span>
                       </td>
                     </tr>
                   ))
@@ -322,10 +402,9 @@ export default function TransactionsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           <div className="p-4 border-t border-[#ececec] flex items-center justify-between bg-mist-gray">
             <span className="text-xs text-ash-gray">
-              Showing {(page - 1) * 50 + 1}-{Math.min(page * 50, total)} of {total} transactions
+              Showing {(page - 1) * 50 + 1}-{Math.min(page * 50, total)} of {total}
             </span>
             <div className="flex gap-2">
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
@@ -338,10 +417,10 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        {/* Rules Sidebar Engine */}
-        <div className="col-span-12 lg:col-span-4 bg-paper-white border border-[#ececec] rounded-cards p-6 flex flex-col gap-6 overflow-y-auto max-h-[calc(100vh-280px)]">
+        {/* Edit Sidebar */}
+        <div className="col-span-12 lg:col-span-4 bg-paper-white border border-[#ececec] rounded-cards p-6 flex flex-col gap-4 overflow-y-auto max-h-[calc(100vh-280px)]">
           <div className="flex items-center justify-between">
-            <h3 className="font-signifier text-lg text-ink-black">Rule Configuration</h3>
+            <h3 className="font-signifier text-lg text-ink-black">Edit Transaction</h3>
             <div className="bg-forest p-1 rounded-lg">
               <Wand2 className="h-4 w-4 text-lime-vibrant" />
             </div>
@@ -352,97 +431,151 @@ export default function TransactionsPage() {
               {/* Save Message */}
               {saveMessage && (
                 <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${
-                  saveMessage.type === "success"
-                    ? "bg-lime-vibrant/20 text-forest"
-                    : "bg-error/10 text-error"
+                  saveMessage.type === "success" ? "bg-lime-vibrant/20 text-forest" : "bg-error/10 text-error"
                 }`}>
-                  {saveMessage.type === "success" ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4" />
-                  )}
+                  {saveMessage.type === "success" ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
                   {saveMessage.text}
                 </div>
               )}
 
-              {/* Detected Pattern */}
+              {/* Transaction Info */}
               <div className="p-4 bg-mist-gray rounded-lg border border-[#ececec]">
-                <p className="text-xs text-ash-gray mb-1">Detected Pattern</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-ash-gray">Original Description</p>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                    selectedTx.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-error/10 text-error"
+                  }`}>
+                    {selectedTx.type === "credit" ? "CREDIT" : "DEBIT"}
+                  </span>
+                </div>
                 <p className="font-mono text-sm text-ink-black bg-paper-white p-2 rounded border border-[#ececec]">
                   {selectedTx.description}
                 </p>
               </div>
 
-              {/* Form Fields */}
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-xs font-semibold text-ink-black mb-1 block">Normalized Merchant</Label>
-                  <Input
-                    value={ruleForm.normalizedMerchant}
-                    onChange={(e) => setRuleForm({ ...ruleForm, normalizedMerchant: e.target.value })}
-                    placeholder="e.g. Shoprite"
-                    className="bg-paper-white border-[#ececec] rounded-lg text-sm"
-                  />
-                </div>
+              {/* Merchant Name (editable) */}
+              <div>
+                <Label className="text-xs font-semibold text-ink-black mb-1 block">Merchant Name</Label>
+                {editingMerchant ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={merchantName}
+                      onChange={(e) => setMerchantName(e.target.value)}
+                      placeholder="e.g. Shoprite"
+                      className="bg-paper-white border-[#ececec] rounded-lg text-sm"
+                    />
+                    <Button size="sm" onClick={() => {
+                      setRuleForm({ ...ruleForm, normalizedMerchant: merchantName });
+                      setEditingMerchant(false);
+                    }}>
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingMerchant(false)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-ink-black flex-1">{merchantName || "—"}</span>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingMerchant(true)}>
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
 
-                <div>
-                  <Label className="text-xs font-semibold text-ink-black mb-1 block">Category Assignment</Label>
-                  <select
-                    value={ruleForm.categoryId}
-                    onChange={(e) => setRuleForm({ ...ruleForm, categoryId: e.target.value })}
-                    className="w-full bg-paper-white border border-[#ececec] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-lime-vibrant/50"
-                  >
-                    <option value="">Select category...</option>
-                    {categories.map((cat) => (
+              {/* Category */}
+              <div>
+                <Label className="text-xs font-semibold text-ink-black mb-1 block">Category</Label>
+                <select
+                  value={showNewCategory ? "__new__" : ruleForm.categoryId}
+                  onChange={(e) => {
+                    if (e.target.value === "__new__") {
+                      setShowNewCategory(true);
+                      setRuleForm({ ...ruleForm, categoryId: "" });
+                    } else {
+                      setShowNewCategory(false);
+                      setRuleForm({ ...ruleForm, categoryId: e.target.value });
+                    }
+                  }}
+                  className="w-full bg-paper-white border border-[#ececec] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-lime-vibrant/50"
+                >
+                  <option value="">Select category...</option>
+                  {parentCategories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                  ))}
+                  {userCategories.length > 0 && <optgroup label="Your Categories">
+                    {userCategories.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
                     ))}
-                  </select>
-                </div>
+                  </optgroup>}
+                  <option value="__new__">+ Create New Category</option>
+                </select>
 
-                {/* Advanced Matching */}
-                <div className="p-4 bg-lime-vibrant/10 rounded-lg border border-lime/20">
-                  <h4 className="text-xs font-semibold text-lime flex items-center gap-2 mb-3">
-                    <Wand2 className="h-3 w-3" />
-                    Advanced Matching
-                  </h4>
-                  <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-2 text-xs cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={ruleForm.regexExact}
-                        onChange={(e) => setRuleForm({ ...ruleForm, regexExact: e.target.checked })}
-                        className="rounded border-[#ececec]"
-                      />
-                      Regex Exact Match
-                    </label>
-                    <label className="flex items-center gap-2 text-xs cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={ruleForm.ignoreNumbers}
-                        onChange={(e) => setRuleForm({ ...ruleForm, ignoreNumbers: e.target.checked })}
-                        className="rounded border-[#ececec]"
-                      />
-                      Ignore Numbers/Dates
-                    </label>
-                    <label className="flex items-center gap-2 text-xs cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={ruleForm.markTransfer}
-                        onChange={(e) => setRuleForm({ ...ruleForm, markTransfer: e.target.checked })}
-                        className="rounded border-[#ececec]"
-                      />
-                      Mark as Internal Transfer
-                    </label>
+                {showNewCategory && (
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="Category name"
+                      className="bg-paper-white border-[#ececec] rounded-lg text-sm"
+                    />
+                    <Button size="sm" onClick={() => {
+                      if (newCategoryName) {
+                        setShowNewCategory(false);
+                      }
+                    }}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
                   </div>
-                </div>
+                )}
               </div>
+
+              {/* Mark as Transfer */}
+              <div className="p-4 bg-lime-vibrant/10 rounded-lg border border-lime/20">
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={ruleForm.markTransfer}
+                    onChange={(e) => setRuleForm({ ...ruleForm, markTransfer: e.target.checked })}
+                    className="rounded border-[#ececec]"
+                  />
+                  Mark as Internal Transfer
+                </label>
+              </div>
+
+              {/* Similar Transactions */}
+              {showSimilar && similarTxs.length > 0 && (
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Link className="h-4 w-4 text-blue-600" />
+                    <p className="text-xs font-semibold text-blue-800">
+                      {similarTxs.length} Similar Transaction{similarTxs.length > 1 ? "s" : ""} Found
+                    </p>
+                  </div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {similarTxs.slice(0, 5).map(s => (
+                      <div key={s.id} className="flex items-center justify-between text-xs">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-blue-900 truncate">{s.description}</p>
+                          <p className="text-blue-600 text-[10px]">{s.matchReason}</p>
+                        </div>
+                        <span className={`ml-2 font-mono ${s.type === "credit" ? "text-forest" : "text-error"}`}>
+                          {s.type === "credit" ? "+" : "-"}{formatCurrency(s.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-blue-600 mt-2">These will be updated with the same category.</p>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="pt-4 flex flex-col gap-3 border-t border-[#ececec]">
-                <Button onClick={handleRuleApply} className="w-full" disabled={saving}>
-                  {saving ? "Saving..." : "Apply to Similar Transactions"}
+                <Button onClick={handleSave} className="w-full" disabled={saving}>
+                  {saving ? "Saving..." : "Save & Apply to Similar"}
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => setSelectedTx(null)}>
+                <Button variant="outline" className="w-full" onClick={() => { setSelectedTx(null); setShowSimilar(false); }}>
                   Cancel
                 </Button>
               </div>
@@ -451,27 +584,11 @@ export default function TransactionsPage() {
             <div className="flex-1 flex items-center justify-center text-center py-8">
               <div className="text-ash-gray">
                 <Wand2 className="h-8 w-8 mx-auto mb-3 opacity-50" />
-                <p className="text-sm">Select a transaction to edit its cleaning rule</p>
+                <p className="text-sm">Select a transaction to edit</p>
               </div>
             </div>
           )}
-
-          {/* Data Quality Score */}
-          <div className="mt-auto pt-6 border-t border-[#ececec]">
-            <p className="text-xs text-ash-gray mb-2">Data Quality Score</p>
-            <div className="w-full h-2 bg-mist-gray rounded-full overflow-hidden">
-              <div className="w-[88%] h-full bg-lime rounded-full"></div>
-            </div>
-            <p className="text-right text-[10px] font-semibold text-lime mt-1">88% of data is cleaned</p>
-          </div>
         </div>
-      </div>
-
-      {/* Floating Action Button */}
-      <div className="fixed bottom-8 right-8 z-50">
-        <button className="bg-lime text-white w-14 h-14 rounded-full flex items-center justify-center shadow-elevated hover:scale-105 active:scale-95 transition-transform">
-          <Zap className="h-6 w-6" fill="currentColor" />
-        </button>
       </div>
     </div>
   );

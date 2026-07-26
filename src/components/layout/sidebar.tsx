@@ -67,17 +67,6 @@ export function Sidebar() {
 
       {/* Bottom Section */}
       <div className="mt-auto flex flex-col gap-2">
-        {/* Pro Card */}
-        <div className="bg-forest p-4 rounded-cards relative overflow-hidden group">
-          <div className="relative z-10">
-            <p className="text-white/80 text-sm mb-2">Analyze spending, gain financial control.</p>
-            <button className="bg-lime-vibrant text-forest px-4 py-2 rounded-buttons text-sm font-semibold w-full hover:brightness-95 transition-all">
-              Get Pro
-            </button>
-          </div>
-          <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-lime-vibrant/20 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
-        </div>
-
         {/* Settings & Logout */}
         <Link
           href="/dashboard/settings"
