@@ -234,6 +234,8 @@ export default function TransactionsPage() {
 
       if (res.ok) {
         const data = await res.json();
+        setSelectedTx(data.transaction);
+        setMerchantName(data.transaction.merchant?.displayName || merchantName);
         setSaveMessage({
           type: "success",
           text: `Saved! ${data.updatedSimilarCount > 0 ? `${data.updatedSimilarCount} similar updated.` : ""}`,
