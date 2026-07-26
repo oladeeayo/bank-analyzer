@@ -248,16 +248,45 @@ function cleanDescription(desc: string): string {
 }
 
 function extractMerchant(cleaned: string): string {
-  const lower = cleaned.toLowerCase();
+  // Handle pipe-separated transfer descriptions
+  // "Transfer from TEMITOPEMARY AYEOYENKAN | POCKETAPP | 191****823"
+  // "Transfer to IKEOLUWA UNIQUE ENTERPRISE  | OPay | 7071750698"
+  const pipeTransferMatch = cleaned.match(/^Transfer\s+(to|from)\s+(.+?)\s*\|/i);
+  if (pipeTransferMatch) {
+    const name = pipeTransferMatch[2].trim();
+    if (name.length >= 3) {
+      return name.toUpperCase();
+    }
+  }
 
-  // Extract name from transfer descriptions
-  // "Transfer to Faith Erezioghene Awenede" → "Faith Erezioghene Awenede"
-  // "Transfer from ADEKUNBI TOYIN BABATUNDE" → "ADEKUNBI TOYIN BABATUNDE"
-  const transferMatch = lower.match(/transfer\s+(to|from)\s+(.+?)(?:\s*\||\s*$)/i);
+  // Handle non-pipe transfer descriptions
+  // "Transfer from OLADEJI ISAIAH OLADIPUPO | OPay"
+  const transferMatch = cleaned.match(/^Transfer\s+(to|from)\s+(.+?)$/i);
   if (transferMatch) {
     const name = transferMatch[2].trim();
     if (name.length >= 3) {
       return name.toUpperCase();
+    }
+  }
+
+  // Handle pipe-separated non-transfer descriptions
+  // "Mobile Data | 8136167673 | MTN | 6GB Weekly Plan"
+  // "Electricity | 70004967884 | capricorn_ibadan_prepaid | 100.67 kWh"
+  // "OPay Card Payment | Spotify"
+  const pipeMatch = cleaned.match(/^([^|]+)\s*\|/);
+  if (pipeMatch) {
+    const service = pipeMatch[1].trim();
+    // For "OPay Card Payment | Spotify" → use the second part
+    if (service.toLowerCase().includes("card payment")) {
+      const secondPart = cleaned.split("|")[1]?.trim();
+      if (secondPart && secondPart.length >= 2) {
+        return secondPart.toUpperCase();
+      }
+    }
+    // For "Electricity | ..." → "ELECTRICITY"
+    // For "Mobile Data | ..." → "MOBILE DATA"
+    if (service.length >= 3) {
+      return service.toUpperCase();
     }
   }
 

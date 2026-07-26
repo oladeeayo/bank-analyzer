@@ -180,6 +180,8 @@ export default function TransactionsPage() {
     const txWords = extractMeaningfulWords(tx.description);
     const similar: SimilarTransaction[] = [];
 
+    const isTransfer = (desc: string) => /^Transfer\s+(to|from)\s+/i.test(desc);
+
     for (const other of transactions) {
       if (other.id === tx.id) continue;
 
@@ -187,7 +189,28 @@ export default function TransactionsPage() {
       const { exact, similar: sim } = matchWords(txWords, otherWords);
       const totalScore = exact.length + sim.length * 0.75;
 
-      if (tx.type === other.type && totalScore >= 2) {
+      const txIsTransfer = isTransfer(tx.description);
+      const otherIsTransfer = isTransfer(other.description);
+
+      // For transfers: require exact name match (3+ words), not just similar words
+      if (txIsTransfer && otherIsTransfer && tx.type === other.type) {
+        const txName = tx.description.replace(/^Transfer\s+(to|from)\s+/i, "").split("|")[0].trim().toUpperCase();
+        const otherName = other.description.replace(/^Transfer\s+(to|from)\s+/i, "").split("|")[0].trim().toUpperCase();
+        if (txName === otherName && txName.length >= 3) {
+          similar.push({
+            id: other.id,
+            description: other.description,
+            amount: other.amount,
+            type: other.type,
+            date: other.date,
+            matchReason: `Same person: ${txName}`,
+          });
+          continue;
+        }
+      }
+
+      // For non-transfers: use word similarity with higher threshold
+      if (!txIsTransfer && !otherIsTransfer && tx.type === other.type && totalScore >= 2.5) {
         similar.push({
           id: other.id,
           description: other.description,
