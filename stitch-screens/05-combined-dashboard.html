@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>CONYEST | Financial Intelligence — Combined Design</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;430;450;480;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'ink-black': '#17191c',
+            'paper-white': '#ffffff',
+            'mist-gray': '#f2f2f3',
+            'fog-white': '#fafafb',
+            'slate-gray': '#777b86',
+            'ash-gray': '#979799',
+            'smoke-gray': '#a3a6af',
+            'blush-peach': '#fbe1d1',
+            'sienna-brown': '#5d2a1a',
+            forest: { DEFAULT: '#003527', container: '#064e3b', light: '#95d3ba' },
+            lime: { DEFAULT: '#416900', vibrant: '#acf847', bright: '#91db2a' },
+            surface: { DEFAULT: '#f9f9ff', dim: '#d3daea', bright: '#f9f9ff', lowest: '#ffffff', low: '#f0f3ff', container: '#e7eefe', high: '#e2e8f8', highest: '#dce2f3' },
+            error: { DEFAULT: '#ba1a1a', container: '#ffdad6' },
+          },
+          fontFamily: {
+            signifier: ['"Source Serif 4"', 'ui-serif', 'Georgia', 'serif'],
+            sohne: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+          borderRadius: {
+            'cards': '24px',
+            'elevated': '20px',
+            'inputs': '16px',
+            'buttons': '9999px',
+          },
+          boxShadow: {
+            'subtle': 'oklab(0 0 0 / 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.08) 0px 4px 24px 0px',
+            'elevated': '0 0 0 1px rgba(4,23,43,0.05), 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { background-color: #ffffff; font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      line-height: 1;
+      vertical-align: middle;
+    }
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 24px;
+    }
+    .serif-heading {
+      font-family: 'Source Serif 4', ui-serif, Georgia, serif;
+      font-weight: 400;
+      letter-spacing: -0.015em;
+    }
+    .heat-map-cell {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      transition: all 0.2s ease;
+    }
+    .heat-map-cell:hover {
+      transform: scale(1.2);
+      z-index: 10;
+    }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body class="text-ink-black">
+  <!-- SideNavBar -->
+  <aside class="fixed left-0 top-0 h-full w-[260px] border-r border-[#ececec] bg-paper-white flex flex-col p-6 gap-4 z-50">
+    <!-- Logo -->
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-10 h-10 bg-forest-container rounded-buttons flex items-center justify-center text-white">
+        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">insights</span>
+      </div>
+      <div>
+        <h1 class="serif-heading text-2xl text-forest">CONYEST</h1>
+        <p class="text-[10px] uppercase tracking-widest text-ash-gray font-medium">Financial Intelligence</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 flex flex-col gap-1">
+      <a class="bg-lime-vibrant text-forest rounded-buttons font-semibold flex items-center gap-3 px-4 py-3 transition-all" href="#">
+        <span class="material-symbols-outlined">dashboard</span>
+        <span class="text-sm">Dashboard</span>
+      </a>
+      <a class="text-slate-gray hover:text-forest hover:bg-mist-gray transition-colors duration-200 rounded-buttons flex items-center gap-3 px-4 py-3" href="#">
+        <span class="material-symbols-outlined">account_balance_wallet</span>
+        <span class="text-sm">Payments</span>
+      </a>
+      <a class="text-slate-gray hover:text-forest hover:bg-mist-gray transition-colors duration-200 rounded-buttons flex items-center gap-3 px-4 py-3" href="#">
+        <span class="material-symbols-outlined">receipt_long</span>
+        <span class="text-sm">Transactions</span>
+      </a>
+      <a class="text-slate-gray hover:text-forest hover:bg-mist-gray transition-colors duration-200 rounded-buttons flex items-center gap-3 px-4 py-3" href="#">
+        <span class="material-symbols-outlined">description</span>
+        <span class="text-sm">Invoices</span>
+      </a>
+      <a class="text-slate-gray hover:text-forest hover:bg-mist-gray transition-colors duration-200 rounded-buttons flex items-center gap-3 px-4 py-3" href="#">
+        <span class="material-symbols-outlined">credit_card</span>
+        <span class="text-sm">Cards</span>
+      </a>
+      <a class="text-slate-gray hover:text-forest hover:bg-mist-gray transition-colors duration-200 rounded-buttons flex items-center gap-3 px-4 py-3" href="#">
+        <span class="material-symbols-outlined">savings</span>
+        <span class="text-sm">Saving Plans</span>
+      </a>
+      <a class="text-slate-gray hover:text-forest hover:bg-mist-gray transition-colors duration-200 rounded-buttons flex items-center gap-3 px-4 py-3" href="#">
+        <span class="material-symbols-outlined">trending_up</span>
+        <span class="text-sm">Investments</span>
+      </a>
+      <a class="text-slate-gray hover:text-forest hover:bg-mist-gray transition-colors duration-200 rounded-buttons flex items-center gap-3 px-4 py-3" href="#">
+        <span class="material-symbols-outlined">insights</span>
+        <span class="text-sm">Insights</span>
+      </a>
+    </nav>
+
+    <!-- Bottom Section -->
+    <div class="mt-auto flex flex-col gap-2">
+      <div class="bg-forest p-4 rounded-cards relative overflow-hidden group">
+        <div class="relative z-10">
+          <p class="text-white/80 text-sm mb-2">Analyze spending, gain financial control.</p>
+          <button class="bg-lime-vibrant text-forest px-4 py-2 rounded-buttons text-sm font-semibold w-full hover:brightness-95 transition-all">Get Pro</button>
+        </div>
+        <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-lime-vibrant/20 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
+      </div>
+      <a class="text-slate-gray hover:text-forest flex items-center gap-3 px-4 py-2 transition-colors rounded-lg" href="#">
+        <span class="material-symbols-outlined">settings</span>
+        <span class="text-sm">Settings</span>
+      </a>
+      <a class="text-slate-gray hover:text-forest flex items-center gap-3 px-4 py-2 transition-colors rounded-lg" href="#">
+        <span class="material-symbols-outlined">logout</span>
+        <span class="text-sm">Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="ml-[260px] min-h-screen bg-paper-white">
+    <!-- TopAppBar -->
+    <header class="w-full h-20 flex justify-between items-center px-8 sticky top-0 bg-paper-white/80 backdrop-blur-md z-40 border-b border-[#ececec]/50">
+      <h2 class="serif-heading text-[28px] text-ink-black">Dashboard</h2>
+      <div class="flex items-center gap-4">
+        <div class="relative">
+          <input class="bg-mist-gray border-none rounded-buttons px-10 py-2 w-64 focus:ring-2 focus:ring-lime-vibrant/50 text-sm" placeholder="Search transactions..." type="text"/>
+          <span class="material-symbols-outlined absolute left-3 top-2.5 text-smoke-gray">search</span>
+        </div>
+        <button class="w-10 h-10 rounded-full hover:bg-mist-gray flex items-center justify-center text-slate-gray transition-colors">
+          <span class="material-symbols-outlined">notifications</span>
+        </button>
+        <div class="flex items-center gap-3 pl-4 border-l border-[#ececec]">
+          <div class="text-right">
+            <p class="font-semibold text-sm text-ink-black">Jamie Smith</p>
+            <p class="text-xs text-ash-gray">Premium User</p>
+          </div>
+          <img class="w-10 h-10 rounded-full border-2 border-forest-container" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQCgH1RJa7vKLaqWt5W1GMJF2ZdVtRVfyb83-XxInuNL9eoSVURZjO3oaYclnJtOk9E0cfi1yiNZvT4VsClTz11CdY5MtRlo5CrtyvWWMStt0_FCF4UUPUllK7ZnUVNEP0KzGZ3W4pcrf9xbqyZcNGFjMoZ-2cq3FpgDBBxVD32-Juk-ZJMYAV6Up-wisPf8m2h4TwJId0Naqw4OGrZCi6FRGtrAbO0GjHxPCFTHukJtHq7vJtuf013Q-nuD5DBN6tAsnJrcdIS1Y"/>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dashboard Content -->
+    <div class="p-8 space-y-6">
+      <!-- Hero Metric Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total Balance — Forest Card -->
+        <div class="bg-forest p-5 rounded-cards text-white relative overflow-hidden flex flex-col justify-between h-44 shadow-elevated">
+          <div class="relative z-10 flex justify-between items-start">
+            <div>
+              <p class="text-white/60 text-xs uppercase tracking-wider mb-1">Across All Banks</p>
+              <h3 class="font-mono text-[28px] font-medium">₦2,100,000</h3>
+            </div>
+            <div class="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+              <span class="material-symbols-outlined text-lime-vibrant">account_balance</span>
+            </div>
+          </div>
+          <div class="relative z-10 flex items-center gap-2">
+            <span class="bg-lime-vibrant text-forest px-2 py-0.5 rounded-buttons text-[10px] font-semibold">+12.5%</span>
+            <span class="text-xs text-white/60">vs last month</span>
+          </div>
+          <div class="absolute -right-4 -top-8 w-32 h-32 bg-lime-vibrant/10 rounded-full blur-3xl"></div>
+        </div>
+
+        <!-- Money In — Floating Artifact -->
+        <div class="bg-paper-white border border-[#ececec] p-5 rounded-cards flex flex-col justify-between h-44 shadow-subtle">
+          <div>
+            <p class="text-ash-gray text-xs mb-1">Money In</p>
+            <h3 class="font-mono text-[28px] font-medium text-forest">₦1.2M</h3>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-lime-accent font-semibold flex items-center gap-1 text-xs">
+              <span class="material-symbols-outlined text-sm">trending_up</span> 8.2%
+            </span>
+            <span class="text-xs text-ash-gray">Growth</span>
+          </div>
+        </div>
+
+        <!-- Money Out — Floating Artifact -->
+        <div class="bg-paper-white border border-[#ececec] p-5 rounded-cards flex flex-col justify-between h-44 shadow-subtle">
+          <div>
+            <p class="text-ash-gray text-xs mb-1">Money Out</p>
+            <h3 class="font-mono text-[28px] font-medium text-forest">₦645k</h3>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-error font-semibold flex items-center gap-1 text-xs">
+              <span class="material-symbols-outlined text-sm">trending_down</span> 4.1%
+            </span>
+            <span class="text-xs text-ash-gray">Efficiency</span>
+          </div>
+        </div>
+
+        <!-- Savings Rate — Floating Artifact -->
+        <div class="bg-paper-white border border-[#ececec] p-5 rounded-cards flex flex-col justify-between h-44 shadow-subtle">
+          <div>
+            <p class="text-ash-gray text-xs mb-1">Savings Rate</p>
+            <h3 class="font-mono text-[28px] font-medium text-forest">46%</h3>
+          </div>
+          <div class="w-full bg-mist-gray h-2 rounded-full overflow-hidden mt-2">
+            <div class="bg-lime-accent h-full rounded-full" style="width: 46%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Middle Section: Chart & Heatmap -->
+      <div class="bento-grid">
+        <!-- Cash Flow Chart — Floating Artifact -->
+        <div class="col-span-12 lg:col-span-8 bg-paper-white border border-[#ececec] p-6 rounded-cards shadow-subtle">
+          <div class="flex justify-between items-center mb-8">
+            <div>
+              <h4 class="serif-heading text-xl text-ink-black">Cash Flow Analysis</h4>
+              <p class="text-xs text-ash-gray mt-1">Monthly overview</p>
+            </div>
+            <div class="flex gap-2">
+              <select class="bg-mist-gray border-none rounded-buttons px-3 py-1 text-xs focus:ring-2 focus:ring-lime-vibrant/50 cursor-pointer">
+                <option>Last 6 Months</option>
+                <option>This Year</option>
+              </select>
+            </div>
+          </div>
+          <div class="h-64 flex items-end justify-between gap-4 px-2">
+            <div class="flex-1 flex flex-col items-center gap-2">
+              <div class="w-full flex flex-col-reverse gap-1 items-center h-full">
+                <div class="w-full bg-lime-vibrant/20 rounded-t h-[40%]"></div>
+                <div class="w-full bg-forest rounded-t h-[60%]"></div>
+              </div>
+              <span class="text-[10px] font-mono text-ash-gray uppercase">Mar</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center gap-2">
+              <div class="w-full flex flex-col-reverse gap-1 items-center h-full">
+                <div class="w-full bg-lime-vibrant/20 rounded-t h-[35%]"></div>
+                <div class="w-full bg-forest rounded-t h-[75%]"></div>
+              </div>
+              <span class="text-[10px] font-mono text-ash-gray uppercase">Apr</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center gap-2">
+              <div class="w-full flex flex-col-reverse gap-1 items-center h-full">
+                <div class="w-full bg-lime-vibrant/20 rounded-t h-[50%]"></div>
+                <div class="w-full bg-forest rounded-t h-[55%]"></div>
+              </div>
+              <span class="text-[10px] font-mono text-ash-gray uppercase">May</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center gap-2">
+              <div class="w-full flex flex-col-reverse gap-1 items-center h-full">
+                <div class="w-full bg-lime-vibrant/20 rounded-t h-[45%]"></div>
+                <div class="w-full bg-forest rounded-t h-[80%]"></div>
+              </div>
+              <span class="text-[10px] font-mono text-ash-gray uppercase">Jun</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center gap-2">
+              <div class="w-full flex flex-col-reverse gap-1 items-center h-full">
+                <div class="w-full bg-lime-vibrant/20 rounded-t h-[30%]"></div>
+                <div class="w-full bg-forest rounded-t h-[90%]"></div>
+              </div>
+              <span class="text-[10px] font-mono text-ash-gray uppercase">Jul</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center gap-2">
+              <div class="w-full flex flex-col-reverse gap-1 items-center h-full relative group">
+                <div class="w-full bg-lime-accent rounded-t h-[42%] group-hover:brightness-110 transition-all"></div>
+                <div class="w-full bg-forest rounded-t h-[65%] group-hover:brightness-110 transition-all"></div>
+                <div class="absolute -top-16 bg-ink-black text-white px-3 py-1 rounded-lg text-[10px] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
+                  In: ₦1.2M | Out: ₦645k
+                </div>
+              </div>
+              <span class="text-[10px] font-mono text-forest font-semibold uppercase">Aug</span>
+            </div>
+          </div>
+          <div class="flex justify-center gap-6 mt-6">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-forest"></div>
+              <span class="text-xs text-ash-gray">Money In</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-lime-vibrant/40"></div>
+              <span class="text-xs text-ash-gray">Money Out</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Spending Heatmap — Floating Artifact -->
+        <div class="col-span-12 lg:col-span-4 bg-paper-white border border-[#ececec] p-6 rounded-cards shadow-subtle flex flex-col">
+          <h4 class="serif-heading text-xl text-ink-black mb-1">Spending Intensity</h4>
+          <p class="text-xs text-ash-gray mb-6">Daily activity across 12 months</p>
+          <div class="flex flex-col gap-1 overflow-x-auto scrollbar-hide">
+            <div class="grid grid-cols-[repeat(52,14px)] gap-1">
+              <script>
+                const grid = document.currentScript.parentElement;
+                const colors = ['bg-mist-gray', 'bg-lime-vibrant/20', 'bg-lime-vibrant/40', 'bg-lime-vibrant/70', 'bg-lime-vibrant'];
+                for (let i = 0; i < 52 * 7; i++) {
+                  const cell = document.createElement('div');
+                  cell.className = `heat-map-cell ${colors[Math.floor(Math.random() * colors.length)]}`;
+                  grid.appendChild(cell);
+                }
+              </script>
+            </div>
+          </div>
+          <div class="mt-auto pt-6 flex justify-between items-center text-[10px] text-ash-gray">
+            <span>Less</span>
+            <div class="flex gap-1">
+              <div class="w-3 h-3 bg-mist-gray rounded-sm"></div>
+              <div class="w-3 h-3 bg-lime-vibrant/20 rounded-sm"></div>
+              <div class="w-3 h-3 bg-lime-vibrant/40 rounded-sm"></div>
+              <div class="w-3 h-3 bg-lime-vibrant/70 rounded-sm"></div>
+              <div class="w-3 h-3 bg-lime-vibrant rounded-sm"></div>
+            </div>
+            <span>More</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Section: Activity & Merchants -->
+      <div class="bento-grid">
+        <!-- Recent Activity Table — Floating Artifact -->
+        <div class="col-span-12 lg:col-span-8 bg-paper-white border border-[#ececec] rounded-cards overflow-hidden shadow-subtle">
+          <div class="px-6 py-4 border-b border-[#ececec] flex justify-between items-center">
+            <h4 class="serif-heading text-xl text-ink-black">Recent Activity</h4>
+            <button class="text-lime-accent font-semibold text-xs hover:underline">View All →</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead class="bg-mist-gray text-ash-gray text-[11px] border-b border-[#ececec]">
+                <tr>
+                  <th class="px-6 py-3 font-semibold uppercase tracking-wider">Merchant/Bank</th>
+                  <th class="px-6 py-3 font-semibold uppercase tracking-wider">Type</th>
+                  <th class="px-6 py-3 font-semibold uppercase tracking-wider">Status</th>
+                  <th class="px-6 py-3 font-semibold uppercase tracking-wider text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#ececec]">
+                <tr class="hover:bg-mist-gray/50 transition-colors">
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-lg bg-white border border-[#ececec] flex items-center justify-center p-1">
+                        <img class="w-full h-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbzB7ieIx3B7EpXxrb2LwCfXt_RMZsYBOfr4phu32-CCg2Z0zJ21C2YSlhd9br_qSwqp6lbwlgDirC93yf7xM4IKzuoyZPE81DRwU3kSvpeQzkdWCrQZbqtiM3-Cp_uz2c0q2AX2ZmAUFkfZR6pCzKQSj-2-1ioS8iHHBFHvg49Tmvg8MF_wBZUmgMDjQbf3T09vnAcvukOnyf3tyQW5tVpcuidyDcD0Nef7PvSP7kwKDCqYaY6Zxfv3BJAu5kWJe5Ddx3a_NYC2E"/>
+                      </div>
+                      <div>
+                        <p class="font-semibold text-sm">GTBank Transfer</p>
+                        <p class="text-xs text-ash-gray">Aug 14, 2:30 PM</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="px-2 py-1 bg-mist-gray text-slate-gray rounded-lg text-xs">Internal Transfer</span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="px-3 py-1 bg-lime-vibrant/20 text-forest rounded-buttons text-[10px] font-semibold uppercase">Completed</span>
+                  </td>
+                  <td class="px-6 py-4 text-right font-mono font-medium">₦45,000.00</td>
+                </tr>
+                <tr class="hover:bg-mist-gray/50 transition-colors">
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-lg bg-white border border-[#ececec] flex items-center justify-center p-1">
+                        <img class="w-full h-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCID2MuurI1yY67KS4PliMQEWM4Ay2zUHS5pez46H_bQGMX_Q7ExUFZ-GfrL9RBvVbcnGsp4-XZuJbony9ICS94N96QTb9rT3fQVOQ0HN60vxvJK6ZYXB_4vfbn9c-N2wbNO-oIhXQ7_JOfNDWPTIr5rYkjwjQpbx8Wl608KjD5IxJfkjXHsJD19wREXrkrE4cxos-wrgxjKYq9W7sa10yPh_mNdi1ATnPT2Ky0iz4ja1ggFnGJw7ghqzx_aYwqhPXNS70X_hHIZgk"/>
+                      </div>
+                      <div>
+                        <p class="font-semibold text-sm">Shoprite Store</p>
+                        <p class="text-xs text-ash-gray">Aug 13, 10:15 AM</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="px-2 py-1 bg-mist-gray text-slate-gray rounded-lg text-xs">Shopping</span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="px-3 py-1 bg-lime-vibrant/20 text-forest rounded-buttons text-[10px] font-semibold uppercase">Completed</span>
+                  </td>
+                  <td class="px-6 py-4 text-right font-mono font-medium">₦12,850.00</td>
+                </tr>
+                <tr class="hover:bg-mist-gray/50 transition-colors">
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-lg bg-white border border-[#ececec] flex items-center justify-center p-1">
+                        <span class="material-symbols-outlined text-forest text-sm">directions_car</span>
+                      </div>
+                      <div>
+                        <p class="font-semibold text-sm">Uber Nigeria</p>
+                        <p class="text-xs text-ash-gray">Aug 12, 08:45 PM</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="px-2 py-1 bg-mist-gray text-slate-gray rounded-lg text-xs">Transport</span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="px-3 py-1 bg-amber-50 text-amber-700 rounded-buttons text-[10px] font-semibold uppercase">Pending</span>
+                  </td>
+                  <td class="px-6 py-4 text-right font-mono font-medium">₦4,200.00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Merchant Ranking — Floating Artifact -->
+        <div class="col-span-12 lg:col-span-4 space-y-6">
+          <div class="bg-paper-white border border-[#ececec] p-6 rounded-cards shadow-subtle">
+            <h4 class="serif-heading text-xl text-ink-black mb-6">Merchant Ranking</h4>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between group">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-mist-gray flex items-center justify-center border border-[#ececec] font-semibold text-forest group-hover:bg-lime-vibrant/20 transition-colors">1</div>
+                  <div>
+                    <p class="font-semibold text-sm">Shoprite</p>
+                    <p class="text-xs text-ash-gray">12 Transactions</p>
+                  </div>
+                </div>
+                <p class="font-mono font-medium text-forest">₦145,200</p>
+              </div>
+              <div class="flex items-center justify-between group">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-mist-gray flex items-center justify-center border border-[#ececec] font-semibold text-forest group-hover:bg-lime-vibrant/20 transition-colors">2</div>
+                  <div>
+                    <p class="font-semibold text-sm">Jumia</p>
+                    <p class="text-xs text-ash-gray">8 Transactions</p>
+                  </div>
+                </div>
+                <p class="font-mono font-medium text-forest">₦88,400</p>
+              </div>
+              <div class="flex items-center justify-between group">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-mist-gray flex items-center justify-center border border-[#ececec] font-semibold text-forest group-hover:bg-lime-vibrant/20 transition-colors">3</div>
+                  <div>
+                    <p class="font-semibold text-sm">Uber</p>
+                    <p class="text-xs text-ash-gray">15 Transactions</p>
+                  </div>
+                </div>
+                <p class="font-mono font-medium text-forest">₦22,150</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accent Peach Card — Editorial Highlight -->
+          <div class="bg-blush-peach p-6 rounded-cards text-sienna-brown">
+            <div class="flex justify-between items-center mb-3">
+              <span class="material-symbols-outlined">bolt</span>
+              <span class="text-xs font-semibold bg-sienna-brown/10 px-2 py-1 rounded-lg">Smart Tip</span>
+            </div>
+            <p class="text-sm leading-relaxed">You spent 15% more on groceries this month. Consider checking Jumia for bulk deals.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Micro-interaction for sidebar links
+    document.querySelectorAll('nav a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('nav a').forEach(l => {
+          l.classList.remove('bg-lime-vibrant', 'text-forest', 'font-semibold');
+          l.classList.add('text-slate-gray');
+        });
+        link.classList.add('bg-lime-vibrant', 'text-forest', 'font-semibold');
+        link.classList.remove('text-slate-gray');
+      });
+    });
+  </script>
+</body>
+</html>

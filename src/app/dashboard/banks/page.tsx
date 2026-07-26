@@ -1,21 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Building2, FileText, ArrowLeftRight } from "lucide-react";
+import { Plus, Building2, Wallet, Search, X } from "lucide-react";
 import { BANKS } from "@/lib/constants";
 import { useUser } from "@/lib/hooks";
+import { formatCurrency } from "@/lib/utils";
 
 interface Bank {
   id: string;
@@ -28,13 +21,36 @@ interface Bank {
   _count: { transactions: number; statements: number };
 }
 
+const BANK_ICONS: Record<string, string> = {
+  "GTBank": "🏦",
+  "Access Bank": "🏦",
+  "Zenith Bank": "🏦",
+  "First Bank": "🏦",
+  "Kuda": "🏦",
+  "OPay": "💳",
+  "Moniepoint": "💳",
+  "PalmPay": "💳",
+  "UBA": "🏦",
+  "Wema Bank": "🏦",
+  "Fidelity Bank": "🏦",
+  "Sterling Bank": "🏦",
+  "Union Bank": "🏦",
+  "Polaris Bank": "🏦",
+  "Unity Bank": "🏦",
+  "Stanbic IBTC": "🏦",
+  "Ecobank": "🏦",
+  "Standard Chartered": "🏦",
+};
+
 export default function BanksPage() {
   const { user, loading: userLoading } = useUser();
   const [banks, setBanks] = useState<Bank[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [bankSearch, setBankSearch] = useState("");
+  const [selectedBank, setSelectedBank] = useState("");
+  const [step, setStep] = useState<"select" | "details">("select");
   const [form, setForm] = useState({
-    bankName: "",
     accountName: "",
     accountNumber: "",
     nickname: "",
@@ -45,7 +61,7 @@ export default function BanksPage() {
     if (user) fetchBanks();
   }, [user]);
 
-  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-gray-400">Loading...</div></div>;
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
 
   const fetchBanks = async () => {
     try {
@@ -67,14 +83,14 @@ export default function BanksPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user?.id || "",
+          bankName: selectedBank,
           ...form,
           openingBalance: parseFloat(form.openingBalance) || 0,
         }),
       });
 
       if (res.ok) {
-        setDialogOpen(false);
-        setForm({ bankName: "", accountName: "", accountNumber: "", nickname: "", openingBalance: "" });
+        closeModal();
         fetchBanks();
       }
     } catch (err) {
@@ -84,7 +100,6 @@ export default function BanksPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure? This will delete all transactions for this bank.")) return;
-
     try {
       const res = await fetch(`/api/banks/${id}`, { method: "DELETE" });
       if (res.ok) fetchBanks();
@@ -93,138 +108,212 @@ export default function BanksPage() {
     }
   };
 
+  const openModal = () => {
+    setModalOpen(true);
+    setStep("select");
+    setSelectedBank("");
+    setBankSearch("");
+    setForm({ accountName: "", accountNumber: "", nickname: "", openingBalance: "" });
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setStep("select");
+    setSelectedBank("");
+  };
+
+  const selectBank = (bank: string) => {
+    setSelectedBank(bank);
+    setStep("details");
+  };
+
+  const filteredBanks = BANKS.filter(b => b.toLowerCase().includes(bankSearch.toLowerCase()));
+
   return (
     <div className="space-y-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">My Banks</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
-              <Plus className="h-4 w-4 mr-2" /> Add Bank
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-white rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-gray-900">Add New Bank</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-gray-700">Bank Name</Label>
-                <select
-                  value={form.bankName}
-                  onChange={(e) => setForm({ ...form, bankName: e.target.value })}
-                  className="w-full mt-1 bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                >
-                  <option value="">Select bank</option>
-                  {BANKS.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label className="text-gray-700">Account Name</Label>
-                <Input
-                  value={form.accountName}
-                  onChange={(e) => setForm({ ...form, accountName: e.target.value })}
-                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
-                  placeholder="e.g., John Doe Savings"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-700">Account Number</Label>
-                <Input
-                  value={form.accountNumber}
-                  onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
-                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
-                  placeholder="0123456789"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-700">Nickname</Label>
-                <Input
-                  value={form.nickname}
-                  onChange={(e) => setForm({ ...form, nickname: e.target.value })}
-                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
-                  placeholder="e.g., GT Salary"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-700">Opening Balance (₦)</Label>
-                <Input
-                  type="number"
-                  value={form.openingBalance}
-                  onChange={(e) => setForm({ ...form, openingBalance: e.target.value })}
-                  className="bg-gray-50 border-gray-200 text-gray-700 rounded-xl"
-                  placeholder="0"
-                />
-              </div>
-              <Button onClick={handleCreate} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
-                Add Bank
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div>
+          <h1 className="font-signifier text-[28px] text-ink-black">Connected Accounts</h1>
+          <p className="text-sm text-ash-gray">Manage your linked Nigerian bank accounts</p>
+        </div>
+        <Button onClick={openModal} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add New Bank
+        </Button>
       </div>
 
+      {/* Bank Cards Grid */}
       {loading ? (
-        <div className="text-center py-16 text-gray-400">Loading banks...</div>
+        <div className="text-center py-16 text-ash-gray">Loading banks...</div>
       ) : banks.length === 0 ? (
-        <Card className="bg-white border-gray-100">
-          <CardContent className="py-16 text-center">
-            <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No banks added yet</h3>
-            <p className="text-gray-500 mb-4">Add your first bank to start tracking transactions</p>
-          </CardContent>
-        </Card>
+        <div className="bg-paper-white border border-[#ececec] rounded-cards py-16 text-center">
+          <Building2 className="h-12 w-12 text-ash-gray/50 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-ink-black mb-2">No banks added yet</h3>
+          <p className="text-ash-gray mb-4">Add your first bank to start tracking transactions</p>
+          <Button onClick={openModal}>Add Your First Bank</Button>
+        </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {banks.map((bank) => (
-            <Card key={bank.id} className="bg-white border-gray-100 hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <CardTitle className="text-gray-900 text-lg">{bank.nickname || bank.bankName}</CardTitle>
+          {banks.map((bank, idx) => (
+            <div
+              key={bank.id}
+              className={`rounded-cards p-6 text-white relative overflow-hidden group ${
+                idx === 0
+                  ? "bg-gradient-to-br from-forest to-forest-container shadow-elevated"
+                  : "bg-paper-white border border-[#ececec] text-ink-black hover:shadow-subtle transition-shadow"
+              }`}
+            >
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <p className={`text-sm mb-1 ${idx === 0 ? "text-white/60" : "text-ash-gray"}`}>
+                      {bank.nickname || bank.bankName}
+                    </p>
+                    <p className="text-2xl font-mono font-medium">
+                      {formatCurrency(bank.openingBalance)}
+                    </p>
                   </div>
-                  <Badge variant="secondary" className="bg-gray-100 text-gray-600 rounded-lg">
-                    {bank.bankName}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  {bank.accountName && (
-                    <div className="text-gray-700">{bank.accountName}</div>
-                  )}
-                  {bank.accountNumber && (
-                    <div className="text-gray-500">••••{bank.accountNumber.slice(-4)}</div>
-                  )}
-                  <div className="flex items-center gap-4 mt-4">
-                    <div className="flex items-center gap-1 text-gray-500">
-                      <ArrowLeftRight className="h-4 w-4" />
-                      <span>{bank._count.transactions} transactions</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-500">
-                      <FileText className="h-4 w-4" />
-                      <span>{bank._count.statements} statements</span>
-                    </div>
-                  </div>
-                  <div className="pt-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => handleDelete(bank.id)}
-                    >
-                      Delete
-                    </Button>
+                  <div className={`p-2 rounded-lg ${idx === 0 ? "bg-white/20 backdrop-blur-md" : "bg-mist-gray"}`}>
+                    <Building2 className={`h-5 w-5 ${idx === 0 ? "text-lime-vibrant" : "text-forest"}`} />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className="flex justify-between items-end">
+                  <div>
+                    <p className={`text-xs font-mono ${idx === 0 ? "text-white/60" : "text-ash-gray"}`}>
+                      {bank.accountNumber ? `••••${bank.accountNumber.slice(-4)}` : "No account number"}
+                    </p>
+                    <p className={`text-[10px] mt-1 px-2 py-0.5 rounded inline-block ${
+                      idx === 0
+                        ? "bg-lime-vibrant/20 text-lime-vibrant"
+                        : "bg-lime-vibrant/20 text-forest"
+                    }`}>
+                      {bank._count.statements} statements uploaded
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDelete(bank.id)}
+                    className={`text-xs font-semibold hover:underline ${idx === 0 ? "text-white/60" : "text-error"}`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+
+              {/* Decorative circle */}
+              <div className={`absolute -bottom-10 -right-10 w-40 h-40 rounded-full blur-3xl ${
+                idx === 0 ? "bg-white/5" : "bg-lime-vibrant/5"
+              }`}></div>
+            </div>
           ))}
+        </div>
+      )}
+
+      {/* Add Bank Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-forest/40 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-paper-white w-full max-w-xl rounded-cards overflow-hidden shadow-elevated">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-[#ececec] flex justify-between items-center bg-mist-gray">
+              <div>
+                <h3 className="font-signifier text-lg text-ink-black">Connect New Account</h3>
+                <p className="text-sm text-ash-gray">Select your bank from the list of Nigerian providers</p>
+              </div>
+              <button onClick={closeModal} className="p-2 hover:bg-paper-white rounded-full transition-colors">
+                <X className="h-5 w-5 text-slate-gray" />
+              </button>
+            </div>
+
+            {step === "select" ? (
+              <>
+                {/* Search */}
+                <div className="p-6 pb-0">
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ash-gray" />
+                    <input
+                      type="text"
+                      placeholder="Search for your bank..."
+                      value={bankSearch}
+                      onChange={(e) => setBankSearch(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 border border-[#ececec] rounded-xl focus:ring-2 focus:ring-lime focus:outline-none text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Bank Grid */}
+                <div className="p-6 grid grid-cols-4 gap-4 max-h-[300px] overflow-y-auto">
+                  {filteredBanks.map((bank) => (
+                    <button
+                      key={bank}
+                      onClick={() => selectBank(bank)}
+                      className="flex flex-col items-center gap-2 p-4 border border-[#ececec] rounded-xl hover:border-lime hover:bg-mist-gray transition-all group"
+                    >
+                      <div className="w-12 h-12 bg-paper-white rounded-lg flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform text-2xl">
+                        {BANK_ICONS[bank] || "🏦"}
+                      </div>
+                      <span className="text-[10px] font-semibold text-ash-gray">{bank}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Details Form */}
+                <div className="p-6 space-y-4">
+                  <div className="p-3 bg-mist-gray rounded-lg flex items-center gap-3">
+                    <span className="text-2xl">{BANK_ICONS[selectedBank] || "🏦"}</span>
+                    <span className="font-semibold text-sm text-ink-black">{selectedBank}</span>
+                    <button onClick={() => setStep("select")} className="ml-auto text-xs text-lime hover:underline">Change</button>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-ink-black">Account Name</Label>
+                    <Input
+                      value={form.accountName}
+                      onChange={(e) => setForm({ ...form, accountName: e.target.value })}
+                      className="bg-mist-gray border-[#ececec] rounded-inputs mt-1"
+                      placeholder="e.g., John Doe Savings"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-ink-black">Account Number</Label>
+                    <Input
+                      value={form.accountNumber}
+                      onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
+                      className="bg-mist-gray border-[#ececec] rounded-inputs mt-1"
+                      placeholder="0123456789"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-ink-black">Nickname</Label>
+                    <Input
+                      value={form.nickname}
+                      onChange={(e) => setForm({ ...form, nickname: e.target.value })}
+                      className="bg-mist-gray border-[#ececec] rounded-inputs mt-1"
+                      placeholder="e.g., GT Salary"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-ink-black">Opening Balance (₦)</Label>
+                    <Input
+                      type="number"
+                      value={form.openingBalance}
+                      onChange={(e) => setForm({ ...form, openingBalance: e.target.value })}
+                      className="bg-mist-gray border-[#ececec] rounded-inputs mt-1"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-6 bg-mist-gray flex justify-end gap-4 border-t border-[#ececec]">
+                  <Button variant="ghost" onClick={closeModal}>Cancel</Button>
+                  <Button onClick={handleCreate}>Proceed</Button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

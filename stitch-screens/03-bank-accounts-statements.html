@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CONYEST | Bank Accounts & Statements</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary": "#416900",
+                    "inverse-primary": "#95d3ba",
+                    "surface-container-highest": "#dce2f3",
+                    "surface": "#f9f9ff",
+                    "on-secondary-fixed-variant": "#304f00",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#454748",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-container": "#424546",
+                    "tertiary": "#2c2f30",
+                    "background": "#f9f9ff",
+                    "outline-variant": "#bfc9c3",
+                    "on-error": "#ffffff",
+                    "on-tertiary-fixed": "#191c1d",
+                    "on-secondary-fixed": "#102000",
+                    "tertiary-fixed-dim": "#c5c7c8",
+                    "inverse-on-surface": "#ebf1ff",
+                    "surface-variant": "#dce2f3",
+                    "surface-dim": "#d3daea",
+                    "surface-container-high": "#e2e8f8",
+                    "surface-container-low": "#f0f3ff",
+                    "tertiary-fixed": "#e1e3e4",
+                    "secondary-fixed": "#acf847",
+                    "surface-container": "#e7eefe",
+                    "on-primary-fixed-variant": "#0b513d",
+                    "on-tertiary-container": "#b0b2b3",
+                    "on-primary-container": "#80bea6",
+                    "surface-bright": "#f9f9ff",
+                    "error-container": "#ffdad6",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-tint": "#2b6954",
+                    "error": "#ba1a1a",
+                    "secondary-container": "#acf847",
+                    "primary": "#003527",
+                    "on-secondary-container": "#457000",
+                    "on-primary-fixed": "#002117",
+                    "inverse-surface": "#2a313d",
+                    "on-surface-variant": "#404944",
+                    "on-primary": "#ffffff",
+                    "primary-container": "#064e3b",
+                    "primary-fixed-dim": "#95d3ba",
+                    "secondary-fixed-dim": "#91db2a",
+                    "on-surface": "#151c27",
+                    "on-background": "#151c27",
+                    "outline": "#707974",
+                    "on-error-container": "#93000a",
+                    "primary-fixed": "#b0f0d6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin": "24px",
+                    "card-padding": "20px",
+                    "stack-sm": "8px",
+                    "stack-lg": "32px",
+                    "stack-md": "16px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Inter"],
+                    "display-md": ["Inter"],
+                    "mono-data": ["JetBrains Mono"],
+                    "body-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "display-md": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "mono-data": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bank-card-gradient {
+            background: linear-gradient(135deg, #003527 0%, #064e3b 100%);
+        }
+        .drag-active {
+            border-color: #416900 !important;
+            background-color: #f0f3ff !important;
+        }
+    </style>
+</head>
+<body class="bg-background font-body-md text-on-background min-h-screen">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full w-[260px] border-r border-outline-variant bg-surface-container-lowest dark:bg-surface-dim flex flex-col p-container-margin gap-stack-md">
+<div class="mb-stack-lg">
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary dark:text-primary-fixed">CONYEST</h1>
+<p class="text-[10px] tracking-widest text-on-surface-variant opacity-70">FINANCIAL INTELLIGENCE</p>
+</div>
+<nav class="flex-grow space-y-1">
+<a class="flex items-center gap-3 p-3 transition-colors duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 p-3 transition-colors duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded-lg" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-body-md text-body-md">Payments</span>
+</a>
+<a class="flex items-center gap-3 p-3 transition-colors duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded-lg" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-body-md text-body-md">Transactions</span>
+</a>
+<a class="flex items-center gap-3 p-3 transition-colors duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded-lg" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-body-md text-body-md">Invoices</span>
+</a>
+<!-- Active State: Cards -->
+<a class="flex items-center gap-3 p-3 bg-secondary-container text-on-secondary-container rounded-lg font-bold" href="#">
+<span class="material-symbols-outlined">credit_card</span>
+<span class="font-body-md text-body-md">Cards</span>
+</a>
+<a class="flex items-center gap-3 p-3 transition-colors duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded-lg" href="#">
+<span class="material-symbols-outlined">savings</span>
+<span class="font-body-md text-body-md">Saving Plans</span>
+</a>
+<a class="flex items-center gap-3 p-3 transition-colors duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded-lg" href="#">
+<span class="material-symbols-outlined">trending_up</span>
+<span class="font-body-md text-body-md">Investments</span>
+</a>
+<a class="flex items-center gap-3 p-3 transition-colors duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded-lg" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-body-md text-body-md">Insights</span>
+</a>
+</nav>
+<div class="mt-auto pt-stack-lg border-t border-outline-variant space-y-1">
+<div class="p-4 bg-primary rounded-xl text-white mb-stack-md">
+<p class="text-xs opacity-80 mb-2">Analyze spending, gain financial control.</p>
+<button class="w-full bg-secondary-container text-on-secondary-container font-bold py-2 px-4 rounded-lg text-sm hover:opacity-90 transition-opacity">Get Pro</button>
+</div>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-primary rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-body-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-error rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="text-body-md">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-[260px] w-[calc(100%-260px)] min-h-screen">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-stack-lg h-20 bg-surface dark:bg-background sticky top-0 z-10">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Bank Accounts & Statements</h2>
+<div class="flex items-center gap-stack-md">
+<div class="relative focus-within:ring-2 focus-within:ring-secondary-container rounded-lg overflow-hidden">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-lg focus:outline-none w-64 text-sm" placeholder="Search statements..." type="text"/>
+</div>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container rounded-full relative transition-all">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="flex items-center gap-3 border-l border-outline-variant pl-stack-md ml-stack-sm">
+<div class="text-right">
+<p class="text-sm font-bold text-on-surface">Jamie Smith</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-tighter">Personal Account</p>
+</div>
+<img class="w-10 h-10 rounded-full border-2 border-secondary" data-alt="A professional studio portrait of a modern financial professional, Jamie Smith, smiling warmly with a clean minimalist office background. Soft high-key lighting illuminates the subject against a neutral grey wall, fitting a high-end corporate fintech interface aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQkLqceeGZNzy69FqfaFNpyIbizUEaLzPNjSD-vvd4Dtab2GoMnhBNwNw0dfqlxUJ-LhAxUqP-TZgrVu2HvNxYKhcE11uKksYE57Zz5EA9MBCwegtl3_yUxblcLQrGmn5ugN5QXM_kq2yKoMkL0-Es8KX1ay9KvIDiIpn9SFxi8GK64QrmJhRjy5JdykrFBM1yMzkS4y5nT15K1Lot5QFDo6Va_iAICHPRkZ1HQ2Oe3m3OKNWFZvm_y3aOJvBQr-eSFf3DY48zOio"/>
+</div>
+</div>
+</header>
+<div class="p-container-margin space-y-stack-lg">
+<!-- Bank Cards Section -->
+<section>
+<div class="flex justify-between items-end mb-stack-md">
+<div>
+<h3 class="text-headline-sm font-bold text-primary">Connected Accounts</h3>
+<p class="text-body-md text-on-surface-variant">Manage your linked Nigerian bank accounts.</p>
+</div>
+<button class="flex items-center gap-2 bg-primary text-on-primary px-6 py-2.5 rounded-xl font-bold hover:opacity-90 transition-transform active:scale-95" id="addBankBtn">
+<span class="material-symbols-outlined">add</span>
+<span>Add New Bank</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- GT Salary -->
+<div class="bank-card-gradient rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group">
+<div class="flex justify-between items-start relative z-10">
+<div>
+<p class="text-sm opacity-70 mb-1">GT Salary Account</p>
+<p class="text-2xl font-bold font-mono-data">₦4,250,560.00</p>
+</div>
+<div class="bg-white/20 p-2 rounded-lg backdrop-blur-md">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+</div>
+</div>
+<div class="mt-8 flex justify-between items-end relative z-10">
+<div>
+<p class="text-xs opacity-70 font-mono-data">0123456789</p>
+<p class="text-[10px] mt-1 bg-secondary-fixed/20 px-2 py-0.5 rounded inline-block text-secondary-fixed">Last statement: 12 May 2026</p>
+</div>
+<img class="h-6 opacity-80 group-hover:opacity-100 transition-opacity" data-alt="Simplified monochrome bank logo for GTBank, stylized for a high-end fintech app UI in a white circular vector style. Professional, minimalist graphic design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqAOE4qhv-5WCkVj1VsRLnGdxwxqCXvLUQkJ_trX7ltes0pIAa49-t1J52PIu7XZOry3u2Tp-dbcUoH2EUAj_Pn_Qbp-T2msMwag6iGlYbmdgzqBe_bchdWzFrRqKqnfkRljRsNgNZsVBF9RCGLfWBEXm79ZJdmKZnR83tHB9s3QpyywGp0QGeuKD8B7w0aYZNv1M9-7oJhRL4gOzKoxt8gkN0md7s1nxA_hnUgJLAtAVxunPbOGHRvU6uKFRr8ItYc0DhKKnbips"/>
+</div>
+<!-- Background Pattern -->
+<div class="absolute -bottom-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
+</div>
+<!-- Opay -->
+<div class="bg-white border border-outline-variant rounded-2xl p-6 text-on-surface shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+<div class="flex justify-between items-start relative z-10">
+<div>
+<p class="text-sm text-on-surface-variant mb-1">Opay Business</p>
+<p class="text-2xl font-bold font-mono-data text-primary">₦890,200.45</p>
+</div>
+<div class="bg-primary/5 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">wallet</span>
+</div>
+</div>
+<div class="mt-8 flex justify-between items-end relative z-10">
+<div>
+<p class="text-xs text-on-surface-variant font-mono-data">7034551223</p>
+<p class="text-[10px] mt-1 bg-error-container/50 text-error px-2 py-0.5 rounded inline-block">Syncing Required</p>
+</div>
+<img class="h-6 opacity-60 group-hover:opacity-100 transition-opacity" data-alt="Simplified monochrome bank logo for Opay, stylized for a high-end fintech app UI. Clean minimalist vector graphic in deep forest green." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBl0_kTipsDFUyfjcXy6e-KJbXYGvyLFI0nWuBnslqlRFkVgCaHyYt-j6dKz3TSK-YxSCVVcTxnir4N969KPl3bstMKdscwLj_o-4EpYiYEtOLSzLQ3oDhFhnnAX6ELhgx_zfBlOx2KVrNIBzocMUvxRxOCqNKxFMK03DepG9g7nAScij1_pJOXmjNtHN6DN6eCi9C1JAGT3Fjv4pGBqbMo3MurfLw9jWs6whFebw0Aj-fjDhSRHlw3fPWz16z1CqjCAoLRLVbScpk"/>
+</div>
+</div>
+<!-- Kuda -->
+<div class="bg-white border border-outline-variant rounded-2xl p-6 text-on-surface shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group border-b-2 border-secondary">
+<div class="flex justify-between items-start relative z-10">
+<div>
+<p class="text-sm text-on-surface-variant mb-1">Kuda Savings</p>
+<p class="text-2xl font-bold font-mono-data text-primary">₦1,402,202.12</p>
+</div>
+<div class="bg-primary/5 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">savings</span>
+</div>
+</div>
+<div class="mt-8 flex justify-between items-end relative z-10">
+<div>
+<p class="text-xs text-on-surface-variant font-mono-data">2014567890</p>
+<p class="text-[10px] mt-1 bg-secondary-fixed/50 text-on-secondary-fixed-variant px-2 py-0.5 rounded inline-block">Last statement: 02 June 2026</p>
+</div>
+<img class="h-6 opacity-60 group-hover:opacity-100 transition-opacity" data-alt="Simplified monochrome bank logo for Kuda Bank, stylized for a high-end fintech app UI. Clean minimalist vector graphic in deep forest green." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfGOEaGMaN31zORbjNiSELwHASjA1g2UksRJfh_SmLRF507X6579NRvGJkIK0Nj5EBJBpooLTKdhHbuL04eFv-LuijYfXTA8yVRln-v0MjtIIqJLddODHFCWYa9-1di_dfGk1dhShLnJwteQl5ztRtYh7j4BQBRdVs2dswbB2PXpLDQGLsgFhSsAyOiY9jtozUOTG1sjft-ofj0SrWU12nbxSFOoWliNzWbJ3gTcurHDcxWs5TzD01G1_AWJhP75OO7qoQ197nUXs"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Bento Layout: Upload Zone & History -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Upload Zone -->
+<div class="lg:col-span-5 bg-white border border-outline-variant rounded-2xl p-stack-lg flex flex-col justify-center items-center text-center group" id="dropZone">
+<div class="w-16 h-16 bg-surface-container-low rounded-full flex items-center justify-center mb-stack-md group-hover:scale-110 transition-transform border border-outline-variant">
+<span class="material-symbols-outlined text-secondary text-3xl">upload_file</span>
+</div>
+<h4 class="font-headline-sm text-on-surface mb-2">Upload Statement</h4>
+<p class="text-body-md text-on-surface-variant mb-stack-lg max-w-xs">Drag and drop your bank statements here. We support PDF, CSV, and Excel formats.</p>
+<div class="w-full p-stack-lg border-2 border-dashed border-outline-variant rounded-xl bg-surface-container-lowest transition-all hover:border-secondary cursor-pointer" onclick="document.getElementById('fileInput').click()">
+<input class="hidden" id="fileInput" type="file"/>
+<span class="text-sm font-bold text-secondary">Click to Browse Files</span>
+<p class="text-[10px] text-on-surface-variant mt-1">Maximum file size: 10MB</p>
+</div>
+<!-- Duplicate Detection Alert (Hidden by default, shown on trigger) -->
+<div class="mt-stack-md w-full bg-error-container text-on-error-container p-4 rounded-xl flex gap-3 items-start text-left opacity-0 transition-opacity duration-300" id="duplicateAlert">
+<span class="material-symbols-outlined text-error">warning</span>
+<div>
+<p class="text-sm font-bold">Duplicate Statement Detected</p>
+<p class="text-xs opacity-90">A statement for May 2026 already exists for GT Salary. Would you like to overwrite it?</p>
+<div class="flex gap-2 mt-2">
+<button class="text-xs font-bold underline">Overwrite</button>
+<button class="text-xs font-bold underline text-on-surface-variant">Cancel</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Upload History -->
+<div class="lg:col-span-7 bg-white border border-outline-variant rounded-2xl overflow-hidden flex flex-col">
+<div class="p-6 border-b border-outline-variant flex justify-between items-center">
+<h4 class="font-headline-sm text-primary">Upload History</h4>
+<div class="flex gap-2">
+<button class="p-1.5 hover:bg-surface-container rounded-lg"><span class="material-symbols-outlined text-sm">filter_list</span></button>
+<button class="p-1.5 hover:bg-surface-container rounded-lg"><span class="material-symbols-outlined text-sm">more_vert</span></button>
+</div>
+</div>
+<div class="flex-grow overflow-auto max-h-[400px]">
+<table class="w-full text-left">
+<thead class="bg-surface-container-low text-[11px] uppercase tracking-wider text-on-surface-variant">
+<tr>
+<th class="px-6 py-3 font-semibold">Account</th>
+<th class="px-6 py-3 font-semibold">Period</th>
+<th class="px-6 py-3 font-semibold">Transactions</th>
+<th class="px-6 py-3 font-semibold">Status</th>
+<th class="px-6 py-3 font-semibold"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-sm font-medium">GT Salary</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm font-mono-data">May 2026</td>
+<td class="px-6 py-4 text-sm">325 Txns</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-secondary-fixed/30 text-on-secondary-fixed-variant text-[10px] font-bold rounded uppercase">Uploaded</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:underline text-xs font-bold">View</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-sm font-medium">Kuda Savings</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm font-mono-data">April 2026</td>
+<td class="px-6 py-4 text-sm">112 Txns</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-secondary-fixed/30 text-on-secondary-fixed-variant text-[10px] font-bold rounded uppercase">Uploaded</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:underline text-xs font-bold">View</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-amber-500"></div>
+<span class="text-sm font-medium">Opay Business</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm font-mono-data">March 2026</td>
+<td class="px-6 py-4 text-sm">--</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-error-container text-error text-[10px] font-bold rounded uppercase">Failed</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-error hover:underline text-xs font-bold">Retry</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-sm font-medium">GT Salary</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm font-mono-data">Feb 2026</td>
+<td class="px-6 py-4 text-sm">290 Txns</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-secondary-fixed/30 text-on-secondary-fixed-variant text-[10px] font-bold rounded uppercase">Uploaded</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary hover:underline text-xs font-bold">View</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Modal: Add New Bank -->
+<div class="fixed inset-0 bg-primary/40 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300" id="bankModal">
+<div class="bg-white w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl transform translate-y-4 transition-transform duration-300">
+<div class="p-8 border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<div>
+<h3 class="text-headline-sm font-bold text-primary">Connect New Account</h3>
+<p class="text-sm text-on-surface-variant">Select your bank from the list of Nigerian providers.</p>
+</div>
+<button class="p-2 hover:bg-surface-container rounded-full" id="closeModal"><span class="material-symbols-outlined">close</span></button>
+</div>
+<div class="p-8">
+<div class="mb-6 relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-12 pr-4 py-3 border border-outline-variant rounded-xl focus:ring-2 focus:ring-secondary focus:outline-none transition-all" placeholder="Search for your bank..." type="text"/>
+</div>
+<div class="grid grid-cols-4 gap-4 max-h-[300px] overflow-y-auto p-2">
+<!-- Bank Selection Grid -->
+<button class="flex flex-col items-center gap-2 p-4 border border-outline-variant rounded-xl hover:border-secondary hover:bg-surface-container transition-all group">
+<div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm p-2 group-hover:scale-105 transition-transform">
+<img class="w-full grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all" data-alt="Monochrome minimalist logo for GTBank Nigeria." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdfQb9t9wEALsIXNr2IehEjhnxZHlYgHSriGOcrLZs_7nL5U9_r9nRKKWQ1k53VesGgr_gyMSoBppGFvCRPiuKSFYaNx4le_YCof-ZlV46YGZ8UztCD23o8YT8NzWZjgPIASmRTxvh-y2inJ251Ckoai8bAWFpmfWT0aQSMZzz1mzYsrdFPOBek98_cNIRZiFi3PfpaAMHQVM674pJ8RU0ibg0iN560qX0buGqfJNVAUTfWTuak2EJ--tr6lbBFI7oNoDjsursjJE"/>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">GTBank</span>
+</button>
+<button class="flex flex-col items-center gap-2 p-4 border border-outline-variant rounded-xl hover:border-secondary hover:bg-surface-container transition-all group">
+<div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm p-2 group-hover:scale-105 transition-transform">
+<img class="w-full grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all" data-alt="Monochrome minimalist logo for Access Bank Nigeria." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgUBbJ6jxB4Q82j4jp7HKpJrHw_YHzN3p9AYMpAVOys-P3hCtifTHdYROH0NmBdbiTXUfnvYCJM0hllZtV7WOsVr7mVLmYdJPiUVB1a6NrcScOpymzbzdY-egbIh2h6lN0MN1Z4h-HzF593HIuXOSklLvVan4WUFJ1WLo6dnQm1Kg4QvZG7BpCCvhDC4zUpn7s1hlM_Ff5cmPBtGXbENwt40QtnMJHnkmEk_Zpxd58_NH9zMXOm6yM1rHJjl0_yjiIGcCQosfHn6Q"/>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">Access</span>
+</button>
+<button class="flex flex-col items-center gap-2 p-4 border border-outline-variant rounded-xl hover:border-secondary hover:bg-surface-container transition-all group">
+<div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm p-2 group-hover:scale-105 transition-transform">
+<img class="w-full grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all" data-alt="Monochrome minimalist logo for Zenith Bank Nigeria." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgo9UY4rCXXtKk9GIBZKXcsd1XOPEgvcST-ZNr7dCHlmW1L0mfBHWO3ggQx6xFLSiFAkVtS_ijtPXCdnHrz14McgJ7pUgHz4SR7S8hvXewSDa0YTFko5hpF0Jh6NwiQwoyxiX4R2UKuaA0dxfZm6piCUiurA9B-3bHFYFcu31jdRwamUlpNw8niVIspjO07YuuHm-q7VEY1sq7kgvG7_wB0tN6G9MruATGeUYP1WGWc3QgvSBgDzh9PaZa6zC6sV6ibKLOI-rPrwc"/>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">Zenith</span>
+</button>
+<button class="flex flex-col items-center gap-2 p-4 border border-outline-variant rounded-xl hover:border-secondary hover:bg-surface-container transition-all group">
+<div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm p-2 group-hover:scale-105 transition-transform">
+<img class="w-full grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all" data-alt="Monochrome minimalist logo for First Bank Nigeria." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgdFwCIxL8DUt6JmIpSLZp1_lv6ct5HTaSRDatsqvNhlqaT6Dvo8o92KqiPfLTfMgEFOBAPOvllnJZCGlxE2BiayEKfkgF_UAe4o2oU3GOUDSqsVaYTtDFnuNYkPz_jyEZQhhdL1FEXjAuWCXHeX8oEJi9yljvu7jBDwrMs20iY_cEKu0Cen21oT1JneaHFQC3z-n4lALx4dFcWmmjISylYarnl2N-8kAHxWAyH8j2g0NrZro_CxknJTSOAFLqspoEDQ0qGUyTpL4"/>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">FirstBank</span>
+</button>
+<button class="flex flex-col items-center gap-2 p-4 border border-outline-variant rounded-xl hover:border-secondary hover:bg-surface-container transition-all group">
+<div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm p-2 group-hover:scale-105 transition-transform">
+<img class="w-full grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all" data-alt="Monochrome minimalist logo for Kuda Bank Nigeria." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGNa4HVivlh64mK3n-4xmlqASokrxcYfzWZR1IJ0D5IsXv0UlsCGGpvyl_8Xf5phAwkY4Nk-HocJtVgcOMe_EvigSjY-GTKMwNV5U_vFxdN2WS-jfX4al4_T21w88tbFrX9aWPxjfBUzGeJ90w87bmugpp69Xk1dqbNBsFiCTSV0yzoleUI-29otyhK-zBT_PrJg_CaFR-V2oQA2yW0KEn4M2Sth_5-Q1_AWenst8n3AJrbDEBA5yDabdPCdB8QzXFnDsG6RJ9mkw"/>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">Kuda</span>
+</button>
+<button class="flex flex-col items-center gap-2 p-4 border border-outline-variant rounded-xl hover:border-secondary hover:bg-surface-container transition-all group">
+<div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm p-2 group-hover:scale-105 transition-transform">
+<img class="w-full grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all" data-alt="Monochrome minimalist logo for Opay Nigeria." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZCicRrbgBDyzP4Phn7_bwFQegb2Wp5a-DCIZwm_3pAQuzbqJ8MnqrGKaWxNRVUQg64_mPsqgnDanmaNlS14Rp1xpCfsm-itTcsNVVPcZ9Im5BVPOpf16hojFJSlIEJxNUiSfDvPR3Y4fL4C0_-Y0hNiqqb5x-vqOqQv_u0_T6RXCIQzaVMFtowytyNj7AMOUJTK2dVCG7TOnq33bOJ0w1UdDSgI7gV7K12eQs8gii_z99GRPaIduKCVMos1dNrX4kFA0pt_0Gbpg"/>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">Opay</span>
+</button>
+<button class="flex flex-col items-center gap-2 p-4 border border-outline-variant rounded-xl hover:border-secondary hover:bg-surface-container transition-all group">
+<div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm p-2 group-hover:scale-105 transition-transform">
+<img class="w-full grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all" data-alt="Monochrome minimalist logo for Moniepoint Nigeria." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAofpJGBOO3jpCjUAiWoDcpudhfVbAMWxKNOC6u5QlNi0ogTBiUuwGLWmmj5QKYYMr2__A07qfJh3ItRob1cYKWeFAe1B8NFxvmCJqcShWjmwnrKAVBRIcNjEKzBCmOJentxRwa3N4NWr5r7oMbnKt9o9M2RGVLvXcyst_KG-jpwLgBDy0xXUTBR8MSo9VF4AA9D57bNrGmNFB6l7hx_KAXF3Vk2dbl2B9BD_rj9D5Z3Qtsp0at3sdeN85gM9ObzuYJMf-RoBQ-5XY"/>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">Moniepoint</span>
+</button>
+<button class="flex flex-col items-center gap-2 p-4 border border-outline-variant rounded-xl hover:border-secondary hover:bg-surface-container transition-all group border-dashed">
+<div class="w-12 h-12 bg-surface-container-low rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-on-surface-variant">more_horiz</span>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">Others</span>
+</button>
+</div>
+</div>
+<div class="p-8 bg-surface-container-lowest flex justify-end gap-4 border-t border-outline-variant">
+<button class="px-6 py-2 text-on-surface-variant font-bold hover:bg-surface-container rounded-lg transition-colors" id="cancelModal">Cancel</button>
+<button class="px-8 py-2 bg-primary text-on-primary font-bold rounded-lg hover:opacity-90 transition-transform active:scale-95 shadow-lg shadow-primary/20">Proceed</button>
+</div>
+</div>
+</div>
+<script>
+        // Modal Logic
+        const addBankBtn = document.getElementById('addBankBtn');
+        const bankModal = document.getElementById('bankModal');
+        const closeModal = document.getElementById('closeModal');
+        const cancelModal = document.getElementById('cancelModal');
+        const modalContent = bankModal.querySelector('div');
+
+        const openModal = () => {
+            bankModal.classList.remove('hidden');
+            setTimeout(() => {
+                bankModal.classList.remove('opacity-0');
+                modalContent.classList.remove('translate-y-4');
+            }, 50);
+        };
+
+        const hideModal = () => {
+            bankModal.classList.add('opacity-0');
+            modalContent.classList.add('translate-y-4');
+            setTimeout(() => {
+                bankModal.classList.add('hidden');
+            }, 300);
+        };
+
+        addBankBtn.addEventListener('click', openModal);
+        closeModal.addEventListener('click', hideModal);
+        cancelModal.addEventListener('click', hideModal);
+        bankModal.addEventListener('click', (e) => {
+            if (e.target === bankModal) hideModal();
+        });
+
+        // Drag & Drop Simulation
+        const dropZone = document.getElementById('dropZone');
+        const duplicateAlert = document.getElementById('duplicateAlert');
+        const fileInput = document.getElementById('fileInput');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-active'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            // Simulate duplicate detection for demo purposes
+            duplicateAlert.classList.remove('opacity-0');
+            setTimeout(() => {
+                duplicateAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                 duplicateAlert.classList.remove('opacity-0');
+            }
+        });
+    </script>
+</body></html>

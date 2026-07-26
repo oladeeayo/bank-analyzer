@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CONYEST - Merchant &amp; Category Analytics</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "secondary": "#416900",
+                "inverse-primary": "#95d3ba",
+                "surface-container-highest": "#dce2f3",
+                "surface": "#f9f9ff",
+                "on-secondary-fixed-variant": "#304f00",
+                "on-secondary": "#ffffff",
+                "on-tertiary-fixed-variant": "#454748",
+                "on-tertiary": "#ffffff",
+                "tertiary-container": "#424546",
+                "tertiary": "#2c2f30",
+                "background": "#f9f9ff",
+                "outline-variant": "#bfc9c3",
+                "on-error": "#ffffff",
+                "on-tertiary-fixed": "#191c1d",
+                "on-secondary-fixed": "#102000",
+                "tertiary-fixed-dim": "#c5c7c8",
+                "inverse-on-surface": "#ebf1ff",
+                "surface-variant": "#dce2f3",
+                "surface-dim": "#d3daea",
+                "surface-container-high": "#e2e8f8",
+                "surface-container-low": "#f0f3ff",
+                "tertiary-fixed": "#e1e3e4",
+                "secondary-fixed": "#acf847",
+                "surface-container": "#e7eefe",
+                "on-primary-fixed-variant": "#0b513d",
+                "on-tertiary-container": "#b0b2b3",
+                "on-primary-container": "#80bea6",
+                "surface-bright": "#f9f9ff",
+                "error-container": "#ffdad6",
+                "surface-container-lowest": "#ffffff",
+                "surface-tint": "#2b6954",
+                "error": "#ba1a1a",
+                "secondary-container": "#acf847",
+                "primary": "#003527",
+                "on-secondary-container": "#457000",
+                "on-primary-fixed": "#002117",
+                "inverse-surface": "#2a313d",
+                "on-surface-variant": "#404944",
+                "on-primary": "#ffffff",
+                "primary-container": "#064e3b",
+                "primary-fixed-dim": "#95d3ba",
+                "secondary-fixed-dim": "#91db2a",
+                "on-surface": "#151c27",
+                "on-background": "#151c27",
+                "outline": "#707974",
+                "on-error-container": "#93000a",
+                "primary-fixed": "#b0f0d6"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "container-margin": "24px",
+                "card-padding": "20px",
+                "stack-sm": "8px",
+                "stack-lg": "32px",
+                "stack-md": "16px",
+                "gutter": "16px"
+            },
+            "fontFamily": {
+                "label-sm": ["Inter"],
+                "display-md": ["Inter"],
+                "mono-data": ["JetBrains Mono"],
+                "body-lg": ["Inter"],
+                "display-lg": ["Inter"],
+                "headline-sm": ["Inter"],
+                "body-md": ["Inter"]
+            },
+            "fontSize": {
+                "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                "display-md": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "mono-data": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .chart-container {
+            position: relative;
+            background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(149,211,186,0.05) 100%);
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #E5E7EB;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-[260px] border-r border-outline-variant bg-surface-container-lowest dark:bg-surface-dim flex flex-col p-container-margin gap-stack-md z-50">
+<div class="mb-stack-lg">
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary dark:text-primary-fixed">CONYEST</h1>
+<p class="text-[11px] uppercase tracking-widest text-on-surface-variant/60 font-bold">Financial Intelligence</p>
+</div>
+<nav class="flex flex-col gap-1">
+<!-- Active state determined as Dashboard/Analytics -->
+<a class="flex items-center gap-3 p-3 bg-secondary-container text-on-secondary-container rounded-lg font-bold transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="font-body-md">Insights</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-body-md">Payments</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-body-md">Transactions</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-body-md">Invoices</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="credit_card">credit_card</span>
+<span class="font-body-md">Cards</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="savings">savings</span>
+<span class="font-body-md">Saving Plans</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-body-md">Investments</span>
+</a>
+</nav>
+<div class="mt-auto pt-stack-lg border-t border-outline-variant flex flex-col gap-2">
+<div class="bg-primary-container p-4 rounded-xl text-on-primary-container mb-4">
+<p class="font-bold text-sm">Analyze spending,</p>
+<p class="text-xs opacity-80 mb-3">gain financial control.</p>
+<button class="bg-secondary-container text-on-secondary-container px-4 py-2 rounded-lg text-xs font-bold w-full hover:brightness-95 transition-all">Get Pro</button>
+</div>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-body-md">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-[260px] min-h-screen">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-stack-lg w-full h-20 sticky top-0 z-40 bg-surface/80 backdrop-blur-md">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Merchant Analytics</h2>
+</div>
+<div class="flex items-center gap-6">
+<!-- Specialized Search Bar -->
+<div class="relative flex items-center group">
+<span class="material-symbols-outlined absolute left-3 text-on-surface-variant group-focus-within:text-primary transition-colors" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-full text-sm w-80 focus:ring-2 focus:ring-secondary-container focus:outline-none transition-all" placeholder="Lookup merchant or category..." type="text"/>
+<kbd class="absolute right-3 text-[10px] bg-outline-variant/20 px-1.5 py-0.5 rounded text-on-surface-variant">⌘K</kbd>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<div class="flex items-center gap-3 border-l border-outline-variant pl-4">
+<div class="text-right">
+<p class="font-bold text-sm text-on-surface">Jamie Smith</p>
+<p class="text-xs text-on-surface-variant">Admin Level</p>
+</div>
+<img alt="Jamie Smith" class="w-10 h-10 rounded-full bg-secondary-container p-0.5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXZs7oj9uRmHi1UX6IR6uWVODGUetHnPJYDHZ3C1NVjGuTOsASCDzoMgB3PnKww4giopPQGTXHOnsqLGk99KQiRlSzPTCKMk-W_Eqt7NLRC98ODpKAo9-K4Y3r77bp0hhrYk1_oT7jggZPkeqZujcZM_OzSTEYXOMQV1pO2a8Wyh-1WZ4VgSfBl0Q9S5C3fLGN8uaRH1bkQrUvynzjVgyeOQd8MqPVuGdaY0S4rfq8dGP4lsuXel6K2b71FFFG7LTT36jtMFHLTyo"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Dashboard Body -->
+<div class="p-container-margin">
+<div class="bento-grid">
+<!-- Merchant Selector/Header (Full Width Context) -->
+<div class="col-span-12 flex items-center justify-between bg-primary p-card-padding rounded-2xl text-white shadow-lg overflow-hidden relative">
+<div class="absolute right-0 top-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
+<span class="material-symbols-outlined text-[320px]" data-icon="shopping_bag">shopping_bag</span>
+</div>
+<div class="flex items-center gap-6 z-10">
+<div class="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30">
+<span class="material-symbols-outlined text-4xl" data-icon="store">store</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h3 class="font-display-md text-display-md">Shoprite</h3>
+<span class="bg-secondary px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase">Verified Merchant</span>
+</div>
+<p class="text-on-primary-container font-medium opacity-80 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="location_on">location_on</span>
+                                Lagos Island Distribution Center
+                            </p>
+</div>
+</div>
+<div class="flex items-center gap-8 z-10">
+<div class="text-right border-r border-white/10 pr-8">
+<p class="text-xs opacity-60 uppercase tracking-wider mb-1">Total Spent</p>
+<p class="text-2xl font-bold text-secondary-fixed">₦684,200</p>
+</div>
+<div class="text-right border-r border-white/10 pr-8">
+<p class="text-xs opacity-60 uppercase tracking-wider mb-1">Visits</p>
+<p class="text-2xl font-bold">38</p>
+</div>
+<div class="text-right">
+<p class="text-xs opacity-60 uppercase tracking-wider mb-1">Avg. Visit</p>
+<p class="text-2xl font-bold">₦18,005</p>
+</div>
+</div>
+</div>
+<!-- Trend Graph (Bento: Large Area) -->
+<div class="col-span-8 bg-surface-container-lowest p-card-padding rounded-2xl border border-outline-variant flex flex-col min-h-[400px]">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Spending Velocity</h4>
+<p class="text-sm text-on-surface-variant">Historical analysis over 15 months</p>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1 text-xs font-bold bg-surface-container rounded hover:bg-outline-variant transition-colors">Export CSV</button>
+<select class="text-xs font-bold bg-surface-container border-none rounded focus:ring-0 cursor-pointer">
+<option>Last 15 Months</option>
+<option>Year to Date</option>
+</select>
+</div>
+</div>
+<div class="flex-grow chart-container rounded-xl flex items-end justify-between px-4 pb-8 gap-4 overflow-hidden">
+<!-- Mockup Visual Lines -->
+<div class="absolute inset-0 p-8 flex flex-col justify-between pointer-events-none opacity-20">
+<div class="border-t border-dashed border-primary"></div>
+<div class="border-t border-dashed border-primary"></div>
+<div class="border-t border-dashed border-primary"></div>
+<div class="border-t border-dashed border-primary"></div>
+</div>
+<!-- Bar Graph representing 15 months trend -->
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[40%] transition-all group-hover:bg-secondary-fixed relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-primary text-white text-[10px] px-2 py-1 rounded">₦42k</div>
+</div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">JAN</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[55%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">FEB</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[45%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">MAR</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed rounded-t-lg h-[75%] shadow-[0_-8px_20px_rgba(172,248,71,0.2)]"></div>
+<span class="text-[10px] font-mono-data text-primary font-bold">APR</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[60%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">MAY</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[85%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">JUN</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[70%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">JUL</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[90%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">AUG</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[65%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">SEP</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[40%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">OCT</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[55%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">NOV</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[80%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">DEC</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[60%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">JAN</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[45%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">FEB</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+<div class="w-full bg-secondary-fixed/30 rounded-t-lg h-[30%] transition-all group-hover:bg-secondary-fixed relative"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">MAR</span>
+</div>
+</div>
+</div>
+<!-- Category Comparison Chart (Bento: Square/Tall) -->
+<div class="col-span-4 bg-surface-container-lowest p-card-padding rounded-2xl border border-outline-variant flex flex-col">
+<div class="mb-8">
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Category Split</h4>
+<p class="text-sm text-on-surface-variant">Spend distribution relative to total</p>
+</div>
+<div class="flex-grow flex flex-col items-center justify-center py-6">
+<div class="relative w-48 h-48">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#e7eefe" stroke-width="12"></circle>
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#003527" stroke-dasharray="251.2" stroke-dashoffset="100.48" stroke-width="12"></circle>
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#416900" stroke-dasharray="251.2" stroke-dashoffset="200.96" stroke-width="12"></circle>
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#91db2a" stroke-dasharray="251.2" stroke-dashoffset="240.5" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant opacity-60">Total Share</p>
+<p class="text-2xl font-bold text-primary">60%</p>
+</div>
+</div>
+<div class="w-full mt-10 space-y-3">
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="text-on-surface">Groceries</span>
+</div>
+<span class="font-bold text-on-surface">60%</span>
+</div>
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-secondary"></div>
+<span class="text-on-surface">Household</span>
+</div>
+<span class="font-bold text-on-surface">25%</span>
+</div>
+<div class="flex items-center justify-between text-sm">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-secondary-fixed-dim"></div>
+<span class="text-on-surface">Electronics</span>
+</div>
+<span class="font-bold text-on-surface">15%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Insights Section (Bento: Bottom Rows) -->
+<div class="col-span-12 grid grid-cols-4 gap-6">
+<div class="glass-card p-6 rounded-2xl flex flex-col gap-4 border-l-4 border-l-secondary">
+<div class="w-10 h-10 bg-secondary/10 rounded-xl flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Category Surge</p>
+<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">Food category spending increased <span class="text-error font-bold">28%</span> this month across all merchants.</p>
+</div>
+</div>
+<div class="glass-card p-6 rounded-2xl flex flex-col gap-4 border-l-4 border-l-primary">
+<div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="calendar_month">calendar_month</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Peak Spending Day</p>
+<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">Most expensive Friday was <span class="text-primary font-bold">June 25th</span> with a total of ₦84,500.</p>
+</div>
+</div>
+<div class="glass-card p-6 rounded-2xl flex flex-col gap-4 border-l-4 border-l-secondary-fixed-dim">
+<div class="w-10 h-10 bg-secondary-fixed/10 rounded-xl flex items-center justify-center text-secondary-container">
+<span class="material-symbols-outlined" data-icon="savings">savings</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Saving Opportunity</p>
+<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">Switching to "Value" alternatives at Shoprite could save <span class="text-secondary font-bold">₦12k/mo</span>.</p>
+</div>
+</div>
+<div class="glass-card p-6 rounded-2xl flex flex-col gap-4 border-l-4 border-l-outline">
+<div class="w-10 h-10 bg-surface-variant rounded-xl flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Visit Frequency</p>
+<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">You visit this merchant <span class="text-primary font-bold">3.2x</span> more often than typical users in your demographic.</p>
+</div>
+</div>
+</div>
+<!-- Recent Merchant Transactions (Full Width Table) -->
+<div class="col-span-12 bg-surface-container-lowest p-card-padding rounded-2xl border border-outline-variant">
+<div class="flex items-center justify-between mb-6">
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Activity History</h4>
+<div class="flex gap-4">
+<div class="flex items-center gap-2 text-xs text-on-surface-variant">
+<span class="w-2 h-2 rounded-full bg-secondary-fixed"></span> Successful
+                            </div>
+<div class="flex items-center gap-2 text-xs text-on-surface-variant">
+<span class="w-2 h-2 rounded-full bg-error"></span> Flagged
+                            </div>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-low text-on-surface-variant text-xs uppercase tracking-wider font-bold">
+<tr>
+<th class="px-4 py-3 rounded-l-lg">ID</th>
+<th class="px-4 py-3">Category</th>
+<th class="px-4 py-3">Date &amp; Time</th>
+<th class="px-4 py-3">Payment Method</th>
+<th class="px-4 py-3">Amount</th>
+<th class="px-4 py-3 rounded-r-lg text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/30 text-sm">
+<tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer group">
+<td class="px-4 py-4 font-mono-data">#TX-9042</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm opacity-60" data-icon="local_grocery_store">local_grocery_store</span>
+                                            Groceries
+                                        </div>
+</td>
+<td class="px-4 py-4">
+<div class="flex flex-col">
+<span class="font-medium">Nov 12, 2025</span>
+<span class="text-[10px] text-on-surface-variant">03:45 PM</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="credit_card">credit_card</span>
+                                            •••• 8820
+                                        </div>
+</td>
+<td class="px-4 py-4 font-bold">₦45,200.00</td>
+<td class="px-4 py-4 text-right">
+<span class="px-2 py-1 bg-secondary-fixed/20 text-on-secondary-container rounded-full text-[10px] font-bold uppercase">Completed</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer group">
+<td class="px-4 py-4 font-mono-data">#TX-8911</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm opacity-60" data-icon="home_repair_service">home_repair_service</span>
+                                            Household
+                                        </div>
+</td>
+<td class="px-4 py-4">
+<div class="flex flex-col">
+<span class="font-medium">Nov 10, 2025</span>
+<span class="text-[10px] text-on-surface-variant">11:20 AM</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="account_balance_wallet">account_balance_wallet</span>
+                                            Direct Transfer
+                                        </div>
+</td>
+<td class="px-4 py-4 font-bold">₦12,800.00</td>
+<td class="px-4 py-4 text-right">
+<span class="px-2 py-1 bg-secondary-fixed/20 text-on-secondary-container rounded-full text-[10px] font-bold uppercase">Completed</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer group">
+<td class="px-4 py-4 font-mono-data">#TX-8854</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm opacity-60" data-icon="devices">devices</span>
+                                            Electronics
+                                        </div>
+</td>
+<td class="px-4 py-4">
+<div class="flex flex-col">
+<span class="font-medium">Nov 08, 2025</span>
+<span class="text-[10px] text-on-surface-variant">09:15 PM</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="credit_card">credit_card</span>
+                                            •••• 8820
+                                        </div>
+</td>
+<td class="px-4 py-4 font-bold">₦125,000.00</td>
+<td class="px-4 py-4 text-right">
+<span class="px-2 py-1 bg-error-container text-on-error-container rounded-full text-[10px] font-bold uppercase">Failed</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Simple micro-interaction for active tab
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                document.querySelectorAll('nav a').forEach(l => {
+                    l.classList.remove('bg-secondary-container', 'text-on-secondary-container', 'font-bold');
+                    l.classList.add('text-on-surface-variant');
+                });
+                this.classList.add('bg-secondary-container', 'text-on-secondary-container', 'font-bold');
+                this.classList.remove('text-on-surface-variant');
+            });
+        });
+
+        // Search shortcut simulation
+        window.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                document.querySelector('input').focus();
+            }
+        });
+    </script>
+</body></html>

@@ -13,6 +13,7 @@ import {
   Target,
   Wallet,
   CreditCard,
+  LogOut,
 } from "lucide-react";
 
 const navigation = [
@@ -30,19 +31,20 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="w-64 bg-[#1a3a2a] min-h-screen p-6 flex flex-col">
+    <aside className="w-[260px] bg-surface-lowest border-r border-[#ececec] min-h-screen p-6 flex flex-col gap-4 fixed left-0 top-0 z-50">
       {/* Logo */}
-      <div className="mb-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-400 rounded-xl flex items-center justify-center">
-            <span className="text-[#1a3a2a] font-bold text-lg">B</span>
-          </div>
-          <span className="text-white font-semibold text-xl tracking-tight">CONVEST</span>
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-10 h-10 bg-forest-container rounded-buttons flex items-center justify-center text-white">
+          <span className="font-bold text-lg">C</span>
+        </div>
+        <div>
+          <h1 className="font-signifier text-[22px] text-forest leading-tight">CONYEST</h1>
+          <p className="text-[10px] uppercase tracking-widest text-ash-gray font-medium">Financial Intelligence</p>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1">
+      <nav className="flex-1 flex flex-col gap-1">
         {navigation.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
@@ -50,10 +52,10 @@ export function Sidebar() {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 px-4 py-3 rounded-buttons text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-emerald-400 text-[#1a3a2a] shadow-lg shadow-emerald-400/20"
-                  : "text-emerald-100/60 hover:text-white hover:bg-white/5"
+                  ? "bg-lime-vibrant text-forest font-semibold"
+                  : "text-slate-gray hover:text-forest hover:bg-mist-gray"
               )}
             >
               <item.icon className="h-5 w-5" />
@@ -62,6 +64,38 @@ export function Sidebar() {
           );
         })}
       </nav>
-    </div>
+
+      {/* Bottom Section */}
+      <div className="mt-auto flex flex-col gap-2">
+        {/* Pro Card */}
+        <div className="bg-forest p-4 rounded-cards relative overflow-hidden group">
+          <div className="relative z-10">
+            <p className="text-white/80 text-sm mb-2">Analyze spending, gain financial control.</p>
+            <button className="bg-lime-vibrant text-forest px-4 py-2 rounded-buttons text-sm font-semibold w-full hover:brightness-95 transition-all">
+              Get Pro
+            </button>
+          </div>
+          <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-lime-vibrant/20 rounded-full blur-xl group-hover:scale-150 transition-transform"></div>
+        </div>
+
+        {/* Settings & Logout */}
+        <Link
+          href="/dashboard/settings"
+          className={cn(
+            "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            pathname === "/dashboard/settings"
+              ? "text-forest bg-mist-gray"
+              : "text-slate-gray hover:text-forest hover:bg-mist-gray"
+          )}
+        >
+          <Settings className="h-5 w-5" />
+          Settings
+        </Link>
+        <button className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest hover:bg-mist-gray transition-colors">
+          <LogOut className="h-5 w-5" />
+          Logout
+        </button>
+      </div>
+    </aside>
   );
 }
