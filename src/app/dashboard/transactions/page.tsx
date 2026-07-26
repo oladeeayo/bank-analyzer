@@ -120,54 +120,79 @@ export default function TransactionsPage() {
   }, [user, search, filterType, page, refreshKey]);
 
   const findSimilarTransactions = useCallback((tx: Transaction) => {
+    const STOP_WORDS = new Set(["from", "to", "the", "and", "for", "with", "that", "this", "was", "are", "has", "have", "not", "but", "can", "will", "just", "been", "its", "may", "who", "did", "get", "got", "let", "say", "she", "him", "his", "her", "our", "your", "all", "any", "few", "more", "most", "other", "some", "such", "than", "too", "very", "because", "through", "about", "before", "after", "above", "below", "between", "under", "again", "once", "here", "there", "when", "where", "why", "how", "each", "every", "both", "few", "own", "same", "also", "back", "even", "still", "new", "well", "only", "into", "over", "such", "take", "come", "make", "like", "long", "look", "many", "much", "must", "need", "next", "only", "same", "than", "them", "then", "these", "they", "those", "upon", "what", "when", "your"]);
+
+    const extractWords = (desc: string): string[] => {
+      return desc
+        .toLowerCase()
+        .split(/[\s,.\-;:!?/()]+/)
+        .filter(w => w.length > 2 && !STOP_WORDS.has(w));
+    };
+
+    const extractNames = (desc: string): string[] => {
+      const words = desc.toUpperCase().split(/[\s,.\-;:!?/()]+/);
+      const nameWords = words.filter(w =>
+        w.length >= 3 &&
+        !STOP_WORDS.has(w.toLowerCase()) &&
+        !/^\d+$/.test(w) &&
+        !["BANK", "OPAY", "PALMPAY", "TRANSFER", "LOAN", "REPAYMENT", "SAVE", "WITHDRAWAL", "DEPOSIT", "PAYMENT", "POS", "ATM", "USSD", "WEB", "APP", "NIP", "NIBSS", "AUTOSAVE", "AUTOSAVE", "EASEMONI", "EASEMONI", "CASHBACK", "REVERSAL", "CHARGE", "FEE", "INTEREST", "COMMISSION", "TAX", "VAT", "CHARGE", "SANDBOX", "LIMIT", "BALANCE", "ACCOUNT", "WALLET"].includes(w)
+      );
+      return nameWords;
+    };
+
+    const exactWords = extractWords(tx.description);
+    const txNames = extractNames(tx.description);
+
     const similar: SimilarTransaction[] = [];
-    const txDesc = tx.normalizedDescription || tx.description;
-    const txWords = txDesc.toLowerCase().split(/\s+/).filter(w => w.length > 2);
 
     for (const other of transactions) {
       if (other.id === tx.id) continue;
 
-      const otherDesc = other.normalizedDescription || other.description;
-      const otherWords = otherDesc.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      const otherExactWords = extractWords(other.description);
+      const otherNames = extractNames(other.description);
 
-      let matchCount = 0;
-      const matchedWords: string[] = [];
-      for (const tw of txWords) {
-        for (const ow of otherWords) {
-          if (tw === ow || tw.includes(ow) || ow.includes(tw)) {
-            matchCount++;
-            matchedWords.push(tw);
-            break;
-          }
+      const exactMatches: string[] = [];
+      for (const tw of exactWords) {
+        if (otherExactWords.includes(tw)) {
+          exactMatches.push(tw);
         }
       }
 
-      if (tx.type === other.type && matchCount >= 2) {
+      const nameMatches: string[] = [];
+      for (const tn of txNames) {
+        if (otherNames.includes(tn)) {
+          nameMatches.push(tn);
+        }
+      }
+
+      const totalExact = exactMatches.length + nameMatches.length;
+
+      if (tx.type === other.type && nameMatches.length >= 1 && exactMatches.length >= 1) {
         similar.push({
           id: other.id,
-          description: otherDesc,
+          description: other.description,
           amount: other.amount,
           type: other.type,
           date: other.date,
-          matchReason: `Words: ${matchedWords.join(", ")}`,
+          matchReason: `Exact: ${[...new Set([...exactMatches, ...nameMatches])].join(", ")}`,
         });
       } else if (tx.type === other.type && tx.merchantId && tx.merchantId === other.merchantId) {
         similar.push({
           id: other.id,
-          description: otherDesc,
+          description: other.description,
           amount: other.amount,
           type: other.type,
           date: other.date,
           matchReason: "Same merchant",
         });
-      } else if (tx.type !== other.type && tx.amount !== 0 && other.amount !== 0 && Math.abs(tx.amount - other.amount) / tx.amount < 0.01 && matchCount >= 1) {
+      } else if (tx.type !== other.type && tx.amount !== 0 && other.amount !== 0 && Math.abs(tx.amount - other.amount) / tx.amount < 0.01 && nameMatches.length >= 1) {
         similar.push({
           id: other.id,
-          description: otherDesc,
+          description: other.description,
           amount: other.amount,
           type: other.type,
           date: other.date,
-          matchReason: "Potential transfer (same amount)",
+          matchReason: `Transfer: ${nameMatches.join(", ")} (${tx.type === "credit" ? "in" : "out"} → ${other.type === "credit" ? "in" : "out"})`,
         });
       }
     }
