@@ -62,6 +62,7 @@ export default function TransactionsPage() {
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [similarTxs, setSimilarTxs] = useState<SimilarTransaction[]>([]);
   const [showSimilar, setShowSimilar] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newSubcategoryName, setNewSubcategoryName] = useState("");
@@ -159,7 +160,7 @@ export default function TransactionsPage() {
           date: other.date,
           matchReason: "Same merchant",
         });
-      } else if (tx.type !== other.type && tx.amount !== 0 && other.amount !== 0 && Math.abs(tx.amount - other.amount) / tx.amount < 0.01) {
+      } else if (tx.type !== other.type && tx.amount !== 0 && other.amount !== 0 && Math.abs(tx.amount - other.amount) / tx.amount < 0.01 && matchCount >= 1) {
         similar.push({
           id: other.id,
           description: otherDesc,
@@ -296,6 +297,7 @@ export default function TransactionsPage() {
     setNewSubcategoryName("");
     setShowNewSubcategory(false);
     setSelectedParentCategoryId("");
+    setDismissedIds(new Set());
     findSimilarTransactions(tx);
   };
 
@@ -619,24 +621,33 @@ export default function TransactionsPage() {
               </div>
 
               {/* Similar Transactions */}
-              {showSimilar && similarTxs.length > 0 && (
+              {showSimilar && similarTxs.filter(s => !dismissedIds.has(s.id)).length > 0 && (
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-center gap-2 mb-3">
                     <Link className="h-4 w-4 text-blue-600" />
                     <p className="text-xs font-semibold text-blue-800">
-                      {similarTxs.length} Similar Found
+                      {similarTxs.filter(s => !dismissedIds.has(s.id)).length} Similar Found
                     </p>
                   </div>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {similarTxs.slice(0, 5).map(s => (
-                      <div key={s.id} className="flex items-center justify-between text-xs">
+                    {similarTxs.filter(s => !dismissedIds.has(s.id)).slice(0, 5).map(s => (
+                      <div key={s.id} className="flex items-center justify-between text-xs group">
                         <div className="flex-1 min-w-0">
                           <p className="text-blue-900 truncate">{s.description}</p>
                           <p className="text-blue-600 text-[10px]">{s.matchReason}</p>
                         </div>
-                        <span className={`ml-2 font-mono ${s.type === "credit" ? "text-forest" : "text-error"}`}>
-                          {s.type === "credit" ? "+" : "-"}{formatCurrency(s.amount)}
-                        </span>
+                        <div className="flex items-center gap-1 ml-2">
+                          <span className={`font-mono ${s.type === "credit" ? "text-forest" : "text-error"}`}>
+                            {s.type === "credit" ? "+" : "-"}{formatCurrency(s.amount)}
+                          </span>
+                          <button
+                            onClick={() => setDismissedIds(prev => new Set([...prev, s.id]))}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-blue-200 rounded"
+                            title="Remove from suggestions"
+                          >
+                            <X className="h-3 w-3 text-blue-600" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
