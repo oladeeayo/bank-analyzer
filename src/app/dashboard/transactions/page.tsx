@@ -238,7 +238,7 @@ export default function TransactionsPage() {
         setMerchantName(data.transaction.merchant?.displayName || merchantName);
         setSaveMessage({
           type: "success",
-          text: `Saved! ${data.updatedSimilarCount > 0 ? `${data.updatedSimilarCount} similar updated.` : ""}`,
+          text: "Saved!",
         });
         setRefreshKey(k => k + 1);
         setTimeout(() => {
