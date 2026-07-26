@@ -309,7 +309,7 @@ export default function TransactionsPage() {
 
   // Build nested category options
   const renderCategoryOptions = () => {
-    const options: JSX.Element[] = [];
+    const options: React.ReactElement[] = [];
     
     // Root categories (no parentId)
     const rootCats = categories.filter(c => !c.parentId);
