@@ -10,7 +10,13 @@ export async function POST(request: NextRequest) {
 
     const banks = await db.bank.findMany({ where: { userId }, select: { id: true } });
     const bankIds = banks.map(b => b.id);
+
     if (bankIds.length > 0) {
+      const statements = await db.statement.findMany({ where: { bankId: { in: bankIds } }, select: { id: true } });
+      const statementIds = statements.map(s => s.id);
+      if (statementIds.length > 0) {
+        await db.stagedTransaction.deleteMany({ where: { statementId: { in: statementIds } } });
+      }
       await db.transaction.deleteMany({ where: { bankId: { in: bankIds } } });
       await db.statement.deleteMany({ where: { bankId: { in: bankIds } } });
       await db.bank.deleteMany({ where: { userId } });
