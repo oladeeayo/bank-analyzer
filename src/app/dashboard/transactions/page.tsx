@@ -315,6 +315,25 @@ export default function TransactionsPage() {
           <Calendar className="h-4 w-4 text-slate-gray" />
           <span className="text-sm text-ink-black">Oct 1, 2023 - Oct 31, 2023</span>
         </div>
+        <div className="relative flex-1 max-w-xs">
+          <Input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search transactions..."
+            className="bg-paper-white border-[#ececec] rounded-lg text-sm pl-8"
+          />
+          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ash-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-mist-gray rounded"
+            >
+              <X className="h-3 w-3 text-ash-gray" />
+            </button>
+          )}
+        </div>
         <div className="ml-auto flex items-center gap-2">
           {selectedIds.size > 0 && (
             <select
