@@ -99,12 +99,14 @@ function extractMerchant(cleaned: string): string {
 
   // Remove noise words
   for (const noise of NOISE_WORDS) {
-    merchant = merchant.replace(new RegExp(noise, "gi"), "");
+    const escaped = noise.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    merchant = merchant.replace(new RegExp(escaped, "gi"), "");
   }
 
   // Remove location keywords
   for (const loc of LOCATION_KEYWORDS) {
-    merchant = merchant.replace(new RegExp(`\\b${loc}\\b`, "gi"), "");
+    const escaped = loc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    merchant = merchant.replace(new RegExp(`\\b${escaped}\\b`, "gi"), "");
   }
 
   // Remove numbers that look like card/terminal IDs

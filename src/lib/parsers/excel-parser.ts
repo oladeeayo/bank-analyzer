@@ -116,10 +116,92 @@ export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
         metadata: { fileName, fileType: "excel", totalRows: 0, parsedRows: 0 },
       };
     }
-
     const headerIdx = findHeaderRow(allRows);
     console.log(`[ExcelParser] Header row index: ${headerIdx}`);
+
     if (headerIdx === -1) {
+      // Detect OPay format: date in col 0, description in col 2, debit/credit in cols 3/4
+      const sample = allRows[0];
+      if (sample && sample.length >= 6 && sample[0] && sample[2]) {
+        const testDate = parseDate(sample[0]);
+        if (!isNaN(testDate.getTime())) {
+          console.log("[ExcelParser] Detected OPay headerless format, using hardcoded columns");
+          const transactions: ParsedTransaction[] = [];
+          const errors: string[] = [];
+
+          for (let i = 0; i < allRows.length; i++) {
+            try {
+              const row = allRows[i];
+              if (!row || row.length < 5) continue;
+
+              const dateVal = row[0];
+              const desc = String(row[2] || "").trim();
+              const debitRaw = row[3];
+              const creditRaw = row[4];
+              const balanceVal = row[5];
+              const refVal = row[7] ? String(row[7]).trim() : undefined;
+
+              if (!dateVal || !desc) continue;
+
+              const date = parseDate(dateVal);
+              if (isNaN(date.getTime())) continue;
+
+              const debit = normalizeAmount(debitRaw);
+              const credit = normalizeAmount(creditRaw);
+
+              let amount = 0;
+              let type: "debit" | "credit";
+
+              if (debit > 0 && credit === 0) {
+                amount = debit;
+                type = "debit";
+              } else if (credit > 0 && debit === 0) {
+                amount = credit;
+                type = "credit";
+              } else if (debit > 0 && credit > 0) {
+                amount = debit;
+                type = "debit";
+              } else {
+                continue;
+              }
+
+              if (amount === 0) continue;
+
+              const balance = balanceVal ? normalizeAmount(balanceVal) : undefined;
+
+              transactions.push({
+                date: date.toISOString(),
+                description: desc,
+                amount,
+                type,
+                balance,
+                reference: refVal || undefined,
+                narration: desc,
+              });
+            } catch (err) {
+              errors.push(`Row ${i + 1}: Parse error`);
+            }
+          }
+
+          const dates = transactions.map((t) => new Date(t.date).getTime()).sort((a, b) => a - b);
+          console.log(`[ExcelParser] OPay format: ${transactions.length} transactions, ${errors.length} errors`);
+
+          return {
+            transactions,
+            errors,
+            metadata: {
+              fileName,
+              fileType: "excel",
+              totalRows: allRows.length,
+              parsedRows: transactions.length,
+              dateRange: dates.length > 0
+                ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() }
+                : undefined,
+            },
+          };
+        }
+      }
+
       // Fallback: try CSV conversion
       const csvContent = XLSX.utils.sheet_to_csv(sheet);
       return parseCSVFromExcel(csvContent, fileName);
