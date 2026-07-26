@@ -46,17 +46,6 @@ export async function PUT(
 
     const userId = currentTx.bank.userId;
 
-    // Update the merchant's display name if a new name was provided
-    if (body.normalizedDescription && currentTx.merchantId) {
-      const merchant = await db.merchant.findUnique({ where: { id: currentTx.merchantId } });
-      if (merchant && merchant.displayName !== body.normalizedDescription) {
-        await db.merchant.update({
-          where: { id: currentTx.merchantId },
-          data: { displayName: body.normalizedDescription },
-        });
-      }
-    }
-
     // Update the transaction
     const transaction = await db.transaction.update({
       where: { id },

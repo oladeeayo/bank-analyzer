@@ -532,7 +532,7 @@ export default function TransactionsPage() {
                           {tx.merchant ? (
                             <>
                               <div className="w-6 h-6 rounded bg-lime-vibrant/20 flex items-center justify-center text-[10px] font-bold text-forest">{tx.merchant.icon}</div>
-                              <span className="font-semibold text-sm text-ink-black">{tx.merchant.displayName}</span>
+                              <span className="font-semibold text-sm text-ink-black">{tx.normalizedDescription || tx.merchant.displayName}</span>
                             </>
                           ) : (
                             <span className="italic text-slate-gray text-sm">—</span>
@@ -844,23 +844,23 @@ export default function TransactionsPage() {
                       {similarTxs.filter(s => !dismissedIds.has(s.id)).length} Similar Found
                     </p>
                   </div>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {similarTxs.filter(s => !dismissedIds.has(s.id)).slice(0, 5).map(s => (
-                      <div key={s.id} className="flex items-center justify-between text-xs group">
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                    {similarTxs.filter(s => !dismissedIds.has(s.id)).map(s => (
+                      <div key={s.id} className="flex items-center justify-between text-xs p-1.5 rounded hover:bg-blue-100/50">
                         <div className="flex-1 min-w-0">
                           <p className="text-blue-900 truncate">{s.description}</p>
                           <p className="text-blue-600 text-[10px]">{s.matchReason}</p>
                         </div>
-                        <div className="flex items-center gap-1 ml-2">
+                        <div className="flex items-center gap-1.5 ml-2 shrink-0">
                           <span className={`font-mono ${s.type === "credit" ? "text-forest" : "text-error"}`}>
                             {s.type === "credit" ? "+" : "-"}{formatCurrency(s.amount)}
                           </span>
                           <button
                             onClick={() => setDismissedIds(prev => new Set([...prev, s.id]))}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-blue-200 rounded"
-                            title="Remove from suggestions"
+                            className="p-0.5 hover:bg-blue-200 rounded text-blue-400 hover:text-blue-700"
+                            title="Remove"
                           >
-                            <X className="h-3 w-3 text-blue-600" />
+                            <X className="h-3 w-3" />
                           </button>
                         </div>
                       </div>
