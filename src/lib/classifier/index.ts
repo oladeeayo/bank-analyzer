@@ -8,34 +8,60 @@ export interface ClassificationResult {
   source: "rule" | "override" | "merchant" | "pattern" | "none";
 }
 
-export async function classifyTransaction(
-  tx: NormalizedTransaction,
-  userId: string
-): Promise<ClassificationResult> {
-  // 1. Check manual overrides first (highest priority)
-  const override = await db.manualOverride.findFirst({
-    where: { description: tx.description },
-    include: { merchant: true, category: true },
-  });
+interface ClassificationCache {
+  rules: Array<{
+    type: string;
+    pattern: string;
+    merchantId: string | null;
+    categoryId: string;
+  }>;
+  merchants: Map<string, { id: string; normalizedName: string }>;
+  merchantCategoryMap: Map<string, string | null>;
+  categoryMap: Map<string, string | null>;
+  othersCategoryId: string | null;
+}
 
-  if (override) {
-    return {
-      merchantId: override.merchantId,
-      categoryId: override.categoryId,
-      confidence: 1.0,
-      source: "override",
-    };
+async function buildClassificationCache(userId: string): Promise<ClassificationCache> {
+  const [rules, allMerchants, allCategories] = await Promise.all([
+    db.classificationRule.findMany({
+      where: { userId, isActive: true },
+      orderBy: { priority: "desc" },
+      select: { type: true, pattern: true, merchantId: true, categoryId: true },
+    }),
+    db.merchant.findMany({
+      select: { id: true, normalizedName: true },
+    }),
+    db.category.findMany({
+      where: { OR: [{ userId }, { isSystem: true }] },
+      select: { id: true, name: true, userId: true, isSystem: true },
+    }),
+  ]);
+
+  const merchants = new Map<string, { id: string; normalizedName: string }>();
+  for (const m of allMerchants) {
+    merchants.set(m.normalizedName, m);
   }
 
-  // 2. Check classification rules
-  const rules = await db.classificationRule.findMany({
-    where: { userId, isActive: true },
-    orderBy: { priority: "desc" },
-    include: { merchant: true, category: true },
-  });
+  const categoryMap = new Map<string, string | null>();
+  for (const c of allCategories) {
+    const key = c.isSystem ? `system_${c.name}` : `user_${c.userId}_${c.name}`;
+    categoryMap.set(key, c.id);
+  }
 
-  for (const rule of rules) {
-    const desc = tx.description.toLowerCase();
+  let othersCategoryId: string | null = null;
+  const userOthers = allCategories.find(c => c.name === "Others" && c.userId === userId && !c.isSystem);
+  const sysOthers = allCategories.find(c => c.name === "Others" && c.isSystem);
+  othersCategoryId = userOthers?.id || sysOthers?.id || null;
+
+  const merchantCategoryMap = new Map<string, string | null>();
+
+  return { rules, merchants, merchantCategoryMap, categoryMap, othersCategoryId };
+}
+
+function matchRule(tx: NormalizedTransaction, cache: ClassificationCache): ClassificationResult | null {
+  const desc = tx.description.toLowerCase();
+
+  for (const rule of cache.rules) {
     let matches = false;
 
     switch (rule.type) {
@@ -64,65 +90,38 @@ export async function classifyTransaction(
     }
   }
 
-  // 3. Check existing merchant matches
-  if (tx.merchantGuess) {
-    const merchant = await db.merchant.findFirst({
-      where: { normalizedName: tx.merchantGuess.toLowerCase().replace(/\s+/g, "_") },
-    });
+  return null;
+}
 
-    if (merchant) {
-      // Find the most common category for this merchant
-      const categoryStats = await db.transaction.groupBy({
-        by: ["categoryId"],
-        where: { merchantId: merchant.id, categoryId: { not: null } },
-        _count: { categoryId: true },
-        orderBy: { _count: { categoryId: "desc" } },
-        take: 1,
-      });
+function matchMerchant(tx: NormalizedTransaction, cache: ClassificationCache): ClassificationResult | null {
+  if (!tx.merchantGuess) return null;
 
-      return {
-        merchantId: merchant.id,
-        categoryId: categoryStats[0]?.categoryId || null,
-        confidence: 0.8,
-        source: "merchant",
-      };
-    }
-  }
+  const normalizedName = tx.merchantGuess.toLowerCase().replace(/\s+/g, "_");
+  const merchant = cache.merchants.get(normalizedName);
+  if (!merchant) return null;
 
-  // 4. Use pattern-based guessing
-  if (tx.categoryGuess) {
-    const category = await db.category.findFirst({
-      where: {
-        OR: [
-          { userId, name: tx.categoryGuess },
-          { isSystem: true, name: tx.categoryGuess },
-        ],
-      },
-    });
+  const categoryId = cache.merchantCategoryMap.get(merchant.id) ?? null;
 
-    return {
-      merchantId: null,
-      categoryId: category?.id || null,
-      confidence: 0.5,
-      source: "pattern",
-    };
-  }
+  return {
+    merchantId: merchant.id,
+    categoryId,
+    confidence: 0.8,
+    source: "merchant",
+  };
+}
 
-  // 5. No classification found
-  const othersCategory = await db.category.findFirst({
-    where: {
-      OR: [
-        { userId, name: "Others" },
-        { isSystem: true, name: "Others" },
-      ],
-    },
-  });
+function matchCategory(tx: NormalizedTransaction, cache: ClassificationCache): ClassificationResult | null {
+  if (!tx.categoryGuess) return null;
+
+  const key = `system_${tx.categoryGuess}`;
+  const userKey = tx.categoryGuess;
+  const categoryId = cache.categoryMap.get(key) || cache.categoryMap.get(userKey) || null;
 
   return {
     merchantId: null,
-    categoryId: othersCategory?.id || null,
-    confidence: 0.0,
-    source: "none",
+    categoryId,
+    confidence: 0.5,
+    source: "pattern",
   };
 }
 
@@ -130,11 +129,24 @@ export async function classifyBatch(
   transactions: NormalizedTransaction[],
   userId: string
 ): Promise<Map<string, ClassificationResult>> {
+  const cache = await buildClassificationCache(userId);
   const results = new Map<string, ClassificationResult>();
 
   for (const tx of transactions) {
     const key = `${tx.date}_${tx.description}_${tx.amount}`;
-    const result = await classifyTransaction(tx, userId);
+
+    let result = matchRule(tx, cache);
+    if (!result) result = matchMerchant(tx, cache);
+    if (!result) result = matchCategory(tx, cache);
+    if (!result) {
+      result = {
+        merchantId: null,
+        categoryId: cache.othersCategoryId,
+        confidence: 0.0,
+        source: "none",
+      };
+    }
+
     results.set(key, result);
   }
 

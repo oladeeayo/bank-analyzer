@@ -123,16 +123,7 @@ export function parseCSV(content: string, fileName: string): ParseResult {
   });
 
   if (result.errors.length > 0) {
-    return {
-      transactions: [],
-      errors: result.errors.map(e => e.message),
-      metadata: {
-        fileName,
-        fileType: "csv",
-        totalRows: result.data.length,
-        parsedRows: 0,
-      },
-    };
+    console.warn("PapaParse warnings (non-fatal):", result.errors.map(e => e.message).join("; "));
   }
 
   const headers = result.meta.fields || [];
