@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { useUser } from "@/lib/hooks";
 
 interface AnalyticsData {
   summary: {
@@ -21,19 +22,22 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
+  const { user, loading: userLoading } = useUser();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    fetchAnalytics();
-  }, [month, year]);
+    if (user) fetchAnalytics();
+  }, [month, year, user]);
+
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
 
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/analytics?userId=demo&month=${month}&year=${year}`);
+      const res = await fetch(`/api/analytics?userId=${user?.id || ""}&month=${month}&year=${year}`);
       if (res.ok) setData(await res.json());
     } catch (err) {
       console.error("Failed to fetch analytics:", err);

@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Search, Edit, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useUser } from "@/lib/hooks";
 
 interface Transaction {
   id: string;
@@ -30,6 +31,7 @@ interface Transaction {
 }
 
 export default function TransactionsPage() {
+  const { user, loading: userLoading } = useUser();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -40,14 +42,16 @@ export default function TransactionsPage() {
   const [editForm, setEditForm] = useState({ merchantId: "", categoryId: "" });
 
   useEffect(() => {
-    fetchTransactions();
-  }, [search, filterType, page]);
+    if (user) fetchTransactions();
+  }, [search, filterType, page, user]);
+
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        userId: "demo",
+        userId: user?.id || "",
         page: String(page),
         limit: "50",
       });

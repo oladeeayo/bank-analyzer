@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
+import { useUser } from "@/lib/hooks";
 
 interface DashboardData {
   summary: {
@@ -33,15 +34,18 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
+  const { user, loading: userLoading } = useUser();
 
   useEffect(() => {
     fetchDashboard();
-  }, [month, year]);
+  }, [month, year, user]);
+
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
 
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/analytics?userId=demo&month=${month}&year=${year}`);
+      const res = await fetch(`/api/analytics?userId=${user?.id || ""}&month=${month}&year=${year}`);
       if (res.ok) {
         const result = await res.json();
         setData(result);

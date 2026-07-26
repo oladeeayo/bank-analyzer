@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Upload, FileText, CheckCircle, AlertCircle, Building2 } from "lucide-react";
+import { useUser } from "@/lib/hooks";
 
 interface Bank {
   id: string;
@@ -20,6 +21,7 @@ interface UploadResult {
 }
 
 export default function UploadPage() {
+  const { user, loading: userLoading } = useUser();
   const [banks, setBanks] = useState<Bank[]>([]);
   const [selectedBank, setSelectedBank] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -30,12 +32,14 @@ export default function UploadPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchBanks();
-  }, []);
+    if (user) fetchBanks();
+  }, [user]);
+
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
 
   const fetchBanks = async () => {
     try {
-      const res = await fetch("/api/banks?userId=demo");
+      const res = await fetch(`/api/banks?userId=${user?.id || ""}`);
       if (res.ok) setBanks(await res.json());
     } catch (err) {
       console.error("Failed to fetch banks:", err);
@@ -56,7 +60,7 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("bankId", selectedBank);
-      formData.append("userId", "demo");
+      formData.append("userId", user.id);
 
       const res = await fetch("/api/statements/upload", {
         method: "POST",

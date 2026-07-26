@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { useUser } from "@/lib/hooks";
 
 interface Budget {
   id: string;
@@ -16,6 +17,7 @@ interface Budget {
 }
 
 export default function BudgetsPage() {
+  const { user, loading: userLoading } = useUser();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -24,12 +26,14 @@ export default function BudgetsPage() {
   const [year] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    fetchBudgets();
-  }, []);
+    if (user) fetchBudgets();
+  }, [user]);
+
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
 
   const fetchBudgets = async () => {
     try {
-      const res = await fetch(`/api/budgets?userId=demo&month=${month}&year=${year}`);
+      const res = await fetch(`/api/budgets?userId=${user?.id || ""}&month=${month}&year=${year}`);
       if (res.ok) setBudgets(await res.json());
     } catch (err) {
       console.error("Failed to fetch budgets:", err);
@@ -44,7 +48,7 @@ export default function BudgetsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: "demo",
+          userId: user?.id || "",
           categoryId: form.categoryId,
           month,
           year,

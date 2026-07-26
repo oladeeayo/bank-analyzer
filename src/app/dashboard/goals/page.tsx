@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Plus, Target } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { useUser } from "@/lib/hooks";
 
 interface Goal {
   id: string;
@@ -20,18 +21,21 @@ interface Goal {
 }
 
 export default function GoalsPage() {
+  const { user, loading: userLoading } = useUser();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", targetAmount: "", deadline: "" });
 
   useEffect(() => {
-    fetchGoals();
-  }, []);
+    if (user) fetchGoals();
+  }, [user]);
+
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
 
   const fetchGoals = async () => {
     try {
-      const res = await fetch("/api/goals?userId=demo");
+      const res = await fetch(`/api/goals?userId=${user?.id || ""}`);
       if (res.ok) setGoals(await res.json());
     } catch (err) {
       console.error("Failed to fetch goals:", err);
@@ -46,7 +50,7 @@ export default function GoalsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: "demo",
+          userId: user?.id || "",
           name: form.name,
           targetAmount: parseFloat(form.targetAmount),
           deadline: form.deadline || null,

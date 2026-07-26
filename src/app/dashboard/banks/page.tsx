@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Building2, FileText, ArrowLeftRight } from "lucide-react";
 import { BANKS } from "@/lib/constants";
+import { useUser } from "@/lib/hooks";
 
 interface Bank {
   id: string;
@@ -28,6 +29,7 @@ interface Bank {
 }
 
 export default function BanksPage() {
+  const { user, loading: userLoading } = useUser();
   const [banks, setBanks] = useState<Bank[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,12 +42,14 @@ export default function BanksPage() {
   });
 
   useEffect(() => {
-    fetchBanks();
-  }, []);
+    if (user) fetchBanks();
+  }, [user]);
+
+  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-slate-400">Loading...</div></div>;
 
   const fetchBanks = async () => {
     try {
-      const res = await fetch("/api/banks?userId=demo");
+      const res = await fetch(`/api/banks?userId=${user?.id || ""}`);
       if (res.ok) {
         setBanks(await res.json());
       }
@@ -62,7 +66,7 @@ export default function BanksPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: "demo",
+          userId: user?.id || "",
           ...form,
           openingBalance: parseFloat(form.openingBalance) || 0,
         }),
