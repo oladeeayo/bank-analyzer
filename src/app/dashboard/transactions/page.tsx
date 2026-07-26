@@ -69,6 +69,7 @@ export default function TransactionsPage() {
   const [selectedParentCategoryId, setSelectedParentCategoryId] = useState("");
   const [editingMerchant, setEditingMerchant] = useState(false);
   const [merchantName, setMerchantName] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [ruleForm, setRuleForm] = useState({
     normalizedMerchant: "",
     categoryId: "",
@@ -76,49 +77,48 @@ export default function TransactionsPage() {
   });
 
   useEffect(() => {
-    if (user) {
-      fetchTransactions();
-      fetchCategories();
-    }
-  }, [search, filterType, page, user]);
+    if (!user) return;
+
+    const loadTransactions = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          userId: user.id,
+          page: String(page),
+          limit: "50",
+        });
+        if (search) params.set("search", search);
+        if (filterType) params.set("type", filterType);
+        const res = await fetch(`/api/transactions?${params}`);
+        if (res.ok) {
+          const data = await res.json();
+          setTransactions(data.transactions);
+          setTotal(data.total);
+        }
+      } catch (err) {
+        console.error("Failed to fetch transactions:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const loadCategories = async () => {
+      try {
+        const res = await fetch(`/api/categories?userId=${user.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+      }
+    };
+
+    loadTransactions();
+    loadCategories();
+  }, [user, search, filterType, page, refreshKey]);
 
   if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
-
-  const fetchTransactions = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({
-        userId: user?.id || "",
-        page: String(page),
-        limit: "50",
-      });
-      if (search) params.set("search", search);
-      if (filterType) params.set("type", filterType);
-
-      const res = await fetch(`/api/transactions?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setTransactions(data.transactions);
-        setTotal(data.total);
-      }
-    } catch (err) {
-      console.error("Failed to fetch transactions:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch(`/api/categories?userId=${user?.id || ""}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCategories(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch categories:", err);
-    }
-  };
 
   const findSimilarTransactions = useCallback((tx: Transaction) => {
     const similar: SimilarTransaction[] = [];
@@ -201,7 +201,7 @@ export default function TransactionsPage() {
         if (catRes.ok) {
           const newCat = await catRes.json();
           categoryId = newCat.id;
-          fetchCategories();
+          setRefreshKey(k => k + 1);
         }
       }
 
@@ -221,7 +221,7 @@ export default function TransactionsPage() {
         if (subRes.ok) {
           const newSub = await subRes.json();
           categoryId = newSub.id;
-          fetchCategories();
+          setRefreshKey(k => k + 1);
         }
       }
 
@@ -242,7 +242,7 @@ export default function TransactionsPage() {
           type: "success",
           text: `Saved! ${data.updatedSimilarCount > 0 ? `${data.updatedSimilarCount} similar updated.` : ""}`,
         });
-        fetchTransactions();
+        setRefreshKey(k => k + 1);
         setTimeout(() => {
           setSelectedTx(null);
           setSaveMessage(null);
