@@ -20,7 +20,7 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
       errors: ["PDF parsing requires a dedicated PDF extraction library. Please export as CSV or Excel."],
       metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 },
     };
-  } catch (_error) {
+  } catch (error) {
     return {
       transactions: [],
       errors: [`PDF parse error: ${error}`],

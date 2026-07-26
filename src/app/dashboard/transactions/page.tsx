@@ -60,7 +60,7 @@ export default function TransactionsPage() {
         setTransactions(data.transactions);
         setTotal(data.total);
       }
-    } catch (_err) {
+    } catch (err) {
       console.error("Failed to fetch transactions:", err);
     } finally {
       setLoading(false);
@@ -81,7 +81,7 @@ export default function TransactionsPage() {
         setEditTx(null);
         fetchTransactions();
       }
-    } catch (_err) {
+    } catch (err) {
       console.error("Failed to update transaction:", err);
     }
   };

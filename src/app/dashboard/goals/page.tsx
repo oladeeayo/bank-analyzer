@@ -33,7 +33,7 @@ export default function GoalsPage() {
     try {
       const res = await fetch("/api/goals?userId=demo");
       if (res.ok) setGoals(await res.json());
-    } catch (_err) {
+    } catch (err) {
       console.error("Failed to fetch goals:", err);
     } finally {
       setLoading(false);
@@ -58,7 +58,7 @@ export default function GoalsPage() {
         setForm({ name: "", targetAmount: "", deadline: "" });
         fetchGoals();
       }
-    } catch (_err) {
+    } catch (err) {
       console.error("Failed to create goal:", err);
     }
   };

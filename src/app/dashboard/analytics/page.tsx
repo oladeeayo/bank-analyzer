@@ -35,7 +35,7 @@ export default function AnalyticsPage() {
     try {
       const res = await fetch(`/api/analytics?userId=demo&month=${month}&year=${year}`);
       if (res.ok) setData(await res.json());
-    } catch (_err) {
+    } catch (err) {
       console.error("Failed to fetch analytics:", err);
     } finally {
       setLoading(false);

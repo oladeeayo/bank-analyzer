@@ -49,7 +49,7 @@ export default function BanksPage() {
       if (res.ok) {
         setBanks(await res.json());
       }
-    } catch (_err) {
+    } catch (err) {
       console.error("Failed to fetch banks:", err);
     } finally {
       setLoading(false);
@@ -73,7 +73,7 @@ export default function BanksPage() {
         setForm({ bankName: "", accountName: "", accountNumber: "", nickname: "", openingBalance: "" });
         fetchBanks();
       }
-    } catch (_err) {
+    } catch (err) {
       console.error("Failed to create bank:", err);
     }
   };
@@ -84,7 +84,7 @@ export default function BanksPage() {
     try {
       const res = await fetch(`/api/banks/${id}`, { method: "DELETE" });
       if (res.ok) fetchBanks();
-    } catch (_err) {
+    } catch (err) {
       console.error("Failed to delete bank:", err);
     }
   };

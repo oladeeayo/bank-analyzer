@@ -37,7 +37,7 @@ export default function UploadPage() {
     try {
       const res = await fetch("/api/banks?userId=demo");
       if (res.ok) setBanks(await res.json());
-    } catch (_err) {
+    } catch (err) {
       console.error("Failed to fetch banks:", err);
     }
   };
@@ -77,7 +77,7 @@ export default function UploadPage() {
       setResult(data);
       setFile(null);
       if (inputRef.current) inputRef.current.value = "";
-    } catch (_err) {
+    } catch (err) {
       setError("Upload failed. Please try again.");
     } finally {
       setUploading(false);

@@ -46,7 +46,7 @@ export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
     const csvContent = XLSX.utils.sheet_to_csv(sheet);
 
     return parseCSV(csvContent, fileName);
-  } catch (_error) {
+  } catch (error) {
     return {
       transactions: [],
       errors: [`Excel parse error: ${error}`],

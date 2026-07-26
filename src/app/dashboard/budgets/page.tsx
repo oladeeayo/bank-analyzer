@@ -31,7 +31,7 @@ export default function BudgetsPage() {
     try {
       const res = await fetch(`/api/budgets?userId=demo&month=${month}&year=${year}`);
       if (res.ok) setBudgets(await res.json());
-    } catch (_err) {
+    } catch (err) {
       console.error("Failed to fetch budgets:", err);
     } finally {
       setLoading(false);
@@ -57,7 +57,7 @@ export default function BudgetsPage() {
         setForm({ categoryId: "", limit: "" });
         fetchBudgets();
       }
-    } catch (_err) {
+    } catch (err) {
       console.error("Failed to create budget:", err);
     }
   };
