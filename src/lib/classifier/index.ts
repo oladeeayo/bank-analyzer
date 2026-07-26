@@ -125,6 +125,42 @@ function matchCategory(tx: NormalizedTransaction, cache: ClassificationCache): C
   };
 }
 
+async function findOrCreateMerchant(
+  merchantName: string,
+  cache: ClassificationCache
+): Promise<string | null> {
+  if (!merchantName) return null;
+
+  const normalizedName = merchantName.toLowerCase().replace(/\s+/g, "_");
+
+  // Check cache first
+  const cached = cache.merchants.get(normalizedName);
+  if (cached) return cached.id;
+
+  // Try to find in DB
+  const existing = await db.merchant.findUnique({
+    where: { normalizedName },
+    select: { id: true, normalizedName: true },
+  });
+
+  if (existing) {
+    cache.merchants.set(normalizedName, existing);
+    return existing.id;
+  }
+
+  // Create new merchant
+  const newMerchant = await db.merchant.create({
+    data: {
+      normalizedName,
+      displayName: merchantName,
+    },
+    select: { id: true, normalizedName: true },
+  });
+
+  cache.merchants.set(normalizedName, newMerchant);
+  return newMerchant.id;
+}
+
 export async function classifyBatch(
   transactions: NormalizedTransaction[],
   userId: string
@@ -135,9 +171,45 @@ export async function classifyBatch(
   for (const tx of transactions) {
     const key = `${tx.date}_${tx.description}_${tx.amount}`;
 
+    // 1. Check manual overrides and rules (highest priority)
     let result = matchRule(tx, cache);
-    if (!result) result = matchMerchant(tx, cache);
-    if (!result) result = matchCategory(tx, cache);
+
+    // 2. Check if merchant already exists in DB
+    if (!result) {
+      result = matchMerchant(tx, cache);
+    }
+
+    // 3. If merchant guess exists but not in DB, create it
+    if (!result && tx.merchantGuess) {
+      const merchantId = await findOrCreateMerchant(tx.merchantGuess, cache);
+      if (merchantId && tx.categoryGuess) {
+        // Find category for this merchant
+        const categoryKey = `system_${tx.categoryGuess}`;
+        const userCategoryKey = tx.categoryGuess;
+        const categoryId = cache.categoryMap.get(categoryKey) || cache.categoryMap.get(userCategoryKey) || null;
+
+        result = {
+          merchantId,
+          categoryId,
+          confidence: 0.7,
+          source: "merchant",
+        };
+      } else if (merchantId) {
+        result = {
+          merchantId,
+          categoryId: null,
+          confidence: 0.7,
+          source: "merchant",
+        };
+      }
+    }
+
+    // 4. Try pattern-based category guess
+    if (!result) {
+      result = matchCategory(tx, cache);
+    }
+
+    // 5. Fallback to Others
     if (!result) {
       result = {
         merchantId: null,

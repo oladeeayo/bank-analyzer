@@ -52,11 +52,28 @@ interface Transaction {
   category: { name: string; icon: string } | null;
 }
 
+interface MerchantSummary {
+  merchantId: string;
+  displayName: string;
+  icon: string;
+  color: string;
+  totalAmount: number;
+  transactionCount: number;
+  averageAmount: number;
+}
+
+interface MerchantSummaryData {
+  merchants: MerchantSummary[];
+  uncategorized: { totalAmount: number; transactionCount: number };
+  categories: { categoryId: string; name: string; icon: string; color: string; totalAmount: number; transactionCount: number }[];
+}
+
 const CHART_COLORS = ["#16a34a", "#22c55e", "#4ade80", "#86efac", "#bbf7d0"];
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [merchantSummary, setMerchantSummary] = useState<MerchantSummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
@@ -65,6 +82,7 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboard();
     fetchTransactions();
+    fetchMerchantSummary();
   }, [month, year, user]);
 
   if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-gray-400">Loading...</div></div>;
@@ -93,6 +111,18 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error("Failed to fetch transactions:", err);
+    }
+  };
+
+  const fetchMerchantSummary = async () => {
+    try {
+      const res = await fetch(`/api/merchants/summary?userId=${user?.id || ""}&month=${month}&year=${year}`);
+      if (res.ok) {
+        const result = await res.json();
+        setMerchantSummary(result);
+      }
+    } catch (err) {
+      console.error("Failed to fetch merchant summary:", err);
     }
   };
 
@@ -361,6 +391,53 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Spending by Merchant */}
+      {merchantSummary && merchantSummary.merchants.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Spending by Merchant</h2>
+            <a href="/dashboard/analytics" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+              View All
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {merchantSummary.merchants.slice(0, 8).map((merchant) => (
+              <div key={merchant.merchantId} className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ backgroundColor: `${merchant.color}20` }}>
+                    {merchant.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate">{merchant.displayName}</div>
+                    <div className="text-xs text-gray-500">{merchant.transactionCount} transactions</div>
+                  </div>
+                </div>
+                <div className="text-lg font-bold text-gray-900">{formatCurrency(merchant.totalAmount)}</div>
+                <div className="text-xs text-gray-500">avg {formatCurrency(merchant.averageAmount)}/txn</div>
+              </div>
+            ))}
+          </div>
+
+          {merchantSummary.uncategorized.transactionCount > 0 && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-xl">
+                    🏪
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Uncategorized</div>
+                    <div className="text-xs text-gray-500">{merchantSummary.uncategorized.transactionCount} transactions</div>
+                  </div>
+                </div>
+                <div className="text-lg font-bold text-gray-900">{formatCurrency(merchantSummary.uncategorized.totalAmount)}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Recent Transactions */}
       <div className="bg-white rounded-2xl p-6 border border-gray-100">
