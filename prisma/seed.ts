@@ -13,6 +13,7 @@ interface CatDef {
   icon: string;
   color: string;
   parent?: string;
+  sort?: number;
   children?: CatDef[];
 }
 
@@ -333,12 +334,15 @@ async function main() {
       return;
     }
 
+    const slug = cat.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     await prisma.category.create({
       data: {
         id: cat.id,
         name: cat.name,
+        slug,
         icon: cat.icon,
         color: cat.color,
+        sortOrder: cat.sort || 0,
         isSystem: true,
         parentId: parentId,
       },
