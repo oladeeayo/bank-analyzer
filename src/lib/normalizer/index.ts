@@ -209,9 +209,6 @@ const MERCHANT_DB: Record<string, { name: string; category: string; keywords: st
   atm: { name: "ATM Withdrawal", category: "ATM", keywords: ["atm", "atm withdrawal", "atm cash"] },
   pos: { name: "POS Transaction", category: "POS", keywords: ["pos", "pos purchase", "pos terminal", "pos trans"] },
 
-  // Transfers
-  transfer: { name: "Transfer", category: "Transfer", keywords: ["transfer", "trf", "sent", "received", "funding", "self", "own", "wallet"] },
-
   // Gift & Donations
   gift: { name: "Gift", category: "Gift", keywords: ["gift", "present", "donation", "charity", "tithe", "offering"] },
 
@@ -251,6 +248,19 @@ function cleanDescription(desc: string): string {
 }
 
 function extractMerchant(cleaned: string): string {
+  const lower = cleaned.toLowerCase();
+
+  // Extract name from transfer descriptions
+  // "Transfer to Faith Erezioghene Awenede" → "Faith Erezioghene Awenede"
+  // "Transfer from ADEKUNBI TOYIN BABATUNDE" → "ADEKUNBI TOYIN BABATUNDE"
+  const transferMatch = lower.match(/transfer\s+(to|from)\s+(.+?)(?:\s*\||\s*$)/i);
+  if (transferMatch) {
+    const name = transferMatch[2].trim();
+    if (name.length >= 3) {
+      return name.toUpperCase();
+    }
+  }
+
   let merchant = cleaned;
 
   // Remove noise words

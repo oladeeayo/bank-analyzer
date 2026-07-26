@@ -28,8 +28,6 @@ const KEYWORD_PATTERNS: Array<{
   categoryName: string;
   confidence: number;
 }> = [
-  // Transfers
-  { patterns: [/transfer\s+(from|to)\s+/i, /transferred?\s+(from|to)\s+/i, /internal\s+transfer/i], categoryName: "Transfer", confidence: 0.9 },
   // Savings
   { patterns: [/auto[\s-]?save/i, /savings?\s+(to|from)/i, /save\s+(to|into)\s+/i, /owealth\s+balance/i], categoryName: "Savings", confidence: 0.85 },
   // Salary / Income
