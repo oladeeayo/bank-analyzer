@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Wand2, ChevronLeft, ChevronRight, Check, AlertCircle, Plus, X, Link, Edit } from "lucide-react";
+import { Calendar, Wand2, ChevronLeft, ChevronRight, Check, AlertCircle, X, Link, Edit } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
 
@@ -63,14 +63,11 @@ export default function TransactionsPage() {
   const [similarTxs, setSimilarTxs] = useState<SimilarTransaction[]>([]);
   const [showSimilar, setShowSimilar] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [showNewCategory, setShowNewCategory] = useState(false);
-  const [newSubcategoryName, setNewSubcategoryName] = useState("");
-  const [showNewSubcategory, setShowNewSubcategory] = useState(false);
-  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState("");
   const [editingMerchant, setEditingMerchant] = useState(false);
   const [merchantName, setMerchantName] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [categorySearch, setCategorySearch] = useState("");
+  const [selectedParentForPicker, setSelectedParentForPicker] = useState<string | null>(null);
   const [ruleForm, setRuleForm] = useState({
     normalizedMerchant: "",
     categoryId: "",
@@ -222,46 +219,7 @@ export default function TransactionsPage() {
     setSaveMessage(null);
 
     try {
-      let categoryId = ruleForm.categoryId;
-
-      // Create new category if needed
-      if (showNewCategory && newCategoryName) {
-        const catRes = await fetch("/api/categories", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: user?.id,
-            name: newCategoryName,
-            icon: "📁",
-            color: "#6B7280",
-          }),
-        });
-        if (catRes.ok) {
-          const newCat = await catRes.json();
-          categoryId = newCat.id;
-          setRefreshKey(k => k + 1);
-        }
-      }
-
-      // Create new subcategory if needed
-      if (showNewSubcategory && newSubcategoryName && selectedParentCategoryId) {
-        const subRes = await fetch("/api/categories", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: user?.id,
-            name: newSubcategoryName,
-            icon: "📁",
-            color: "#6B7280",
-            parentId: selectedParentCategoryId,
-          }),
-        });
-        if (subRes.ok) {
-          const newSub = await subRes.json();
-          categoryId = newSub.id;
-          setRefreshKey(k => k + 1);
-        }
-      }
+      const categoryId = ruleForm.categoryId;
 
       const res = await fetch(`/api/transactions/${selectedTx.id}`, {
         method: "PUT",
@@ -285,8 +243,6 @@ export default function TransactionsPage() {
           setSelectedTx(null);
           setSaveMessage(null);
           setShowSimilar(false);
-          setShowNewCategory(false);
-          setShowNewSubcategory(false);
         }, 2000);
       } else {
         setSaveMessage({ type: "error", text: "Failed to save." });
@@ -329,11 +285,8 @@ export default function TransactionsPage() {
     setMerchantName(tx.merchant?.displayName || "");
     setEditingMerchant(false);
     setSaveMessage(null);
-    setNewCategoryName("");
-    setShowNewCategory(false);
-    setNewSubcategoryName("");
-    setShowNewSubcategory(false);
-    setSelectedParentCategoryId("");
+    setCategorySearch("");
+    setSelectedParentForPicker(null);
     setDismissedIds(new Set());
     findSimilarTransactions(tx);
   };
@@ -347,42 +300,6 @@ export default function TransactionsPage() {
       return next;
     });
   };
-
-  // Build nested category options
-  const renderCategoryOptions = () => {
-    const rootCats = categories.filter(c => !c.parentId);
-    const opts: React.ReactNode[] = [];
-    
-    for (const root of rootCats) {
-      opts.push(
-        <option key={root.id} value={root.id}>
-          {root.icon} {root.name}
-        </option>
-      );
-      
-      const children = categories.filter(c => c.parentId === root.id);
-      for (const child of children) {
-        opts.push(
-          <option key={child.id} value={child.id}>
-            &nbsp;&nbsp;└ {child.icon} {child.name}
-          </option>
-        );
-        
-        const grandchildren = categories.filter(c => c.parentId === child.id);
-        for (const gc of grandchildren) {
-          opts.push(
-            <option key={gc.id} value={gc.id}>
-              &nbsp;&nbsp;&nbsp;&nbsp;└ {gc.icon} {gc.name}
-            </option>
-          );
-        }
-      }
-    }
-    
-    return opts;
-  };
-
-  const parentCategories = categories.filter(c => !c.parentId && c.isSystem);
 
   return (
     <div className="space-y-6">
@@ -404,7 +321,14 @@ export default function TransactionsPage() {
               value=""
             >
               <option value="">Bulk: Set Category ({selectedIds.size} selected)</option>
-              {renderCategoryOptions()}
+              {categories.filter(c => c.parentId && categories.some(p => p.id === c.parentId)).map(c => {
+                const parent = categories.find(p => p.id === c.parentId);
+                return (
+                  <option key={c.id} value={c.id}>
+                    {parent?.icon} {parent?.name} → {c.icon} {c.name}
+                  </option>
+                );
+              })}
             </select>
           )}
         </div>
@@ -575,73 +499,183 @@ export default function TransactionsPage() {
                 )}
               </div>
 
-              {/* Category */}
+              {/* Category Picker */}
               <div>
                 <Label className="text-xs font-semibold text-ink-black mb-1 block">Category</Label>
-                <select
-                  value={showNewCategory ? "__new__" : showNewSubcategory ? "__new_sub__" : ruleForm.categoryId}
-                  onChange={(e) => {
-                    if (e.target.value === "__new__") {
-                      setShowNewCategory(true);
-                      setShowNewSubcategory(false);
-                      setRuleForm({ ...ruleForm, categoryId: "" });
-                    } else if (e.target.value === "__new_sub__") {
-                      setShowNewSubcategory(true);
-                      setShowNewCategory(false);
-                      setRuleForm({ ...ruleForm, categoryId: "" });
-                    } else {
-                      setShowNewCategory(false);
-                      setShowNewSubcategory(false);
-                      setRuleForm({ ...ruleForm, categoryId: e.target.value });
-                    }
-                  }}
-                  className="w-full bg-paper-white border border-[#ececec] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-lime-vibrant/50"
-                >
-                  <option value="">Select category...</option>
-                  {renderCategoryOptions()}
-                  <option value="__new__">+ Create New Category</option>
-                  <option value="__new_sub__">+ Create New Subcategory</option>
-                </select>
-
-                {showNewCategory && (
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="New category name"
-                      className="bg-paper-white border-[#ececec] rounded-lg text-sm"
-                    />
-                    <Button size="sm" onClick={() => { if (newCategoryName) setShowNewCategory(false); }}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-
-                {showNewSubcategory && (
-                  <div className="space-y-2 mt-2">
-                    <select
-                      value={selectedParentCategoryId}
-                      onChange={(e) => setSelectedParentCategoryId(e.target.value)}
-                      className="w-full bg-paper-white border border-[#ececec] rounded-lg px-3 py-2 text-sm"
+                
+                {/* Current Selection */}
+                {ruleForm.categoryId && (
+                  <div className="flex items-center gap-2 mb-2 p-2 bg-lime-vibrant/10 rounded-lg border border-lime/20">
+                    {(() => {
+                      const cat = categories.find(c => c.id === ruleForm.categoryId);
+                      const parent = cat?.parentId ? categories.find(c => c.id === cat.parentId) : null;
+                      return cat ? (
+                        <span className="text-sm text-ink-black flex-1">
+                          {parent && <span className="text-ash-gray">{parent.icon} {parent.name} → </span>}
+                          {cat.icon} {cat.name}
+                        </span>
+                      ) : null;
+                    })()}
+                    <button
+                      onClick={() => {
+                        setRuleForm({ ...ruleForm, categoryId: "" });
+                        setSelectedParentForPicker(null);
+                        setCategorySearch("");
+                      }}
+                      className="p-0.5 hover:bg-lime-vibrant/20 rounded"
                     >
-                      <option value="">Select parent category...</option>
-                      {parentCategories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-                      ))}
-                    </select>
-                    <div className="flex gap-2">
-                      <Input
-                        value={newSubcategoryName}
-                        onChange={(e) => setNewSubcategoryName(e.target.value)}
-                        placeholder="Subcategory name"
-                        className="bg-paper-white border-[#ececec] rounded-lg text-sm"
-                      />
-                      <Button size="sm" onClick={() => { if (newSubcategoryName && selectedParentCategoryId) setShowNewSubcategory(false); }}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      <X className="h-3 w-3 text-ash-gray" />
+                    </button>
                   </div>
                 )}
+
+                {/* Search */}
+                <div className="relative mb-2">
+                  <Input
+                    value={categorySearch}
+                    onChange={(e) => {
+                      setCategorySearch(e.target.value);
+                      if (e.target.value) setSelectedParentForPicker(null);
+                    }}
+                    placeholder="Search categories..."
+                    className="bg-paper-white border-[#ececec] rounded-lg text-sm pr-8"
+                  />
+                  {categorySearch && (
+                    <button
+                      onClick={() => setCategorySearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-mist-gray rounded"
+                    >
+                      <X className="h-3 w-3 text-ash-gray" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Grid / List */}
+                <div className="border border-[#ececec] rounded-lg overflow-hidden max-h-48 overflow-y-auto bg-paper-white">
+                  {categorySearch ? (
+                    /* Search Results */
+                    (() => {
+                      const q = categorySearch.toLowerCase();
+                      const matches = categories.filter(c =>
+                        c.name.toLowerCase().includes(q) ||
+                        c.icon?.toLowerCase().includes(q)
+                      );
+                      if (matches.length === 0) {
+                        return <div className="p-3 text-xs text-ash-gray text-center">No categories found</div>;
+                      }
+                      return matches.map(c => {
+                        const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
+                        return (
+                          <button
+                            key={c.id}
+                            onClick={() => {
+                              setRuleForm({ ...ruleForm, categoryId: c.id });
+                              setCategorySearch("");
+                              setSelectedParentForPicker(null);
+                            }}
+                            className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-mist-gray transition-colors ${
+                              ruleForm.categoryId === c.id ? "bg-lime-vibrant/10" : ""
+                            }`}
+                          >
+                            <span>{c.icon}</span>
+                            <span className="flex-1 truncate">{c.name}</span>
+                            {parent && (
+                              <span className="text-[10px] text-ash-gray truncate">{parent.icon} {parent.name}</span>
+                            )}
+                          </button>
+                        );
+                      });
+                    })()
+                  ) : selectedParentForPicker ? (
+                    /* Subcategories of Selected Parent */
+                    (() => {
+                      const parent = categories.find(c => c.id === selectedParentForPicker);
+                      const children = categories.filter(c => c.parentId === selectedParentForPicker);
+                      const grandchildren = categories.filter(c => c.parentId && children.some(ch => ch.id === c.parentId));
+                      
+                      return (
+                        <>
+                          <button
+                            onClick={() => setSelectedParentForPicker(null)}
+                            className="w-full px-3 py-2 text-left text-sm text-ash-gray hover:bg-mist-gray flex items-center gap-2 border-b border-[#ececec]"
+                          >
+                            ← Back to categories
+                          </button>
+                          <button
+                            onClick={() => {
+                              setRuleForm({ ...ruleForm, categoryId: selectedParentForPicker });
+                              setSelectedParentForPicker(null);
+                            }}
+                            className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-lime-vibrant/10 transition-colors font-medium ${
+                              ruleForm.categoryId === selectedParentForPicker ? "bg-lime-vibrant/10" : ""
+                            }`}
+                          >
+                            <span>{parent?.icon}</span>
+                            <span>{parent?.name}</span>
+                            <span className="text-[10px] text-ash-gray ml-auto">Select this</span>
+                          </button>
+                          {children.map(child => (
+                            <div key={child.id}>
+                              <button
+                                onClick={() => {
+                                  setRuleForm({ ...ruleForm, categoryId: child.id });
+                                  setSelectedParentForPicker(null);
+                                }}
+                                className={`w-full px-3 py-2 pl-6 text-left text-sm flex items-center gap-2 hover:bg-mist-gray transition-colors ${
+                                  ruleForm.categoryId === child.id ? "bg-lime-vibrant/10" : ""
+                                }`}
+                              >
+                                <span>{child.icon}</span>
+                                <span className="flex-1">{child.name}</span>
+                                {grandchildren.some(gc => gc.parentId === child.id) && (
+                                  <ChevronRight className="h-3 w-3 text-ash-gray" />
+                                )}
+                              </button>
+                              {grandchildren.filter(gc => gc.parentId === child.id).map(gc => (
+                                <button
+                                  key={gc.id}
+                                  onClick={() => {
+                                    setRuleForm({ ...ruleForm, categoryId: gc.id });
+                                    setSelectedParentForPicker(null);
+                                  }}
+                                  className={`w-full px-3 py-1.5 pl-10 text-left text-xs flex items-center gap-2 hover:bg-mist-gray transition-colors ${
+                                    ruleForm.categoryId === gc.id ? "bg-lime-vibrant/10" : ""
+                                  }`}
+                                >
+                                  <span>{gc.icon}</span>
+                                  <span>{gc.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          ))}
+                          {children.length === 0 && (
+                            <div className="px-3 py-2 text-xs text-ash-gray">No subcategories</div>
+                          )}
+                        </>
+                      );
+                    })()
+                  ) : (
+                    /* Parent Categories */
+                    (() => {
+                      const parents = categories.filter(c => !c.parentId);
+                      return parents.map(parent => {
+                        const childCount = categories.filter(c => c.parentId === parent.id).length;
+                        return (
+                          <button
+                            key={parent.id}
+                            onClick={() => setSelectedParentForPicker(parent.id)}
+                            className="w-full px-3 py-2.5 text-left text-sm flex items-center gap-3 hover:bg-mist-gray transition-colors"
+                          >
+                            <span className="text-lg">{parent.icon}</span>
+                            <span className="flex-1 font-medium">{parent.name}</span>
+                            <span className="text-[10px] text-ash-gray">{childCount} sub</span>
+                            <ChevronRight className="h-3 w-3 text-ash-gray" />
+                          </button>
+                        );
+                      });
+                    })()
+                  )}
+                </div>
               </div>
 
               {/* Mark as Transfer */}
