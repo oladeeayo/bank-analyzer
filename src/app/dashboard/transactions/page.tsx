@@ -273,7 +273,7 @@ export default function TransactionsPage() {
       );
       await Promise.all(promises);
       setSelectedIds(new Set());
-      fetchTransactions();
+      setRefreshKey(k => k + 1);
     } catch (err) {
       console.error("Bulk update failed:", err);
     } finally {
