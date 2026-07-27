@@ -46,6 +46,7 @@ export default function AnalyticsPage() {
   const [selectedBar, setSelectedBar] = useState<{ label: string; income: number; expense: number; net: number } | null>(null);
   const [drilldown, setDrilldown] = useState<{ type: "category" | "merchant"; name: string; icon: string } | null>(null);
   const [drilldownData, setDrilldownData] = useState<{ totalCredits: number; totalDebits: number; transactions: any[] } | null>(null);
+  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) fetchAnalytics();
@@ -108,14 +109,24 @@ export default function AnalyticsPage() {
   const maxDailyCredit = Object.keys(dailyCredits).length > 0 ? Math.max(...Object.values(dailyCredits)) : 0;
   const maxDailyValue = Math.max(maxDailySpend, maxDailyCredit, 1);
 
-  const totalForDonut = categoryBreakdown.reduce((s, c) => s + c.amount, 0);
+  const visibleCategories = categoryBreakdown.filter(c => !hiddenCategories.has(c.name));
+  const totalForDonut = visibleCategories.reduce((s, c) => s + c.amount, 0);
   let cumulativePercent = 0;
-  const donutSegments = categoryBreakdown.map((cat, i) => {
+  const donutSegments = visibleCategories.map((cat, i) => {
     const percent = totalForDonut > 0 ? (cat.amount / totalForDonut) * 100 : 0;
     const start = cumulativePercent;
     cumulativePercent += percent;
     return { ...cat, percent, start, color: DONUT_COLORS[i % DONUT_COLORS.length] };
   });
+
+  const toggleCategory = (name: string) => {
+    setHiddenCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
 
   const maxMonthly = monthlyChart.length > 0 ? Math.max(...monthlyChart.map(m => Math.max(m.credits, m.debits))) : 0;
 
@@ -537,33 +548,57 @@ export default function AnalyticsPage() {
 
         {/* Category Breakdown */}
         <div className="bg-paper-white border border-[#ececec] rounded-cards p-6">
-          <h2 className="font-semibold text-ink-black mb-4">Category Breakdown</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-ink-black">Category Breakdown</h2>
+            {hiddenCategories.size > 0 && (
+              <button
+                onClick={() => setHiddenCategories(new Set())}
+                className="text-[10px] text-forest hover:underline"
+              >
+                Show all ({hiddenCategories.size} hidden)
+              </button>
+            )}
+          </div>
           {categoryBreakdown.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {categoryBreakdown.map((cat, idx) => {
+                const isHidden = hiddenCategories.has(cat.name);
                 const pct = summary.totalExpenses > 0 ? (cat.amount / summary.totalExpenses) * 100 : 0;
                 return (
-                  <button
+                  <div
                     key={idx}
-                    onClick={() => fetchDrilldown("category", cat.name, cat.icon)}
-                    className={`w-full flex items-center gap-3 p-1.5 rounded transition-colors ${
-                      drilldown?.type === "category" && drilldown?.name === cat.name
-                        ? "bg-lime-vibrant/10"
-                        : "hover:bg-mist-gray"
+                    className={`flex items-center gap-2 p-1.5 rounded transition-colors ${
+                      isHidden ? "opacity-40" : ""
                     }`}
                   >
-                    <span className="text-lg w-8 text-center">{cat.icon}</span>
-                    <div className="flex-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium text-ink-black">{cat.name}</span>
-                        <span className="font-mono text-ash-gray">{formatCurrency(cat.amount)}</span>
+                    <button
+                      onClick={() => toggleCategory(cat.name)}
+                      className="text-[10px] text-ash-gray hover:text-ink-black shrink-0"
+                      title={isHidden ? "Show category" : "Hide category"}
+                    >
+                      {isHidden ? "👁️‍🗨️" : "👁️"}
+                    </button>
+                    <button
+                      onClick={() => fetchDrilldown("category", cat.name, cat.icon)}
+                      className={`flex-1 flex items-center gap-3 p-1 rounded transition-colors ${
+                        drilldown?.type === "category" && drilldown?.name === cat.name
+                          ? "bg-lime-vibrant/10"
+                          : "hover:bg-mist-gray"
+                      }`}
+                    >
+                      <span className="text-lg w-8 text-center">{cat.icon}</span>
+                      <div className="flex-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium text-ink-black">{cat.name}</span>
+                          <span className="font-mono text-ash-gray">{formatCurrency(cat.amount)}</span>
+                        </div>
+                        <div className="w-full bg-mist-gray rounded-full h-1.5 mt-1">
+                          <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: DONUT_COLORS[idx % DONUT_COLORS.length] }} />
+                        </div>
                       </div>
-                      <div className="w-full bg-mist-gray rounded-full h-1.5 mt-1">
-                        <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: DONUT_COLORS[idx % DONUT_COLORS.length] }} />
-                      </div>
-                    </div>
-                    <span className="text-xs text-ash-gray w-10 text-right">{pct.toFixed(0)}%</span>
-                  </button>
+                      <span className="text-xs text-ash-gray w-10 text-right">{pct.toFixed(0)}%</span>
+                    </button>
+                  </div>
                 );
               })}
             </div>
