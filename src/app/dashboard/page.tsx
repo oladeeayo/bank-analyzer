@@ -193,12 +193,6 @@ export default function DashboardPage() {
 
   const totalPieExpenses = categoryPieData.reduce((sum, cat) => sum + cat.value, 0);
 
-  // Real percentages
-  const prevMonthIncome = summary.totalIncome * 0.92;
-  const prevMonthExpenses = summary.totalExpenses * 0.95;
-  const incomeChange = prevMonthIncome > 0 ? ((summary.totalIncome - prevMonthIncome) / prevMonthIncome) * 100 : 0;
-  const expenseChange = prevMonthExpenses > 0 ? ((summary.totalExpenses - prevMonthExpenses) / prevMonthExpenses) * 100 : 0;
-
   const periodOptions = [
     { value: "monthly", label: "Monthly" },
     { value: "quarterly", label: "Quarterly" },
@@ -289,10 +283,7 @@ export default function DashboardPage() {
             <h3 className="font-mono text-[28px] font-medium text-forest">{formatCurrency(summary.totalIncome)}</h3>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`font-semibold flex items-center gap-1 text-xs ${incomeChange >= 0 ? "text-forest" : "text-error"}`}>
-              {incomeChange >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-              {Math.abs(incomeChange).toFixed(1)}%
-            </span>
+            <TrendingUp className="h-3 w-3 text-forest" />
             <span className="text-xs text-ash-gray">{data.periodLabel}</span>
           </div>
         </div>
@@ -304,10 +295,7 @@ export default function DashboardPage() {
             <h3 className="font-mono text-[28px] font-medium text-error">{formatCurrency(summary.totalExpenses)}</h3>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`font-semibold flex items-center gap-1 text-xs ${expenseChange <= 0 ? "text-forest" : "text-error"}`}>
-              {expenseChange <= 0 ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
-              {Math.abs(expenseChange).toFixed(1)}%
-            </span>
+            <TrendingDown className="h-3 w-3 text-error" />
             <span className="text-xs text-ash-gray">{data.periodLabel}</span>
           </div>
         </div>

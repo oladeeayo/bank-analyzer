@@ -26,6 +26,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
     const groupBy = searchParams.get("groupBy") || "merchant";
+    const period = searchParams.get("period") || "all";
+    const year = searchParams.get("year") ? parseInt(searchParams.get("year")!) : new Date().getFullYear();
+    const month = searchParams.get("month") ? parseInt(searchParams.get("month")!) : new Date().getMonth() + 1;
+    const quarter = searchParams.get("quarter") ? parseInt(searchParams.get("quarter")!) : undefined;
 
     if (!userId) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
@@ -41,8 +45,21 @@ export async function GET(request: NextRequest) {
     });
     const bankIds = banks.map(b => b.id);
 
+    let dateFilter: { gte: Date; lte: Date } | undefined = undefined;
+    if (period === "monthly") {
+      dateFilter = { gte: new Date(year, month - 1, 1), lte: new Date(year, month, 0, 23, 59, 59) };
+    } else if (period === "quarterly" && quarter) {
+      dateFilter = { gte: new Date(year, (quarter - 1) * 3, 1), lte: new Date(year, quarter * 3, 0, 23, 59, 59) };
+    } else if (period === "yearly") {
+      dateFilter = { gte: new Date(year, 0, 1), lte: new Date(year, 11, 31, 23, 59, 59) };
+    }
+
     const transactions = await db.transaction.findMany({
-      where: { bankId: { in: bankIds } },
+      where: {
+        bankId: { in: bankIds },
+        isSelfTransfer: false,
+        ...(dateFilter ? { date: dateFilter } : {}),
+      },
       select: {
         id: true,
         amount: true,
