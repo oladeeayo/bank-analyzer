@@ -19,7 +19,18 @@ function detectBankFormat(text: string): BankFormat {
 function parseDate(dateStr: string): Date {
   const clean = dateStr.trim();
 
-  let match = clean.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  let match = clean.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
+  if (match) {
+    let hours = parseInt(match[4]);
+    const minutes = parseInt(match[5]);
+    const seconds = parseInt(match[6]);
+    const ampm = match[7].toUpperCase();
+    if (ampm === "PM" && hours < 12) hours += 12;
+    if (ampm === "AM" && hours === 12) hours = 0;
+    return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]), hours, minutes, seconds);
+  }
+
+  match = clean.match(/(\d{2})\/(\d{2})\/(\d{4})/);
   if (match) return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
 
   match = clean.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
@@ -38,40 +49,28 @@ function parseDate(dateStr: string): Date {
     if (monthIdx !== undefined) return new Date(parseInt(match[3]), monthIdx, parseInt(match[1]));
   }
 
-  match = clean.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);
-  if (match) {
-    const monthIdx = months[match[2].toLowerCase().slice(0, 3)];
-    if (monthIdx !== undefined) return new Date(parseInt(match[3]), monthIdx, parseInt(match[1]));
-  }
-
   return new Date(clean);
 }
 
-function normalizeAmount(val: string): number {
-  if (!val) return 0;
-  const cleaned = val.replace(/[^\d.,\-]/g, "").replace(/,/g, "");
-  return Math.abs(parseFloat(cleaned) || 0);
-}
+const DATE_PATTERN = /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}\s*(AM|PM)/i;
+const SIMPLE_DATE_PATTERN = /\d{2}\/\d{2}\/\d{4}/;
+const AMOUNT_PATTERN = /^[+-]?[\d,]+\.?\d*$/;
 
 function extractTextFromPDF2Json(pdfData: any): string {
   const lines: string[] = [];
-
   if (pdfData.Pages) {
     for (const page of pdfData.Pages) {
       if (page.Texts) {
         for (const text of page.Texts) {
           if (text.R) {
             for (const r of text.R) {
-              if (r.T) {
-                lines.push(decodeURIComponent(r.T));
-              }
+              if (r.T) lines.push(decodeURIComponent(r.T));
             }
           }
         }
       }
     }
   }
-
   return lines.join("\n");
 }
 
@@ -86,12 +85,12 @@ function extractTableRows(pdfData: any): string[][] {
 
       for (const text of page.Texts) {
         if (!text.R || text.R.length === 0) continue;
-        const decoded = decodeURIComponent(text.R[0].T || "");
-        if (!decoded.trim()) continue;
+        const decoded = decodeURIComponent(text.R[0].T || "").trim();
+        if (!decoded) continue;
         const y = Math.round(text.y * 10) / 10;
         const x = Math.round(text.x * 10) / 10;
         if (!textsByY[y]) textsByY[y] = [];
-        textsByY[y].push({ x, text: decoded.trim() });
+        textsByY[y].push({ x, text: decoded });
       }
 
       const sortedYs = Object.keys(textsByY)
@@ -110,46 +109,172 @@ function extractTableRows(pdfData: any): string[][] {
   return allRows;
 }
 
-function parseTransactionsFromRows(rows: string[][], bankFormat: BankFormat, fileName: string): ParseResult {
+function isPalmPayFormat(rows: string[][]): boolean {
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const joined = rows[i].join(" ").toLowerCase();
+    if (joined.includes("transaction date") && joined.includes("transaction detail")) return true;
+    if (joined.includes("palmpay")) return true;
+  }
+  return false;
+}
+
+function parsePalmPayRows(rows: string[][]): ParseResult {
   const transactions: ParsedTransaction[] = [];
   const errors: string[] = [];
 
-  const datePattern = /(\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4}|\d{2}\s+\w{3}\s+\d{4})/;
-
   let headerIdx = -1;
-  let dateCol = -1;
-  let descCol = -1;
-  let debitCol = -1;
-  let creditCol = -1;
-  let amountCol = -1;
-  let balanceCol = -1;
-  let refCol = -1;
-
   for (let i = 0; i < Math.min(rows.length, 20); i++) {
-    const row = rows[i];
-    const joined = row.join(" ").toLowerCase();
-    if (
-      (joined.includes("date") && (joined.includes("description") || joined.includes("narration"))) ||
-      (joined.includes("trans") && joined.includes("date"))
-    ) {
+    const joined = rows[i].join(" ").toLowerCase();
+    if (joined.includes("transaction date") && joined.includes("transaction detail")) {
       headerIdx = i;
-      for (let j = 0; j < row.length; j++) {
-        const h = row[j].toLowerCase();
-        if (h.includes("date")) dateCol = j;
-        else if (h.includes("description") || h.includes("narration") || h.includes("details")) descCol = j;
-        else if (h.includes("debit") || h.includes("withdrawal")) debitCol = j;
-        else if (h.includes("credit") || h.includes("deposit")) creditCol = j;
-        else if (h.includes("amount") && debitCol === -1) amountCol = j;
-        else if (h.includes("balance")) balanceCol = j;
-        else if (h.includes("reference") || h.includes("ref")) refCol = j;
-      }
       break;
     }
   }
 
-  const startRow = headerIdx >= 0 ? headerIdx + 1 : 0;
+  if (headerIdx === -1) {
+    return {
+      transactions: [],
+      errors: ["Could not find PalmPay transaction header row"],
+      metadata: { fileName: "", fileType: "pdf", totalRows: rows.length, parsedRows: 0 },
+    };
+  }
 
-  for (let i = startRow; i < rows.length; i++) {
+  const dataRows = rows.slice(headerIdx + 1);
+
+  let pendingDetail = "";
+
+  for (let i = 0; i < dataRows.length; i++) {
+    const row = dataRows[i];
+    if (row.length === 0) continue;
+
+    const firstCell = row[0];
+    const hasDate = DATE_PATTERN.test(firstCell) || SIMPLE_DATE_PATTERN.test(firstCell);
+
+    if (!hasDate) {
+      const text = row.join(" ").trim();
+      if (text && !text.startsWith("PalmPay") && !text.startsWith("Digital Finance") &&
+          !text.includes("Account Statement") && !text.includes("Total Money") &&
+          !text.includes("Statement Period") && !text.includes("Print Time") &&
+          !text.includes("Transaction Date") && !text.includes("support@") &&
+          !text.includes("www.palmpay") && !text.includes("018886888") &&
+          !text.includes("20 Opebi") && !text.includes("Phone Number") &&
+          !text.includes("Account Number") && !text.includes("NGN")) {
+        pendingDetail += (pendingDetail ? " " : "") + text;
+      }
+      continue;
+    }
+
+    let dateStr = firstCell;
+    const date = parseDate(dateStr);
+    if (isNaN(date.getTime())) {
+      errors.push(`Row ${headerIdx + i + 2}: Invalid date "${dateStr}"`);
+      continue;
+    }
+
+    let detail = "";
+    let amount = 0;
+    let type: "debit" | "credit" = "debit";
+    let reference = "";
+
+    if (row.length === 2) {
+      const cell1 = row[1];
+      if (AMOUNT_PATTERN.test(cell1)) {
+        amount = Math.abs(parseFloat(cell1.replace(/,/g, "")));
+        type = cell1.startsWith("-") || (!cell1.startsWith("+") && amount > 0) ? "debit" : "credit";
+      }
+    } else if (row.length === 3) {
+      const cell1 = row[1];
+      const cell2 = row[2];
+      if (AMOUNT_PATTERN.test(cell1)) {
+        amount = Math.abs(parseFloat(cell1.replace(/,/g, "")));
+        type = cell1.startsWith("-") || (!cell1.startsWith("+") && amount > 0) ? "debit" : "credit";
+        reference = AMOUNT_PATTERN.test(cell2) ? "" : cell2;
+      } else if (AMOUNT_PATTERN.test(cell2)) {
+        detail = cell1;
+        amount = Math.abs(parseFloat(cell2.replace(/,/g, "")));
+        type = cell2.startsWith("-") || (!cell2.startsWith("+") && amount > 0) ? "debit" : "credit";
+      }
+    } else if (row.length === 4) {
+      detail = row[1];
+      const cell2 = row[2];
+      const cell3 = row[3];
+      if (AMOUNT_PATTERN.test(cell2)) {
+        amount = Math.abs(parseFloat(cell2.replace(/,/g, "")));
+        type = cell2.startsWith("-") || (!cell2.startsWith("+") && amount > 0) ? "debit" : "credit";
+        reference = cell3;
+      } else if (AMOUNT_PATTERN.test(cell3)) {
+        amount = Math.abs(parseFloat(cell3.replace(/,/g, "")));
+        type = cell3.startsWith("-") || (!cell3.startsWith("+") && amount > 0) ? "debit" : "credit";
+      }
+    } else if (row.length >= 5) {
+      detail = row[1];
+      const cell2 = row[2];
+      const cell3 = row[3];
+      reference = row[4] || "";
+      if (AMOUNT_PATTERN.test(cell2)) {
+        amount = Math.abs(parseFloat(cell2.replace(/,/g, "")));
+        type = cell2.startsWith("-") || (!cell2.startsWith("+") && amount > 0) ? "debit" : "credit";
+      } else if (AMOUNT_PATTERN.test(cell3)) {
+        amount = Math.abs(parseFloat(cell3.replace(/,/g, "")));
+        type = cell3.startsWith("-") || (!cell3.startsWith("+") && amount > 0) ? "debit" : "credit";
+      }
+    }
+
+    if (pendingDetail && !detail) {
+      detail = pendingDetail;
+      pendingDetail = "";
+    } else if (pendingDetail && detail) {
+      detail = pendingDetail + " " + detail;
+      pendingDetail = "";
+    }
+
+    if (!detail) detail = "Unknown transaction";
+
+    if (amount === 0) {
+      errors.push(`Row ${headerIdx + i + 2}: Zero or missing amount for "${detail.substring(0, 40)}"`);
+      continue;
+    }
+
+    transactions.push({
+      date: date.toISOString(),
+      description: detail.trim(),
+      amount,
+      type,
+      reference: reference || undefined,
+      narration: detail.trim(),
+    });
+  }
+
+  const dates = transactions.map(t => new Date(t.date).getTime()).sort((a, b) => a - b);
+
+  console.log(`[PalmPay] Parsed ${transactions.length} transactions, ${errors.length} errors`);
+  if (transactions.length > 0) {
+    console.log(`[PalmPay] First: ${transactions[0].date} - ${transactions[0].description}`);
+    console.log(`[PalmPay] Last: ${transactions[transactions.length - 1].date} - ${transactions[transactions.length - 1].description}`);
+  }
+
+  return {
+    transactions,
+    errors,
+    metadata: {
+      fileName: "",
+      fileType: "pdf",
+      totalRows: rows.length,
+      parsedRows: transactions.length,
+      dateRange: dates.length > 0
+        ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() }
+        : undefined,
+    },
+  };
+}
+
+function parseGenericRows(rows: string[][]): ParseResult {
+  const transactions: ParsedTransaction[] = [];
+  const errors: string[] = [];
+
+  const datePattern = /(\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4}|\d{2}\s+\w{3}\s+\d{4})/;
+
+  for (let i = 0; i < rows.length; i++) {
     try {
       const row = rows[i];
       if (row.length < 2) continue;
@@ -158,78 +283,39 @@ function parseTransactionsFromRows(rows: string[][], bankFormat: BankFormat, fil
       let description = "";
       let amount = 0;
       let type: "debit" | "credit" = "debit";
-      let balance: number | undefined;
-      let reference: string | undefined;
+      let reference = "";
 
-      if (headerIdx >= 0) {
-        dateStr = dateCol >= 0 ? row[dateCol] || "" : "";
-        description = descCol >= 0 ? row[descCol] || "" : "";
-
-        if (debitCol >= 0 && row[debitCol]) {
-          const debit = normalizeAmount(row[debitCol]);
-          if (debit > 0) { amount = debit; type = "debit"; }
-        }
-        if (creditCol >= 0 && row[creditCol]) {
-          const credit = normalizeAmount(row[creditCol]);
-          if (credit > 0) { amount = credit; type = "credit"; }
-        }
-        if (amount === 0 && amountCol >= 0 && row[amountCol]) {
-          amount = normalizeAmount(row[amountCol]);
-          type = row[amountCol].includes("-") ? "debit" : "credit";
-        }
-        if (balanceCol >= 0 && row[balanceCol]) balance = normalizeAmount(row[balanceCol]);
-        if (refCol >= 0 && row[refCol]) reference = row[refCol];
-      } else {
-        for (const cell of row) {
-          if (!dateStr && datePattern.test(cell)) {
-            const m = cell.match(datePattern);
-            if (m) dateStr = m[1];
-          }
-        }
-        for (const cell of row) {
-          if (cell.match(/[\d,]+\.?\d*/) && !datePattern.test(cell) && cell.length < 30) {
-            const num = normalizeAmount(cell);
-            if (num > 0) {
-              if (amount === 0) {
-                amount = num;
-                type = cell.includes("-") || cell.toLowerCase().includes("dr") ? "debit" : "credit";
-              }
-            }
-          } else if (!datePattern.test(cell) && cell.length > 2 && !cell.match(/^[\d,]+\.?\d*$/)) {
-            if (!description) description = cell;
-            else description += " " + cell;
-          }
+      for (const cell of row) {
+        if (!dateStr && datePattern.test(cell)) {
+          const m = cell.match(datePattern);
+          if (m) dateStr = m[1];
         }
       }
 
-      if (!dateStr) {
-        for (const cell of row) {
-          if (datePattern.test(cell)) {
-            const m = cell.match(datePattern);
-            if (m) { dateStr = m[1]; break; }
+      for (const cell of row) {
+        if (AMOUNT_PATTERN.test(cell) && !datePattern.test(cell)) {
+          const num = Math.abs(parseFloat(cell.replace(/,/g, "")));
+          if (num > 0 && amount === 0) {
+            amount = num;
+            type = cell.startsWith("-") || (!cell.startsWith("+")) ? "debit" : "credit";
           }
+        } else if (!datePattern.test(cell) && cell.length > 2 && !cell.match(/^[\d,]+\.?\d*$/)) {
+          if (!description) description = cell;
+          else description += " " + cell;
         }
       }
 
       if (!dateStr || !description) continue;
 
       const date = parseDate(dateStr);
-      if (isNaN(date.getTime())) {
-        errors.push(`Row ${i + 1}: Invalid date "${dateStr}"`);
-        continue;
-      }
-
-      if (amount === 0) {
-        errors.push(`Row ${i + 1}: Zero amount`);
-        continue;
-      }
+      if (isNaN(date.getTime())) continue;
+      if (amount === 0) continue;
 
       transactions.push({
         date: date.toISOString(),
         description: description.trim(),
         amount,
         type,
-        balance,
         reference: reference || undefined,
         narration: description.trim(),
       });
@@ -244,7 +330,7 @@ function parseTransactionsFromRows(rows: string[][], bankFormat: BankFormat, fil
     transactions,
     errors,
     metadata: {
-      fileName,
+      fileName: "",
       fileType: "pdf",
       totalRows: rows.length,
       parsedRows: transactions.length,
@@ -288,23 +374,18 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
 
           const rows = extractTableRows(pdfData);
           console.log(`[PDFParser] Extracted ${rows.length} table rows`);
-          if (rows.length > 0) {
-            console.log(`[PDFParser] First 20 rows:`);
-            for (let i = 0; i < Math.min(20, rows.length); i++) {
-              console.log(`  Row ${i}: ${JSON.stringify(rows[i])}`);
-            }
-          }
-          // Also log rows that look like they contain dates
-          const dateRows = rows.filter(r => r.some(c => /\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4}/.test(c)));
-          console.log(`[PDFParser] Rows with dates: ${dateRows.length}`);
-          if (dateRows.length > 0) {
-            console.log(`[PDFParser] First 10 date rows:`);
-            for (let i = 0; i < Math.min(10, dateRows.length); i++) {
-              console.log(`  ${JSON.stringify(dateRows[i])}`);
-            }
+
+          let result: ParseResult;
+
+          if (bankFormat === "palmpay-pdf" || isPalmPayFormat(rows)) {
+            console.log(`[PDFParser] Using PalmPay parser`);
+            result = parsePalmPayRows(rows);
+          } else {
+            console.log(`[PDFParser] Using generic parser`);
+            result = parseGenericRows(rows);
           }
 
-          const result = parseTransactionsFromRows(rows, bankFormat, fileName);
+          result.metadata.fileName = fileName;
           console.log(`[PDFParser] Parsed ${result.transactions.length} transactions, ${result.errors.length} errors`);
 
           resolve(result);
