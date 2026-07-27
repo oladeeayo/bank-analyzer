@@ -19,6 +19,7 @@ function detectBankFormat(text: string): BankFormat {
 function parseDate(dateStr: string): Date {
   const clean = dateStr.trim();
 
+  // DD/MM/YYYY HH:MM:SS AM/PM (Nigerian format)
   let match = clean.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
   if (match) {
     let hours = parseInt(match[4]);
@@ -27,11 +28,13 @@ function parseDate(dateStr: string): Date {
     const ampm = match[7].toUpperCase();
     if (ampm === "PM" && hours < 12) hours += 12;
     if (ampm === "AM" && hours === 12) hours = 0;
-    return new Date(parseInt(match[3]), parseInt(match[1]) - 1, parseInt(match[2]), hours, minutes, seconds);
+    // DD/MM/YYYY format
+    return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]), hours, minutes, seconds);
   }
 
+  // DD/MM/YYYY format
   match = clean.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-  if (match) return new Date(parseInt(match[3]), parseInt(match[1]) - 1, parseInt(match[2]));
+  if (match) return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
 
   match = clean.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (match) return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
@@ -158,7 +161,8 @@ function parsePalmPayRows(rows: string[][]): ParseResult {
           !text.includes("Transaction Date") && !text.includes("support@") &&
           !text.includes("www.palmpay") && !text.includes("018886888") &&
           !text.includes("20 Opebi") && !text.includes("Phone Number") &&
-          !text.includes("Account Number") && !text.includes("NGN")) {
+          !text.includes("Account Number") && !text.includes("NGN") &&
+          !AMOUNT_PATTERN.test(text) && !/^\d{4,}$/.test(text.replace(/\s/g, ""))) {
         pendingDetail += (pendingDetail ? " " : "") + text;
       }
       continue;
@@ -170,6 +174,7 @@ function parsePalmPayRows(rows: string[][]): ParseResult {
       errors.push(`Row ${headerIdx + i + 2}: Invalid date "${dateStr}"`);
       continue;
     }
+    console.log(`[PalmPay] Date parsed: "${dateStr}" -> ${date.toISOString()} (year: ${date.getFullYear()})`);
 
     let detail = "";
     let amount = 0;

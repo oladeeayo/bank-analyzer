@@ -3,13 +3,28 @@
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, CheckCircle, AlertCircle, Building2, X, Clock } from "lucide-react";
+import { Upload, FileText, CheckCircle, AlertCircle, Building2, X, Clock, Trash2 } from "lucide-react";
 import { useUser } from "@/lib/hooks";
 
 interface Bank {
   id: string;
   bankName: string;
   nickname: string | null;
+  accountNumber: string | null;
+  balance: number | null;
+}
+
+interface Statement {
+  id: string;
+  bankId: string;
+  bankName: string;
+  month: number;
+  year: number;
+  filename: string;
+  fileType: string;
+  status: string;
+  transactionCount: number;
+  uploadedAt: string;
 }
 
 interface UploadResult {
@@ -19,24 +34,20 @@ interface UploadResult {
   errors: string[];
 }
 
-interface HistoryEntry {
-  id: string;
-  bankName: string;
-  fileName: string;
-  status: "success" | "processing" | "error";
-  transactionCount: number;
-  date: string;
-}
+const MONTH_NAMES = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const statusConfig = {
-  success: { label: "Completed", icon: CheckCircle, className: "bg-lime-vibrant/20 text-forest border-lime-vibrant/30" },
+const statusConfig: Record<string, { label: string; icon: any; className: string }> = {
+  completed: { label: "Uploaded", icon: CheckCircle, className: "bg-lime-vibrant/20 text-forest border-lime-vibrant/30" },
+  uploaded: { label: "Uploaded", icon: CheckCircle, className: "bg-lime-vibrant/20 text-forest border-lime-vibrant/30" },
   processing: { label: "Processing", icon: Clock, className: "bg-golden-light/40 text-amber-700 border-golden-light" },
-  error: { label: "Error", icon: X, className: "bg-peach-light/40 text-red-600 border-peach-light" },
+  failed: { label: "Failed", icon: X, className: "bg-peach-light/40 text-red-600 border-peach-light" },
+  error: { label: "Failed", icon: X, className: "bg-peach-light/40 text-red-600 border-peach-light" },
 };
 
 export default function UploadPage() {
   const { user, loading: userLoading } = useUser();
   const [banks, setBanks] = useState<Bank[]>([]);
+  const [statements, setStatements] = useState<Statement[]>([]);
   const [selectedBank, setSelectedBank] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -44,11 +55,15 @@ export default function UploadPage() {
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [showDuplicate, setShowDuplicate] = useState(false);
-  const [duplicateCount, setDuplicateCount] = useState(0);
+  const [duplicateInfo, setDuplicateInfo] = useState<any>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (user) fetchBanks();
+    if (user) {
+      fetchBanks();
+      fetchStatements();
+    }
   }, [user]);
 
   if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
@@ -59,6 +74,30 @@ export default function UploadPage() {
       if (res.ok) setBanks(await res.json());
     } catch (err) {
       console.error("Failed to fetch banks:", err);
+    }
+  };
+
+  const fetchStatements = async () => {
+    try {
+      const res = await fetch(`/api/statements?userId=${user?.id || ""}`);
+      if (res.ok) setStatements(await res.json());
+    } catch (err) {
+      console.error("Failed to fetch statements:", err);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this statement and all its transactions?")) return;
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/statements?id=${id}&userId=${user?.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setStatements((prev) => prev.filter((s) => s.id !== id));
+      }
+    } catch (err) {
+      console.error("Failed to delete statement:", err);
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -80,7 +119,7 @@ export default function UploadPage() {
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 409) {
-          setDuplicateCount(data.existingStatement?.transactionCount || 0);
+          setDuplicateInfo(data);
           setShowDuplicate(true);
           return;
         }
@@ -90,6 +129,7 @@ export default function UploadPage() {
       setResult(data);
       setFile(null);
       if (inputRef.current) inputRef.current.value = "";
+      fetchStatements();
     } catch {
       setError("Upload failed. Please try again.");
     } finally {
@@ -103,14 +143,9 @@ export default function UploadPage() {
     if (e.dataTransfer.files?.[0]) setFile(e.dataTransfer.files[0]);
   };
 
-  const uploadHistory: HistoryEntry[] = banks.slice(0, 3).map((bank, i) => ({
-    id: bank.id,
-    bankName: bank.nickname || bank.bankName,
-    fileName: `${bank.bankName.toLowerCase()}_july2026.xlsx`,
-    status: (["success", "processing", "error"] as const)[i % 3],
-    transactionCount: [156, 0, 89][i % 3],
-    date: "2026-07-25",
-  }));
+  const completedCount = statements.filter((s) => s.status === "completed" || s.status === "uploaded").length;
+  const failedCount = statements.filter((s) => s.status === "failed" || s.status === "error").length;
+  const totalTxns = statements.reduce((sum, s) => sum + s.transactionCount, 0);
 
   return (
     <div className="space-y-8">
@@ -192,39 +227,48 @@ export default function UploadPage() {
           </div>
 
           <div className="bg-paper-white border border-[#ececec] rounded-cards p-6">
-            <h2 className="font-semibold text-ink-black mb-4">Recent Uploads</h2>
-            {uploadHistory.length === 0 ? (
+            <h2 className="font-semibold text-ink-black mb-4">Upload History</h2>
+            {statements.length === 0 ? (
               <div className="text-center py-8 text-ash-gray text-sm">No uploads yet</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[#ececec]">
-                      <th className="text-left font-medium text-ash-gray py-3 pr-4">Bank</th>
-                      <th className="text-left font-medium text-ash-gray py-3 pr-4">File</th>
-                      <th className="text-left font-medium text-ash-gray py-3 pr-4">Status</th>
+                      <th className="text-left font-medium text-ash-gray py-3 pr-4">Account</th>
+                      <th className="text-left font-medium text-ash-gray py-3 pr-4">Period</th>
                       <th className="text-left font-medium text-ash-gray py-3 pr-4">Transactions</th>
-                      <th className="text-left font-medium text-ash-gray py-3">Date</th>
+                      <th className="text-left font-medium text-ash-gray py-3 pr-4">Status</th>
+                      <th className="text-right font-medium text-ash-gray py-3">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {uploadHistory.map((entry) => {
-                      const sc = statusConfig[entry.status];
+                    {statements.map((stmt) => {
+                      const sc = statusConfig[stmt.status] || statusConfig.uploaded;
                       const StatusIcon = sc.icon;
                       return (
-                        <tr key={entry.id} className="border-b border-[#ececec] last:border-0 hover:bg-mist-gray/50 transition-colors">
+                        <tr key={stmt.id} className="border-b border-[#ececec] last:border-0 hover:bg-mist-gray/50 transition-colors">
                           <td className="py-3 pr-4">
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 bg-mist-gray rounded-lg flex items-center justify-center"><Building2 className="h-4 w-4 text-forest" /></div>
-                              <span className="font-medium text-ink-black">{entry.bankName}</span>
+                              <span className="font-medium text-ink-black">{stmt.bankName}</span>
                             </div>
                           </td>
-                          <td className="py-3 pr-4 font-mono text-xs text-ash-gray">{entry.fileName}</td>
+                          <td className="py-3 pr-4 text-ink-black">{MONTH_NAMES[stmt.month]} {stmt.year}</td>
+                          <td className="py-3 pr-4 text-ink-black">{stmt.transactionCount} Txns</td>
                           <td className="py-3 pr-4">
                             <Badge className={`rounded-pill text-[10px] gap-1 ${sc.className}`}><StatusIcon className="h-3 w-3" />{sc.label}</Badge>
                           </td>
-                          <td className="py-3 pr-4 text-ink-black">{entry.transactionCount || "—"}</td>
-                          <td className="py-3 text-ash-gray">{entry.date}</td>
+                          <td className="py-3 text-right">
+                            <button
+                              onClick={() => handleDelete(stmt.id)}
+                              disabled={deleting === stmt.id}
+                              className="text-ash-gray hover:text-red-600 transition-colors p-1"
+                              title="Delete statement"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -238,10 +282,10 @@ export default function UploadPage() {
         <div className="lg:col-span-2 space-y-6">
           <div className="grid grid-cols-2 gap-4">
             {[
-              { label: "Completed", count: 12, color: "bg-lime-vibrant/20 text-forest" },
-              { label: "Processing", count: 1, color: "bg-golden-light/40 text-amber-700" },
-              { label: "Failed", count: 1, color: "bg-peach-light/40 text-red-600" },
-              { label: "Total", count: 14, color: "bg-mist-gray text-ink-black" },
+              { label: "Uploaded", count: completedCount, color: "bg-lime-vibrant/20 text-forest" },
+              { label: "Failed", count: failedCount, color: "bg-peach-light/40 text-red-600" },
+              { label: "Statements", count: statements.length, color: "bg-mist-gray text-ink-black" },
+              { label: "Total Txns", count: totalTxns, color: "bg-mist-gray text-ink-black" },
             ].map((stat) => (
               <div key={stat.label} className={`p-4 rounded-cards ${stat.color}`}>
                 <p className="text-[10px] uppercase tracking-wider font-medium opacity-70">{stat.label}</p>
@@ -253,7 +297,7 @@ export default function UploadPage() {
             <h3 className="font-semibold text-ink-black text-sm mb-3">Need Help?</h3>
             <ul className="space-y-2 text-sm text-ash-gray">
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 bg-forest rounded-full mt-1.5 shrink-0" />Download your statement from your bank&apos;s mobile app</li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 bg-forest rounded-full mt-1.5 shrink-0" />Select CSV or PDF format for best results</li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 bg-forest rounded-full mt-1.5 shrink-0" />Select CSV, Excel, or PDF format for best results</li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 bg-forest rounded-full mt-1.5 shrink-0" />Upload one month at a time for accurate parsing</li>
             </ul>
           </div>
@@ -267,7 +311,7 @@ export default function UploadPage() {
               <div className="w-10 h-10 bg-peach-light/40 rounded-full flex items-center justify-center"><AlertCircle className="h-5 w-5 text-red-600" /></div>
               <div>
                 <h3 className="font-semibold text-ink-black">Duplicate Statement Detected</h3>
-                <p className="text-sm text-ash-gray">A statement for this month already exists with {duplicateCount} transactions.</p>
+                <p className="text-sm text-ash-gray">{duplicateInfo?.message || "A statement for this month already exists."}</p>
               </div>
             </div>
             <div className="flex gap-3 mt-6">
