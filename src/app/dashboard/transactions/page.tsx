@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Wand2, ChevronLeft, ChevronRight, Check, AlertCircle, X, Link, Edit } from "lucide-react";
+import { Calendar, Wand2, ChevronLeft, ChevronRight, Check, AlertCircle, X, Link, Edit, Plus } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
 
@@ -849,6 +849,15 @@ export default function TransactionsPage() {
                         );
                       });
                     })()
+                  )}
+                  {/* Inline Create Button */}
+                  {!categorySearch && (
+                    <button
+                      onClick={() => window.location.href = "/dashboard/settings/categories"}
+                      className="w-full px-3 py-2 text-left text-xs text-forest hover:bg-lime-vibrant/10 flex items-center gap-2 border-t border-[#ececec] font-medium"
+                    >
+                      <Plus className="h-3 w-3" /> Create new category
+                    </button>
                   )}
                 </div>
               </div>

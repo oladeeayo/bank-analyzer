@@ -13,6 +13,7 @@ import {
   Target,
   Wallet,
   LogOut,
+  FolderTree,
 } from "lucide-react";
 
 const navigation = [
@@ -23,6 +24,7 @@ const navigation = [
   { name: "Budgets", href: "/dashboard/budgets", icon: Wallet },
   { name: "Analytics", href: "/dashboard/analytics", icon: PieChart },
   { name: "Goals", href: "/dashboard/goals", icon: Target },
+  { name: "Categories", href: "/dashboard/settings/categories", icon: FolderTree },
 ];
 
 export function Sidebar() {
