@@ -203,39 +203,50 @@ export default function AnalyticsPage() {
               const maxVal = Math.max(...allValues, 1);
               return (
                 <div>
-                  <div className="relative">
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/15 z-10" />
-                    <div className="flex items-center gap-2 h-72 px-2">
+                  <div className="relative h-72">
+                    {/* Zero line at exact center */}
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
+                    {/* Income bars: grow UP from center */}
+                    <div className="absolute top-0 left-0 right-0 h-1/2 flex items-end gap-2 px-2">
                       {monthlyChart.map((m, i) => {
-                        const creditH = Math.max((m.credits / maxVal) * 46, m.credits > 0 ? 3 : 0);
-                        const debitH = Math.max((m.debits / maxVal) * 46, m.debits > 0 ? 3 : 0);
+                        const pct = maxVal > 0 ? (m.credits / maxVal) * 100 : 0;
                         const isSelected = selectedBar?.label === `${MONTH_NAMES[m.month - 1]} ${m.year}`;
                         return (
-                          <div key={i} className="flex-1 flex flex-col items-center h-full relative group">
-                            <div className="flex-1 w-full flex flex-col justify-end items-center" />
+                          <div key={i} className="flex-1 flex justify-center" style={{ height: `${pct}%` }}>
                             <div
-                              className="w-full flex justify-center mb-0 cursor-pointer"
-                              style={{ height: `${creditH}%` }}
-                              onClick={() => setSelectedBar(isSelected ? null : { label: `${MONTH_NAMES[m.month - 1]} ${m.year}`, income: m.credits, expense: m.debits, net: m.net })}
-                            >
-                              <div className={`w-full max-w-[52px] rounded-sm transition-all ${isSelected ? "bg-[#003527] ring-2 ring-[#003527]/30 scale-105" : "bg-[#003527] hover:bg-[#003527]/90"}`} />
-                            </div>
-                            <div
-                              className="w-full flex justify-center mt-0 cursor-pointer"
-                              style={{ height: `${debitH}%` }}
-                              onClick={() => setSelectedBar(isSelected ? null : { label: `${MONTH_NAMES[m.month - 1]} ${m.year}`, income: m.credits, expense: m.debits, net: m.net })}
-                            >
-                              <div className={`w-full max-w-[52px] rounded-sm transition-all ${isSelected ? "bg-[#8BC34A] ring-2 ring-[#8BC34A]/30 scale-105" : "bg-[#8BC34A] hover:bg-[#8BC34A]/80"}`} />
-                            </div>
-                            <div className="flex-1 w-full flex flex-col justify-start items-center" />
-                            <span className="text-[10px] text-ash-gray mt-2 font-medium">{MONTH_NAMES[m.month - 1]}</span>
+                              onClick={() => setSelectedBar(isSelected ? null : { label: `${MONTH_NAMES[m.month - 1]} ${m.year}`, income: m.credits, expense: m.debits, net: m.credits - m.debits })}
+                              className={`w-full max-w-[52px] rounded-t-sm transition-all cursor-pointer ${isSelected ? "bg-[#003527] ring-2 ring-[#003527]/30 scale-105" : "bg-[#003527] hover:bg-[#003527]/80"}`}
+                            />
                           </div>
                         );
                       })}
                     </div>
+                    {/* Expense bars: grow DOWN from center */}
+                    <div className="absolute top-1/2 left-0 right-0 h-1/2 flex items-start gap-2 px-2">
+                      {monthlyChart.map((m, i) => {
+                        const pct = maxVal > 0 ? (m.debits / maxVal) * 100 : 0;
+                        const isSelected = selectedBar?.label === `${MONTH_NAMES[m.month - 1]} ${m.year}`;
+                        return (
+                          <div key={i} className="flex-1 flex justify-center" style={{ height: `${pct}%` }}>
+                            <div
+                              onClick={() => setSelectedBar(isSelected ? null : { label: `${MONTH_NAMES[m.month - 1]} ${m.year}`, income: m.credits, expense: m.debits, net: m.credits - m.debits })}
+                              className={`w-full max-w-[52px] rounded-b-sm transition-all cursor-pointer ${isSelected ? "bg-[#8BC34A] ring-2 ring-[#8BC34A]/30 scale-105" : "bg-[#8BC34A] hover:bg-[#8BC34A]/80"}`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Month labels below */}
+                    <div className="absolute bottom-0 left-0 right-0 flex gap-2 px-2">
+                      {monthlyChart.map((m, i) => (
+                        <div key={i} className="flex-1 text-center">
+                          <span className="text-[10px] text-ash-gray font-medium">{MONTH_NAMES[m.month - 1]}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   {selectedBar && (
-                    <div className="mt-4 flex items-center gap-4 p-3 bg-mist-gray rounded-lg">
+                    <div className="mt-8 flex items-center gap-4 p-3 bg-mist-gray rounded-lg">
                       <span className="text-sm font-medium text-ink-black">{selectedBar.label}</span>
                       <div className="flex items-center gap-1.5">
                         <ArrowUpRight className="h-3.5 w-3.5 text-[#003527]" />
@@ -257,42 +268,61 @@ export default function AnalyticsPage() {
               const maxVal = Math.max(...allValues, 1);
               return (
                 <div>
-                  <div className="relative">
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/15 z-10" />
-                    <div className="flex items-center gap-px h-64 px-1">
+                  <div className="relative h-64">
+                    {/* Zero line at exact center */}
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
+                    {/* Income bars: grow UP from center */}
+                    <div className="absolute top-0 left-0 right-0 h-1/2 flex items-end gap-px px-1">
                       {sortedDays.slice(-31).map(dateStr => {
-                        const expense = dailySpending[dateStr] || 0;
                         const income = dailyCredits[dateStr] || 0;
-                        const expH = Math.max((expense / maxVal) * 46, expense > 0 ? 3 : 0);
-                        const incH = Math.max((income / maxVal) * 46, income > 0 ? 3 : 0);
-                        const dayLabel = dateStr.split("-")[2]?.replace(/^0/, "") || dateStr;
+                        const pct = maxVal > 0 ? (income / maxVal) * 100 : 0;
                         const isSelected = selectedBar?.label === dateStr;
                         return (
-                          <div key={dateStr} className="flex-1 flex flex-col items-center h-full min-w-0 group">
-                            <div className="flex-1 w-full flex flex-col justify-end items-center" />
+                          <div key={dateStr} className="flex-1 flex justify-center" style={{ height: `${pct}%` }}>
                             <div
-                              className="w-full flex justify-center cursor-pointer"
-                              style={{ height: `${incH}%` }}
-                              onClick={() => setSelectedBar(isSelected ? null : { label: dateStr, income, expense, net: income - expense })}
-                            >
-                              <div className={`w-full max-w-[28px] rounded-sm transition-all ${isSelected ? "bg-[#003527] ring-2 ring-[#003527]/30 scale-110" : "bg-[#003527] hover:bg-[#003527]/90"}`} />
-                            </div>
+                              onClick={() => {
+                                const expense = dailySpending[dateStr] || 0;
+                                setSelectedBar(isSelected ? null : { label: dateStr, income, expense, net: income - expense });
+                              }}
+                              className={`w-full max-w-[28px] rounded-t-sm transition-all cursor-pointer ${isSelected ? "bg-[#003527] ring-2 ring-[#003527]/30 scale-110" : "bg-[#003527] hover:bg-[#003527]/80"}`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Expense bars: grow DOWN from center */}
+                    <div className="absolute top-1/2 left-0 right-0 h-1/2 flex items-start gap-px px-1">
+                      {sortedDays.slice(-31).map(dateStr => {
+                        const expense = dailySpending[dateStr] || 0;
+                        const pct = maxVal > 0 ? (expense / maxVal) * 100 : 0;
+                        const isSelected = selectedBar?.label === dateStr;
+                        return (
+                          <div key={dateStr} className="flex-1 flex justify-center" style={{ height: `${pct}%` }}>
                             <div
-                              className="w-full flex justify-center cursor-pointer"
-                              style={{ height: `${expH}%` }}
-                              onClick={() => setSelectedBar(isSelected ? null : { label: dateStr, income, expense, net: income - expense })}
-                            >
-                              <div className={`w-full max-w-[28px] rounded-sm transition-all ${isSelected ? "bg-[#8BC34A] ring-2 ring-[#8BC34A]/30 scale-110" : "bg-[#8BC34A] hover:bg-[#8BC34A]/80"}`} />
-                            </div>
-                            <div className="flex-1 w-full flex flex-col justify-start items-center" />
-                            <span className="text-[8px] text-ash-gray leading-none mt-1 font-medium">{dayLabel}</span>
+                              onClick={() => {
+                                const income = dailyCredits[dateStr] || 0;
+                                setSelectedBar(isSelected ? null : { label: dateStr, income, expense, net: income - expense });
+                              }}
+                              className={`w-full max-w-[28px] rounded-b-sm transition-all cursor-pointer ${isSelected ? "bg-[#8BC34A] ring-2 ring-[#8BC34A]/30 scale-110" : "bg-[#8BC34A] hover:bg-[#8BC34A]/80"}`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Day labels below */}
+                    <div className="absolute bottom-0 left-0 right-0 flex gap-px px-1">
+                      {sortedDays.slice(-31).map(dateStr => {
+                        const dayLabel = dateStr.split("-")[2]?.replace(/^0/, "") || dateStr;
+                        return (
+                          <div key={dateStr} className="flex-1 text-center">
+                            <span className="text-[8px] text-ash-gray font-medium">{dayLabel}</span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
                   {selectedBar && (
-                    <div className="mt-4 flex items-center gap-4 p-3 bg-mist-gray rounded-lg">
+                    <div className="mt-6 flex items-center gap-4 p-3 bg-mist-gray rounded-lg">
                       <span className="text-sm font-medium text-ink-black">{selectedBar.label}</span>
                       <div className="flex items-center gap-1.5">
                         <ArrowUpRight className="h-3.5 w-3.5 text-[#003527]" />

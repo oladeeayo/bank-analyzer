@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     const transactions = await db.transaction.findMany({
       where: {
         bankId: { in: bankIds },
+        isSelfTransfer: false,
         ...(dateFilter ? { date: dateFilter } : {}),
       },
       include: {
