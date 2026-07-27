@@ -289,7 +289,19 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
           const rows = extractTableRows(pdfData);
           console.log(`[PDFParser] Extracted ${rows.length} table rows`);
           if (rows.length > 0) {
-            console.log(`[PDFParser] First 5 rows:`, rows.slice(0, 5));
+            console.log(`[PDFParser] First 20 rows:`);
+            for (let i = 0; i < Math.min(20, rows.length); i++) {
+              console.log(`  Row ${i}: ${JSON.stringify(rows[i])}`);
+            }
+          }
+          // Also log rows that look like they contain dates
+          const dateRows = rows.filter(r => r.some(c => /\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4}/.test(c)));
+          console.log(`[PDFParser] Rows with dates: ${dateRows.length}`);
+          if (dateRows.length > 0) {
+            console.log(`[PDFParser] First 10 date rows:`);
+            for (let i = 0; i < Math.min(10, dateRows.length); i++) {
+              console.log(`  ${JSON.stringify(dateRows[i])}`);
+            }
           }
 
           const result = parseTransactionsFromRows(rows, bankFormat, fileName);
