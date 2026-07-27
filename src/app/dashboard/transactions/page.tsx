@@ -133,122 +133,19 @@ export default function TransactionsPage() {
     loadCategories();
   }, [user, search, filterType, filterCategory, startDate, endDate, minAmount, maxAmount, page, refreshKey]);
 
-  const findSimilarTransactions = useCallback((tx: Transaction) => {
-    const STOP_WORDS = new Set(["from", "to", "the", "and", "for", "with", "that", "this", "was", "are", "has", "have", "not", "but", "can", "will", "just", "been", "its", "may", "who", "did", "get", "got", "let", "say", "she", "him", "his", "her", "our", "your", "all", "any", "few", "more", "most", "other", "some", "such", "than", "too", "very", "because", "through", "about", "before", "after", "above", "below", "between", "under", "again", "once", "here", "there", "when", "where", "why", "how", "each", "every", "both", "few", "own", "same", "also", "back", "even", "still", "new", "well", "only", "into", "over", "such", "take", "come", "make", "like", "long", "look", "many", "much", "must", "need", "next", "only", "same", "than", "them", "then", "these", "they", "those", "upon", "what", "when", "your"]);
-
-    const BANK_WORDS = new Set(["BANK", "OPAY", "PALMPAY", "TRANSFER", "LOAN", "REPAYMENT", "SAVE", "WITHDRAWAL", "DEPOSIT", "PAYMENT", "POS", "ATM", "USSD", "WEB", "APP", "NIP", "NIBSS", "AUTOSAVE", "EASEMONI", "CASHBACK", "REVERSAL", "CHARGE", "FEE", "INTEREST", "COMMISSION", "TAX", "VAT", "SANDBOX", "LIMIT", "BALANCE", "ACCOUNT", "WALLET", "OLADAYO", "OLADIPUPO"]);
-
-    const extractMeaningfulWords = (desc: string): string[] => {
-      return desc
-        .toUpperCase()
-        .split(/[\s,.\-;:!?/()]+/)
-        .filter(w => w.length >= 3 && !STOP_WORDS.has(w.toLowerCase()) && !BANK_WORDS.has(w) && !/^\d+$/.test(w));
-    };
-
-    const wordSimilarity = (a: string, b: string): number => {
-      if (a === b) return 1;
-      const shorter = a.length <= b.length ? a : b;
-      const longer = a.length <= b.length ? b : a;
-      if (longer.startsWith(shorter) || longer.endsWith(shorter)) return 0.85;
-      const threshold = shorter.length <= 4 ? 0.8 : 0.6;
-      const longerRatio = longer.length / shorter.length;
-      if (longerRatio > 1.5) return 0;
-      const aSet = new Set(a.split(""));
-      const bSet = new Set(b.split(""));
-      const intersection = [...aSet].filter(c => bSet.has(c)).length;
-      return intersection / Math.max(aSet.size, bSet.size);
-    };
-
-    const matchWords = (txWords: string[], otherWords: string[]): { exact: string[]; similar: string[] } => {
-      const exact: string[] = [];
-      const similar: string[] = [];
-      for (const tw of txWords) {
-        let found = false;
-        for (const ow of otherWords) {
-          if (tw === ow) {
-            exact.push(tw);
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          for (const ow of otherWords) {
-            if (wordSimilarity(tw, ow) >= 0.7) {
-              similar.push(`${tw}≈${ow}`);
-              break;
-            }
-          }
-        }
+  const findSimilarTransactions = useCallback(async (tx: Transaction) => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/transactions/similar?userId=${user.id}&txId=${tx.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSimilarTxs(data.similar || []);
+        setShowSimilar((data.similar?.length || 0) > 0);
       }
-      return { exact, similar };
-    };
-
-    const txWords = extractMeaningfulWords(tx.description);
-    const similar: SimilarTransaction[] = [];
-
-    const isTransfer = (desc: string) => /^Transfer\s+(to|from)\s+/i.test(desc);
-
-    for (const other of transactions) {
-      if (other.id === tx.id) continue;
-
-      const otherWords = extractMeaningfulWords(other.description);
-      const { exact, similar: sim } = matchWords(txWords, otherWords);
-      const totalScore = exact.length + sim.length * 0.75;
-
-      const txIsTransfer = isTransfer(tx.description);
-      const otherIsTransfer = isTransfer(other.description);
-
-      // For transfers: require exact name match (3+ words), not just similar words
-      if (txIsTransfer && otherIsTransfer && tx.type === other.type) {
-        const txName = tx.description.replace(/^Transfer\s+(to|from)\s+/i, "").split("|")[0].trim().toUpperCase();
-        const otherName = other.description.replace(/^Transfer\s+(to|from)\s+/i, "").split("|")[0].trim().toUpperCase();
-        if (txName === otherName && txName.length >= 3) {
-          similar.push({
-            id: other.id,
-            description: other.description,
-            amount: other.amount,
-            type: other.type,
-            date: other.date,
-            matchReason: `Same person: ${txName}`,
-          });
-          continue;
-        }
-      }
-
-      // For non-transfers: use word similarity with higher threshold
-      if (!txIsTransfer && !otherIsTransfer && tx.type === other.type && totalScore >= 2.5) {
-        similar.push({
-          id: other.id,
-          description: other.description,
-          amount: other.amount,
-          type: other.type,
-          date: other.date,
-          matchReason: `Exact: ${exact.join(", ")}${sim.length ? ` Similar: ${sim.join(", ")}` : ""}`,
-        });
-      } else if (!txIsTransfer && !otherIsTransfer && tx.type === other.type && tx.merchantId && tx.merchantId === other.merchantId) {
-        similar.push({
-          id: other.id,
-          description: other.description,
-          amount: other.amount,
-          type: other.type,
-          date: other.date,
-          matchReason: "Same merchant",
-        });
-      } else if (tx.type !== other.type && tx.amount !== 0 && other.amount !== 0 && Math.abs(tx.amount - other.amount) / tx.amount < 0.01 && totalScore >= 1.5) {
-        similar.push({
-          id: other.id,
-          description: other.description,
-          amount: other.amount,
-          type: other.type,
-          date: other.date,
-          matchReason: `Transfer: ${[...exact, ...sim].join(", ")} (${tx.type === "credit" ? "in" : "out"} → ${other.type === "credit" ? "in" : "out"})`,
-        });
-      }
+    } catch (err) {
+      console.error("Failed to find similar transactions:", err);
     }
-
-    setSimilarTxs(similar);
-    setShowSimilar(similar.length > 0);
-  }, [transactions]);
+  }, [user]);
 
   const handleAiClassify = async () => {
     setAiLoading(true);

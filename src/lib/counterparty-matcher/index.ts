@@ -41,8 +41,11 @@ function cleanupName(name: string): string {
   let cleaned = name
     .toUpperCase()
     .replace(/^TRANSFER\s+(TO|FROM)\s+/i, "")
+    .replace(/^TRF\s+(TO|FROM)\s+/i, "")
+    .replace(/^NIP\s+(CREDIT|DEBIT)\s*:?\s*/i, "")
     .replace(/^NIP\s+/i, "")
     .replace(/^MOBILE\s+TRF\s+(TO|PAY|FROM)\s+/i, "")
+    .replace(/^MOBILE\s+TRANSFER\s+(TO|FROM)\s+/i, "")
     .replace(/^PAY\s+/i, "")
     .replace(/^POS\s+/i, "")
     .replace(/^WEB\s+/i, "")
@@ -50,6 +53,7 @@ function cleanupName(name: string): string {
     .replace(/\s+REF\s+\w+/gi, "")
     .replace(/\b(REF|NARR|TRANSACTION)\b\s*:?\s*\w+/gi, "")
     .replace(/\bTRANSFER\b/gi, "")
+    .replace(/^\s*(CREDIT|DEBIT)\s*:?\s*/i, "")
     .replace(/^\s*[-–—|]+\s*/, "")
     .replace(/\s*[-–—|]+\s*$/, "")
     .trim();
@@ -178,24 +182,23 @@ export function extractCounterpartyInfo(
 
   const upper = desc.toUpperCase();
 
-  if (upper.startsWith("TRANSFER FROM") || upper.startsWith("TRF FROM") || upper.startsWith("NIP CREDIT")) {
+  const isCredit = /^(TRANSFER FROM|TRF FROM|NIP CREDIT|MOBILE TRANSFER FROM|MOBILE TRF FROM|ITF )/i.test(upper);
+  const isDebit = /^(TRANSFER TO|TRF TO|NIP DEBIT|MOBILE TRANSFER TO|MOBILE TRF TO)/i.test(upper);
+
+  if (isCredit) {
     direction = "credit";
-  } else if (upper.startsWith("TRANSFER TO") || upper.startsWith("TRF TO") || upper.startsWith("NIP DEBIT")) {
+  } else if (isDebit) {
     direction = "debit";
   }
 
   const parts = desc.split("|").map(p => p.trim());
 
   if (parts.length >= 3) {
-    if (upper.startsWith("TRANSFER FROM") || upper.startsWith("TRANSFER TO")) {
-      name = parts[0].replace(/^Transfer\s+(to|from)\s+/i, "").trim();
+    if (isCredit || isDebit) {
+      const cleaned = parts[0].replace(/^(Transfer|TRF|Mobile Transfer|Mobile TRF|NIP Credit|NIP Debit|ITF)\s+(to|from|credit|debit)\s*/i, "").trim();
+      name = cleaned;
       bank = parts[1];
       accountNumber = parts[2].replace(/\s+\S+$/g, "").trim();
-
-      if (parts.length >= 4) {
-        const extraText = parts.slice(3).join(" ");
-        const extraName = extraText.replace(/^(Thanks|Thank|Ref|Payment|For)\s+/i, "").trim();
-      }
     } else {
       const firstPart = parts[0].toLowerCase();
       const knownBankMatch = KNOWN_BANKS.find(b => firstPart.includes(b));
@@ -366,6 +369,47 @@ export function findCounterpartyMatch(
   };
 }
 
+function namesMatchForGrouping(
+  info_i: ExtractedCounterparty,
+  info_j: ExtractedCounterparty
+): boolean {
+  if (info_i.accountNumber && info_j.accountNumber && info_i.accountNumber === info_j.accountNumber) {
+    return true;
+  }
+
+  if (
+    info_i.partialAccountNumber && info_j.partialAccountNumber &&
+    info_i.partialAccountNumber === info_j.partialAccountNumber &&
+    info_i.partialAccountNumber.length >= 4
+  ) {
+    const sameBank = info_i.bank && info_j.bank &&
+      KNOWN_BANKS.some(b =>
+        info_i.bank!.toLowerCase().includes(b) && info_j.bank!.toLowerCase().includes(b)
+      );
+    if (sameBank) return true;
+  }
+
+  const sim = nameSimilarity(info_i.normalizedName, info_j.normalizedName);
+  if (sim >= 0.80) return true;
+
+  const key_i = getKeyIdentifier(info_i.name);
+  const key_j = getKeyIdentifier(info_j.name);
+  if (key_i === key_j && key_i.length >= 3) return true;
+
+  const words_i = info_i.normalizedName.split(" ").filter(w => w.length > 1);
+  const words_j = info_j.normalizedName.split(" ").filter(w => w.length > 1);
+  const firstWord_i = words_i[0] || "";
+  const firstWord_j = words_j[0] || "";
+  const lastWord_i = words_i[words_i.length - 1] || "";
+  const lastWord_j = words_j[words_j.length - 1] || "";
+
+  if (firstWord_i === firstWord_j && lastWord_i === lastWord_j && firstWord_i.length > 1 && lastWord_i.length > 1) {
+    return true;
+  }
+
+  return false;
+}
+
 export function groupSimilarTransactions(
   descriptions: string[],
   userOwnNames: string[] = []
@@ -396,27 +440,7 @@ export function groupSimilarTransactions(
       if (assigned.has(j)) continue;
       if (!extracted[j].name) continue;
 
-      const info_i = extracted[i];
-      const info_j = extracted[j];
-
-      let matches = false;
-
-      if (info_i.accountNumber && info_j.accountNumber && info_i.accountNumber === info_j.accountNumber) {
-        matches = true;
-      } else if (
-        info_i.partialAccountNumber && info_j.partialAccountNumber &&
-        info_i.partialAccountNumber === info_j.partialAccountNumber &&
-        info_i.partialAccountNumber.length >= 4
-      ) {
-        matches = true;
-      } else {
-        const sim = nameSimilarity(info_i.normalizedName, info_j.normalizedName);
-        if (sim >= 0.85) {
-          matches = true;
-        }
-      }
-
-      if (matches) {
+      if (namesMatchForGrouping(extracted[i], extracted[j])) {
         group.transactionIndices.push(j);
         group.transactionCount++;
         assigned.add(j);
@@ -479,4 +503,4 @@ export function normalizeNamePublic(name: string): string {
   return normalizeName(name);
 }
 
-export { nameSimilarity, getKeyIdentifier, getLastDigits, normalizeName, cleanupName, isSelfTransfer };
+export { nameSimilarity, getKeyIdentifier, getLastDigits, normalizeName, cleanupName, isSelfTransfer, namesMatchForGrouping };
