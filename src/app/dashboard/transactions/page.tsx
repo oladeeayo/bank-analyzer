@@ -600,13 +600,52 @@ export default function TransactionsPage() {
             <span className="text-xs text-ash-gray">
               Showing {(page - 1) * 50 + 1}-{Math.min(page * 50, total)} of {total}
             </span>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(p => p + 1)} disabled={page * 50 >= total}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+            <div className="flex items-center gap-1">
+              {(() => {
+                const totalPages = Math.ceil(total / 50);
+                if (totalPages <= 1) return null;
+                const pages: (number | "...")[] = [];
+                if (totalPages <= 7) {
+                  for (let i = 1; i <= totalPages; i++) pages.push(i);
+                } else {
+                  pages.push(1);
+                  if (page > 4) pages.push("...");
+                  const start = Math.max(2, page - 2);
+                  const end = Math.min(totalPages - 1, page + 2);
+                  for (let i = start; i <= end; i++) pages.push(i);
+                  if (page < totalPages - 3) pages.push("...");
+                  pages.push(totalPages);
+                }
+                return (
+                  <>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {pages.map((p, i) =>
+                      p === "..." ? (
+                        <span key={`dots-${i}`} className="px-1 text-ash-gray text-xs">...</span>
+                      ) : (
+                        <Button
+                          key={p}
+                          variant="ghost"
+                          size="icon"
+                          className={`h-8 w-8 text-xs font-medium ${
+                            page === p
+                              ? "bg-forest text-lime-vibrant hover:bg-forest/90"
+                              : "text-ash-gray hover:text-ink-black hover:bg-mist-gray"
+                          }`}
+                          onClick={() => setPage(p)}
+                        >
+                          {p}
+                        </Button>
+                      )
+                    )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(p => p + 1)} disabled={page * 50 >= total}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
