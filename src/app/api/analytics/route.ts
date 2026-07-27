@@ -5,28 +5,43 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
-    const month = searchParams.get("month");
-    const year = searchParams.get("year");
+    const period = searchParams.get("period") || "monthly";
+    const year = searchParams.get("year") ? parseInt(searchParams.get("year")!) : new Date().getFullYear();
+    const month = searchParams.get("month") ? parseInt(searchParams.get("month")!) : new Date().getMonth() + 1;
+    const quarter = searchParams.get("quarter") ? parseInt(searchParams.get("quarter")!) : undefined;
 
     if (!userId) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
-    const currentMonth = month ? parseInt(month) : new Date().getMonth() + 1;
-    const currentYear = year ? parseInt(year) : new Date().getFullYear();
-
-    const startOfMonth = new Date(currentYear, currentMonth - 1, 1);
-    const endOfMonth = new Date(currentYear, currentMonth, 0, 23, 59, 59);
-
-    // Get all banks for this user
     const banks = await db.bank.findMany({ where: { userId } });
     const bankIds = banks.map(b => b.id);
 
-    // Get all transactions for the month
+    let dateFilter: { gte: Date; lte: Date } | null = null;
+    let periodLabel = "";
+
+    if (period === "monthly") {
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 0, 23, 59, 59);
+      dateFilter = { gte: start, lte: end };
+      periodLabel = `${new Date(year, month - 1).toLocaleString("en", { month: "long" })} ${year}`;
+    } else if (period === "quarterly" && quarter) {
+      const start = new Date(year, (quarter - 1) * 3, 1);
+      const end = new Date(year, quarter * 3, 0, 23, 59, 59);
+      dateFilter = { gte: start, lte: end };
+      periodLabel = `Q${quarter} ${year}`;
+    } else if (period === "yearly") {
+      dateFilter = { gte: new Date(year, 0, 1), lte: new Date(year, 11, 31, 23, 59, 59) };
+      periodLabel = `${year}`;
+    } else if (period === "all") {
+      dateFilter = null;
+      periodLabel = "All Time";
+    }
+
     const transactions = await db.transaction.findMany({
       where: {
         bankId: { in: bankIds },
-        date: { gte: startOfMonth, lte: endOfMonth },
+        ...(dateFilter ? { date: dateFilter } : {}),
       },
       include: {
         bank: { select: { bankName: true, nickname: true } },
@@ -36,7 +51,6 @@ export async function GET(request: NextRequest) {
       orderBy: { date: "desc" },
     });
 
-    // Calculate summary
     const totalIncome = transactions
       .filter(t => t.type === "credit")
       .reduce((sum, t) => sum + t.amount, 0);
@@ -48,7 +62,6 @@ export async function GET(request: NextRequest) {
     const netCashFlow = totalIncome - totalExpenses;
     const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
-    // Category breakdown
     const categoryMap = new Map<string, { name: string; icon: string; color: string; amount: number; count: number }>();
     transactions
       .filter(t => t.type === "debit" && t.category)
@@ -64,7 +77,6 @@ export async function GET(request: NextRequest) {
     const categoryBreakdown = Array.from(categoryMap.values())
       .sort((a, b) => b.amount - a.amount);
 
-    // Merchant ranking
     const merchantMap = new Map<string, { name: string; icon: string; amount: number; count: number }>();
     transactions
       .filter(t => t.type === "debit" && t.merchant)
@@ -81,53 +93,65 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 20);
 
-    // Bank comparison
-    const bankMap = new Map<string, { name: string; income: number; expenses: number }>();
-    banks.forEach(b => bankMap.set(b.id, { name: b.nickname || b.bankName, income: 0, expenses: 0 }));
+    // Daily spending (keyed by "YYYY-MM-DD" so it works across periods)
+    const dailySpending: Record<string, number> = {};
+    const dailyCredits: Record<string, number> = {};
     transactions.forEach(t => {
-      const bank = bankMap.get(t.bankId);
-      if (bank) {
-        if (t.type === "credit") bank.income += t.amount;
-        else bank.expenses += t.amount;
+      const d = new Date(t.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      if (t.type === "debit") {
+        dailySpending[key] = (dailySpending[key] || 0) + t.amount;
+      } else {
+        dailyCredits[key] = (dailyCredits[key] || 0) + t.amount;
       }
     });
 
-    const bankComparison = Array.from(bankMap.values()).filter(b => b.income > 0 || b.expenses > 0);
+    const sortedDays = Object.keys(dailySpending).sort();
+    const daysInPeriod = dateFilter
+      ? Math.ceil((dateFilter.lte.getTime() - dateFilter.gte.getTime()) / 86400000) + 1
+      : sortedDays.length;
 
-    // Daily spending
-    const dailySpending: Record<number, number> = {};
-    transactions
-      .filter(t => t.type === "debit")
-      .forEach(t => {
-        const day = new Date(t.date).getDate();
-        dailySpending[day] = (dailySpending[day] || 0) + t.amount;
-      });
+    const daysWithSpending = sortedDays.length;
+    const averageDailySpend = daysInPeriod > 0 ? totalExpenses / daysInPeriod : 0;
 
-    // Weekly spending
-    const weeklySpending: Record<number, number> = {};
-    transactions
-      .filter(t => t.type === "debit")
-      .forEach(t => {
-        const date = new Date(t.date);
-        const weekStart = new Date(currentYear, currentMonth - 1, 1);
-        const weekNum = Math.ceil(((date.getTime() - weekStart.getTime()) / 86400000 + 1) / 7);
-        weeklySpending[weekNum] = (weeklySpending[weekNum] || 0) + t.amount;
-      });
-
-    // Average daily spend
-    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-    const daysWithSpending = Object.keys(dailySpending).length;
-    const averageDailySpend = daysWithSpending > 0 ? totalExpenses / daysInMonth : 0;
-
-    // Biggest expense
     const biggestExpense = transactions
       .filter(t => t.type === "debit")
       .sort((a, b) => b.amount - a.amount)[0] || null;
 
-    // Current balance across all banks
     const currentBalance = banks.reduce((sum, b) => sum + b.openingBalance, 0) + netCashFlow;
 
+    // Monthly breakdown for the period (for chart)
+    const monthlyChart: Array<{ month: number; year: number; credits: number; debits: number; net: number }> = [];
+    if (period === "yearly" || period === "all") {
+      const monthlyMap = new Map<string, { month: number; year: number; credits: number; debits: number }>();
+      for (const tx of transactions) {
+        const d = new Date(tx.date);
+        const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
+        const entry = monthlyMap.get(key) || { month: d.getMonth() + 1, year: d.getFullYear(), credits: 0, debits: 0 };
+        if (tx.type === "credit") entry.credits += tx.amount;
+        else entry.debits += tx.amount;
+        monthlyMap.set(key, entry);
+      }
+      for (const entry of monthlyMap.values()) {
+        monthlyChart.push({ ...entry, net: entry.credits - entry.debits });
+      }
+      monthlyChart.sort((a, b) => a.year - b.year || a.month - b.month);
+    }
+
+    // Weekly chart for monthly/quarterly views
+    const weeklySpending: Record<number, number> = {};
+    if (dateFilter) {
+      const periodStart = dateFilter.gte;
+      transactions.filter(t => t.type === "debit").forEach(t => {
+        const date = new Date(t.date);
+        const weekNum = Math.ceil(((date.getTime() - periodStart.getTime()) / 86400000 + 1) / 7);
+        weeklySpending[weekNum] = (weeklySpending[weekNum] || 0) + t.amount;
+      });
+    }
+
     return NextResponse.json({
+      period,
+      periodLabel,
       summary: {
         currentBalance,
         totalIncome,
@@ -143,10 +167,17 @@ export async function GET(request: NextRequest) {
       },
       categoryBreakdown,
       merchantRanking,
-      bankComparison,
+      bankComparison: banks.map(b => ({
+        name: b.nickname || b.bankName,
+        income: transactions.filter(t => t.bankId === b.id && t.type === "credit").reduce((s, t) => s + t.amount, 0),
+        expenses: transactions.filter(t => t.bankId === b.id && t.type === "debit").reduce((s, t) => s + t.amount, 0),
+      })).filter(b => b.income > 0 || b.expenses > 0),
       dailySpending,
+      dailyCredits,
       weeklySpending,
+      monthlyChart,
       transactionCount: transactions.length,
+      daysInPeriod,
     });
   } catch (_error) {
     return NextResponse.json({ error: "Failed to fetch analytics" }, { status: 500 });
