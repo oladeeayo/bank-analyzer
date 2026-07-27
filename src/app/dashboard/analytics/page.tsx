@@ -79,20 +79,18 @@ export default function AnalyticsPage() {
     setDrilldown({ type, name, icon });
     setDrilldownData(null);
     try {
-      let url = `/api/transactions?userId=${user.id}&limit=100`;
-      if (type === "category") {
-        // Search by category name in description
-        url += `&search=${encodeURIComponent(name)}`;
-      } else {
-        url += `&search=${encodeURIComponent(name)}`;
-      }
+      let url = `/api/analytics/drilldown?userId=${user.id}&type=${type}&name=${encodeURIComponent(name)}&period=${period}`;
+      if (period === "monthly") url += `&month=${month}&year=${year}`;
+      else if (period === "quarterly") url += `&quarter=${quarter}&year=${year}`;
+      else if (period === "yearly") url += `&year=${year}`;
       const res = await fetch(url);
       if (res.ok) {
         const result = await res.json();
-        const txs = result.transactions || [];
-        const totalCredits = txs.filter((t: any) => t.type === "credit").reduce((s: number, t: any) => s + t.amount, 0);
-        const totalDebits = txs.filter((t: any) => t.type === "debit").reduce((s: number, t: any) => s + t.amount, 0);
-        setDrilldownData({ totalCredits, totalDebits, transactions: txs.slice(0, 10) });
+        setDrilldownData({
+          totalCredits: result.totalCredits || 0,
+          totalDebits: result.totalDebits || 0,
+          transactions: result.transactions || [],
+        });
       }
     } catch (err) {
       console.error("Failed to fetch drilldown:", err);

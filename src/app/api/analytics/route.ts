@@ -63,13 +63,13 @@ export async function GET(request: NextRequest) {
     const netCashFlow = totalIncome - totalExpenses;
     const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
-    const categoryMap = new Map<string, { name: string; icon: string; color: string; amount: number; count: number }>();
+    const categoryMap = new Map<string, { id: string; name: string; icon: string; color: string; amount: number; count: number }>();
     transactions
       .filter(t => t.type === "debit" && t.category)
       .forEach(t => {
         const cat = t.category!;
         const key = cat.name;
-        const existing = categoryMap.get(key) || { name: cat.name, icon: cat.icon, color: cat.color, amount: 0, count: 0 };
+        const existing = categoryMap.get(key) || { id: cat.name, name: cat.name, icon: cat.icon, color: cat.color, amount: 0, count: 0 };
         existing.amount += t.amount;
         existing.count += 1;
         categoryMap.set(key, existing);
@@ -78,13 +78,13 @@ export async function GET(request: NextRequest) {
     const categoryBreakdown = Array.from(categoryMap.values())
       .sort((a, b) => b.amount - a.amount);
 
-    const merchantMap = new Map<string, { name: string; icon: string; amount: number; count: number }>();
+    const merchantMap = new Map<string, { id: string; name: string; icon: string; amount: number; count: number }>();
     transactions
       .filter(t => t.type === "debit" && t.merchant)
       .forEach(t => {
         const merch = t.merchant!;
         const key = merch.displayName;
-        const existing = merchantMap.get(key) || { name: merch.displayName, icon: merch.icon, amount: 0, count: 0 };
+        const existing = merchantMap.get(key) || { id: merch.displayName, name: merch.displayName, icon: merch.icon, amount: 0, count: 0 };
         existing.amount += t.amount;
         existing.count += 1;
         merchantMap.set(key, existing);
