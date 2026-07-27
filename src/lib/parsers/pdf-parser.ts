@@ -128,7 +128,7 @@ function extractTableRows(pdfData: any): string[][] {
 }
 
 function isPalmPayFormat(rows: string[][]): boolean {
-  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+  for (let i = 0; i < Math.min(rows.length, 40); i++) {
     const joined = rows[i].join(" ").toLowerCase();
     if (joined.includes("transaction date") && joined.includes("transaction detail")) return true;
     if (joined.includes("palmpay")) return true;
@@ -141,7 +141,7 @@ function parsePalmPayRows(rows: string[][]): ParseResult {
   const errors: string[] = [];
 
   let headerIdx = -1;
-  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+  for (let i = 0; i < Math.min(rows.length, 60); i++) {
     const joined = rows[i].join(" ").toLowerCase();
     if (joined.includes("transaction date") && joined.includes("transaction detail")) {
       headerIdx = i;
@@ -157,11 +157,16 @@ function parsePalmPayRows(rows: string[][]): ParseResult {
     };
   }
 
+  console.log(`[PalmPay] Header found at row ${headerIdx}, processing ${rows.length - headerIdx - 1} data rows`);
   const dataRows = rows.slice(headerIdx + 1);
 
   for (let i = 0; i < dataRows.length; i++) {
     const row = dataRows[i];
     if (row.length === 0) continue;
+
+    if (i < 5) {
+      console.log(`[PalmPay] Row ${i}: cells=${row.length} | ${row.map(c => `[${c}]`).join(" | ")}`);
+    }
 
     const firstCell = row[0];
     const hasDate = DATE_PATTERN.test(firstCell) || SIMPLE_DATE_PATTERN.test(firstCell);
@@ -369,7 +374,8 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
       pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
         try {
           const text = extractTextFromPDF2Json(pdfData);
-          console.log(`[PDFParser] Extracted text length: ${text.length}`);
+          const pageCount = pdfData.Pages ? pdfData.Pages.length : 0;
+          console.log(`[PDFParser] Extracted text length: ${text.length}, pages: ${pageCount}`);
 
           if (!text || text.trim().length === 0) {
             resolve({
@@ -385,6 +391,10 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
 
           const rows = extractTableRows(pdfData);
           console.log(`[PDFParser] Extracted ${rows.length} table rows`);
+
+          for (let i = 0; i < Math.min(rows.length, 10); i++) {
+            console.log(`[PDFParser] Pre-header row ${i}: ${rows[i].join(" | ")}`);
+          }
 
           let result: ParseResult;
 
