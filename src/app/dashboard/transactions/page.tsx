@@ -224,6 +224,9 @@ export default function TransactionsPage() {
     setSaving(true);
     setSaveMessage(null);
 
+    const newMerchant = merchantName || ruleForm.normalizedMerchant || undefined;
+    const newCategoryId = ruleForm.categoryId || null;
+
     // Push current state to undo stack (keep last 3)
     setUndoStack(prev => {
       const next = [...prev, {
@@ -236,30 +239,52 @@ export default function TransactionsPage() {
     });
 
     try {
+      // Save the main transaction
       const res = await fetch(`/api/transactions/${selectedTx.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           merchantId: selectedTx.merchantId || null,
-          categoryId: ruleForm.categoryId || null,
-          normalizedDescription: merchantName || ruleForm.normalizedMerchant || undefined,
+          categoryId: newCategoryId,
+          normalizedDescription: newMerchant,
           isTransfer: ruleForm.markTransfer,
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setSelectedTx(data.transaction);
-        setMerchantName(data.transaction.merchant?.displayName || merchantName);
-        setRuleForm(prev => ({ ...prev, categoryId: data.transaction.categoryId || "" }));
-        setSaveMessage({ type: "success", text: "Saved!" });
-        setRefreshKey(k => k + 1);
-        setTimeout(() => {
-          setSaveMessage(null);
-        }, 2000);
-      } else {
+      if (!res.ok) {
         setSaveMessage({ type: "error", text: "Failed to save." });
+        setSaving(false);
+        return;
       }
+
+      const data = await res.json();
+      setSelectedTx(data.transaction);
+      setMerchantName(data.transaction.merchant?.displayName || newMerchant || "");
+      setRuleForm(prev => ({ ...prev, categoryId: data.transaction.categoryId || "" }));
+
+      // Apply same changes to all similar transactions
+      let updatedSimilar = 0;
+      if (similarTxs.length > 0 && (newMerchant || newCategoryId)) {
+        const similarPromises = similarTxs.map(s =>
+          fetch(`/api/transactions/${s.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              normalizedDescription: newMerchant,
+              categoryId: newCategoryId,
+            }),
+          }).then(r => r.ok)
+        );
+        const results = await Promise.all(similarPromises);
+        updatedSimilar = results.filter(Boolean).length;
+      }
+
+      setSaveMessage({
+        type: "success",
+        text: updatedSimilar > 0 ? `Saved! Also updated ${updatedSimilar} similar` : "Saved!",
+      });
+      setRefreshKey(k => k + 1);
+      setTimeout(() => setSaveMessage(null), 3000);
     } catch (err) {
       setSaveMessage({ type: "error", text: "Network error." });
     } finally {
