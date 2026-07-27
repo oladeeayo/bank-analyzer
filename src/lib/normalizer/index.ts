@@ -1,9 +1,14 @@
 import { ParsedTransaction } from "@/lib/parsers/types";
+import { extractCounterpartyInfo } from "@/lib/counterparty-matcher";
 
 export interface NormalizedTransaction extends ParsedTransaction {
   normalizedDescription: string;
   merchantGuess?: string;
   categoryGuess?: string;
+  counterpartyName?: string;
+  counterpartyBank?: string;
+  counterpartyAccount?: string;
+  isSelfTransfer?: boolean;
 }
 
 const NOISE_WORDS = [
@@ -482,7 +487,10 @@ function guessCategory(merchantGuess: string | undefined, desc: string): string 
   return undefined;
 }
 
-export function normalizeTransactions(transactions: ParsedTransaction[]): NormalizedTransaction[] {
+export function normalizeTransactions(
+  transactions: ParsedTransaction[],
+  userOwnNames: string[] = []
+): NormalizedTransaction[] {
   return transactions.map(tx => {
     const cleaned = cleanDescription(tx.description);
     const merchant = extractMerchant(cleaned);
@@ -490,11 +498,17 @@ export function normalizeTransactions(transactions: ParsedTransaction[]): Normal
     const merchantGuess = merchantResult?.name;
     const categoryGuess = merchantResult?.category || guessCategory(merchantGuess, cleaned);
 
+    const cp = extractCounterpartyInfo(tx.description, userOwnNames);
+
     return {
       ...tx,
       normalizedDescription: merchant || cleaned,
       merchantGuess,
       categoryGuess,
+      counterpartyName: cp.name || undefined,
+      counterpartyBank: cp.bank,
+      counterpartyAccount: cp.accountNumber || cp.partialAccountNumber,
+      isSelfTransfer: cp.isSelfTransfer,
     };
   });
 }

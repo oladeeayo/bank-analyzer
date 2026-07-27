@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { parseStatement } from "@/lib/parsers";
 import { normalizeTransactions } from "@/lib/normalizer";
 import { classifyBatch } from "@/lib/classifier";
+import { extractCounterpartyInfo, groupSimilarTransactions } from "@/lib/counterparty-matcher";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +19,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse the file first (fast, no DB calls) before checking duplicates
+    // Get user's own account names for self-transfer detection
+    const userBanks = await db.bank.findMany({
+      where: { userId },
+      select: { accountName: true, bankName: true, accountNumber: true },
+    });
+    const userOwnNames = userBanks
+      .map(b => b.accountName)
+      .filter((n): n is string => !!n);
+
+    // Parse the file
     const arrayBuffer = await file.arrayBuffer();
     const result = await parseStatement(arrayBuffer, file.name);
 
@@ -29,12 +39,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine statement month/year from first transaction date
     const firstDate = new Date(result.transactions[0].date);
     const month = firstDate.getMonth() + 1;
     const year = firstDate.getFullYear();
 
-    // Check for existing statement (duplicate detection)
     const existing = await db.statement.findFirst({
       where: { bankId, month, year },
     });
@@ -50,13 +58,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize transactions
-    const normalized = normalizeTransactions(result.transactions);
+    // Normalize with counterparty extraction
+    const normalized = normalizeTransactions(result.transactions, userOwnNames);
 
-    // Classify transactions (optimized: single query for rules/merchants/categories)
+    // Classify transactions
     const classifications = await classifyBatch(normalized, userId);
 
-    // Create statement and transactions in a single DB operation
+    // Find similar counterparty groups using trinity matching
+    const descriptions = normalized.map(tx => tx.description);
+    const similarGroups = groupSimilarTransactions(descriptions, userOwnNames);
+
+    // Create statement
     const statement = await db.statement.create({
       data: {
         bankId,
@@ -69,9 +81,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Batch create all transactions in one query
     const transactionData = normalized.map((tx, idx) => {
-      // Use index-based key to match classifier (avoids collisions for same-day same-amount)
       const key = `${idx}_${tx.date}_${tx.description}_${tx.amount}`;
       const classification = classifications.get(key);
 
@@ -98,6 +108,13 @@ export async function POST(request: NextRequest) {
       transactionCount: normalized.length,
       errorCount: result.errors.length,
       errors: result.errors.slice(0, 10),
+      counterpartyGroups: similarGroups.map(g => ({
+        groupId: g.groupId,
+        counterpartyName: g.counterpartyName,
+        transactionCount: g.transactionCount,
+        direction: g.direction,
+        transactionIndices: g.transactionIndices,
+      })),
     }, { status: 201 });
   } catch (error: any) {
     console.error("Upload error:", error?.message || error);
