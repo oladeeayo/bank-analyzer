@@ -47,14 +47,23 @@ interface SimilarTransaction {
   matchReason: string;
 }
 
+interface Bank {
+  id: string;
+  bankName: string;
+  nickname: string | null;
+  accountNumber: string | null;
+}
+
 export default function TransactionsPage() {
   const { user, loading: userLoading } = useUser();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
+  const [filterBank, setFilterBank] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [minAmount, setMinAmount] = useState("");
@@ -100,6 +109,7 @@ export default function TransactionsPage() {
         if (search) params.set("search", search);
         if (filterType) params.set("type", filterType);
         if (filterCategory) params.set("categoryId", filterCategory);
+        if (filterBank) params.set("bankId", filterBank);
         if (startDate) params.set("startDate", startDate);
         if (endDate) params.set("endDate", endDate);
         if (minAmount) params.set("minAmount", minAmount);
@@ -129,9 +139,22 @@ export default function TransactionsPage() {
       }
     };
 
+    const loadBanks = async () => {
+      try {
+        const res = await fetch(`/api/banks?userId=${user.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setBanks(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch banks:", err);
+      }
+    };
+
     loadTransactions();
     loadCategories();
-  }, [user, search, filterType, filterCategory, startDate, endDate, minAmount, maxAmount, page, refreshKey]);
+    loadBanks();
+  }, [user, search, filterType, filterCategory, filterBank, startDate, endDate, minAmount, maxAmount, page, refreshKey]);
 
   const findSimilarTransactions = useCallback(async (tx: Transaction) => {
     if (!user) return;
@@ -347,6 +370,48 @@ export default function TransactionsPage() {
     }
   };
 
+  const handleQuickCategory = async (txId: string, categoryId: string) => {
+    try {
+      const res = await fetch(`/api/transactions/${txId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId: categoryId || null }),
+      });
+      if (res.ok) {
+        setTransactions(prev => prev.map(tx =>
+          tx.id === txId
+            ? { ...tx, categoryId: categoryId || null, category: categories.find(c => c.id === categoryId) || null }
+            : tx
+        ));
+      }
+    } catch (err) {
+      console.error("Quick category failed:", err);
+    }
+  };
+
+  const handleExportCsv = () => {
+    const headers = ["Date", "Description", "Merchant", "Category", "Type", "Amount", "Balance", "Reference", "Bank"];
+    const rows = transactions.map(tx => [
+      tx.date,
+      tx.description,
+      tx.normalizedDescription || tx.merchant?.displayName || "",
+      tx.category?.name || "Uncategorized",
+      tx.type,
+      tx.amount.toString(),
+      tx.balance?.toString() || "",
+      tx.reference || "",
+      tx.bank.nickname || tx.bank.bankName,
+    ]);
+    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transactions_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const selectTransaction = (tx: Transaction) => {
     setSelectedTx(tx);
     setRuleForm({
@@ -422,6 +487,16 @@ export default function TransactionsPage() {
               </optgroup>
             ))}
           </select>
+          <select
+            value={filterBank}
+            onChange={(e) => { setFilterBank(e.target.value); setPage(1); }}
+            className="bg-paper-white border border-[#ececec] rounded-lg px-3 py-2 text-sm max-w-[200px]"
+          >
+            <option value="">All Banks</option>
+            {banks.map(bank => (
+              <option key={bank.id} value={bank.id}>{bank.nickname || bank.bankName}</option>
+            ))}
+          </select>
           <div className="ml-auto flex items-center gap-2">
             {selectedIds.size > 0 && (
               <select
@@ -449,6 +524,14 @@ export default function TransactionsPage() {
             >
               <Wand2 className={`h-3.5 w-3.5 ${aiLoading ? "animate-spin" : ""}`} />
               {aiLoading ? "Classifying..." : "AI Classify"}
+            </Button>
+            <Button
+              onClick={handleExportCsv}
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+            >
+              Export CSV
             </Button>
         </div>
         </div>
@@ -489,12 +572,13 @@ export default function TransactionsPage() {
               className="bg-paper-white border-[#ececec] rounded-lg px-2 py-1 text-xs w-[80px]"
             />
           </div>
-          {(startDate || endDate || minAmount || maxAmount || filterType || filterCategory || search) && (
+          {(startDate || endDate || minAmount || maxAmount || filterType || filterCategory || filterBank || search) && (
             <button
               onClick={() => {
                 setSearch("");
                 setFilterType("");
                 setFilterCategory("");
+                setFilterBank("");
                 setStartDate("");
                 setEndDate("");
                 setMinAmount("");
@@ -570,12 +654,23 @@ export default function TransactionsPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        {tx.category ? (
-                          <Badge variant="default">{tx.category.icon} {tx.category.name}</Badge>
-                        ) : (
-                          <Badge variant="destructive">Uncategorized</Badge>
-                        )}
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={tx.categoryId || ""}
+                          onChange={(e) => handleQuickCategory(tx.id, e.target.value)}
+                          className={`text-[11px] px-2 py-1 rounded border border-[#ececec] bg-paper-white cursor-pointer hover:bg-mist-gray transition-colors ${
+                            tx.category ? "text-ink-black" : "text-error italic"
+                          }`}
+                        >
+                          <option value=""> Uncategorized</option>
+                          {categories.filter(c => !c.parentId).map(parent => (
+                            <optgroup key={parent.id} label={`${parent.icon} ${parent.name}`}>
+                              {categories.filter(c => c.parentId === parent.id).map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold ${

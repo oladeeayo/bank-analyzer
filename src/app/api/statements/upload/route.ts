@@ -40,19 +40,80 @@ export async function POST(request: NextRequest) {
     }
 
     const firstDate = new Date(result.transactions[0].date);
+    const lastDate = new Date(result.transactions[result.transactions.length - 1].date);
     const month = firstDate.getMonth() + 1;
     const year = firstDate.getFullYear();
 
-    const existing = await db.statement.findFirst({
-      where: { bankId, month, year },
+    // Check for existing statements with overlapping dates
+    const existingStatements = await db.statement.findMany({
+      where: {
+        bankId,
+        OR: [
+          { month, year },
+          { AND: [{ year: { lte: lastDate.getFullYear() } }, { year: { gte: firstDate.getFullYear() } }] },
+        ],
+      },
+      include: {
+        transactions: {
+          select: { date: true, amount: true, description: true },
+          orderBy: { date: "asc" },
+        },
+      },
     });
 
-    if (existing) {
+    // Find statements with overlapping date ranges
+    const overlapping = existingStatements.filter(s => {
+      const stmtStart = new Date(s.year, s.month - 1, 1);
+      const stmtEnd = new Date(s.year, s.month, 0, 23, 59, 59);
+      return firstDate <= stmtEnd && lastDate >= stmtStart;
+    });
+
+    if (overlapping.length > 0) {
+      // Check if all transactions already exist
+      const existingDates = new Set(
+        overlapping.flatMap(s => s.transactions.map(t => `${t.date.toISOString().split("T")[0]}_${t.amount}_${t.description.substring(0, 30)}`))
+      );
+
+      const newTransactions = result.transactions.filter(tx => {
+        const txDate = new Date(tx.date).toISOString().split("T")[0];
+        const key = `${txDate}_${tx.amount}_${tx.description.substring(0, 30)}`;
+        return !existingDates.has(key);
+      });
+
+      const totalExisting = overlapping.reduce((sum, s) => sum + s.transactions.length, 0);
+
+      if (newTransactions.length === 0) {
+        return NextResponse.json(
+          {
+            error: "duplicate",
+            message: `This statement appears to be a duplicate. ${totalExisting} transactions already exist for this date range.`,
+            existingStatements: overlapping.map(s => ({
+              id: s.id,
+              month: s.month,
+              year: s.year,
+              transactionCount: s.transactionCount,
+              filename: s.filename,
+            })),
+            options: ["cancel", "replace"],
+          },
+          { status: 409 }
+        );
+      }
+
+      // Some new transactions found - offer merge
       return NextResponse.json(
         {
-          error: "Statement already exists for this month",
-          existingStatement: existing,
-          options: ["replace", "merge", "cancel"],
+          error: "partial_overlap",
+          message: `Found ${newTransactions.length} new transactions. ${totalExisting} already exist from overlapping statements.`,
+          existingStatements: overlapping.map(s => ({
+            id: s.id,
+            month: s.month,
+            year: s.year,
+            transactionCount: s.transactionCount,
+            filename: s.filename,
+          })),
+          newTransactionCount: newTransactions.length,
+          options: ["merge", "replace", "cancel"],
         },
         { status: 409 }
       );
@@ -103,11 +164,27 @@ export async function POST(request: NextRequest) {
 
     await db.transaction.createMany({ data: transactionData });
 
+    // Calculate summary stats
+    const totalCredits = normalized.filter(t => t.type === "credit").reduce((s, t) => s + t.amount, 0);
+    const totalDebits = normalized.filter(t => t.type === "debit").reduce((s, t) => s + t.amount, 0);
+    const dateRange = {
+      from: normalized.length > 0 ? normalized.reduce((min, t) => t.date < min ? t.date : min, normalized[0].date) : null,
+      to: normalized.length > 0 ? normalized.reduce((max, t) => t.date > max ? t.date : max, normalized[0].date) : null,
+    };
+
     return NextResponse.json({
       statement,
       transactionCount: normalized.length,
       errorCount: result.errors.length,
       errors: result.errors.slice(0, 10),
+      summary: {
+        totalCredits,
+        totalDebits,
+        netCashFlow: totalCredits - totalDebits,
+        transactionCount: normalized.length,
+        dateRange,
+        classifiedCount: transactionData.filter(t => t.merchantId || t.categoryId).length,
+      },
       counterpartyGroups: similarGroups.map(g => ({
         groupId: g.groupId,
         counterpartyName: g.counterpartyName,

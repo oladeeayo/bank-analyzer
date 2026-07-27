@@ -218,17 +218,49 @@ function matchMerchant(tx: NormalizedTransaction, cache: ClassificationCache): C
 
   const normalizedName = tx.merchantGuess.toLowerCase().replace(/\s+/g, "_");
   const merchant = cache.merchants.get(normalizedName);
-  if (!merchant) return null;
+  if (merchant) {
+    const categoryId = cache.merchantCategoryMap.get(merchant.id) ?? null;
+    return { merchantId: merchant.id, categoryId, confidence: 0.8, source: "merchant" };
+  }
 
-  // Get category from merchant history
-  const categoryId = cache.merchantCategoryMap.get(merchant.id) ?? null;
+  // Fuzzy match: try to find a merchant with similar name
+  const guessLower = tx.merchantGuess.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+  let bestMatch: { id: string; normalizedName: string; score: number } | null = null;
 
-  return {
-    merchantId: merchant.id,
-    categoryId,
-    confidence: 0.8,
-    source: "merchant",
-  };
+  for (const [dbName, merchant] of cache.merchants) {
+    const dbLower = dbName.replace(/_/g, " ").trim();
+    // Exact substring match
+    if (guessLower.includes(dbLower) || dbLower.includes(guessLower)) {
+      bestMatch = { id: merchant.id, normalizedName: dbName, score: 0.95 };
+      break;
+    }
+    // Token overlap: check if 2+ significant words match
+    const guessWords = guessLower.split(/\s+/).filter(w => w.length > 2);
+    const dbWords = dbLower.split(/[\s_]+/).filter(w => w.length > 2);
+    let matches = 0;
+    for (const gw of guessWords) {
+      for (const dw of dbWords) {
+        if (gw === dw || gw.includes(dw) || dw.includes(gw)) {
+          matches++;
+          break;
+        }
+      }
+    }
+    if (matches >= 2 && matches >= Math.min(guessWords.length, dbWords.length) * 0.6) {
+      const score = matches / Math.max(guessWords.length, dbWords.length);
+      if (!bestMatch || score > bestMatch.score) {
+        bestMatch = { id: merchant.id, normalizedName: dbName, score: Math.min(score, 0.9) };
+      }
+    }
+  }
+
+  if (bestMatch) {
+    const merchant = cache.merchants.get(bestMatch.normalizedName);
+    const categoryId = merchant ? (cache.merchantCategoryMap.get(merchant.id) ?? null) : null;
+    return { merchantId: bestMatch.id, categoryId, confidence: bestMatch.score, source: "merchant" };
+  }
+
+  return null;
 }
 
 function matchCategory(tx: NormalizedTransaction, cache: ClassificationCache): ClassificationResult | null {

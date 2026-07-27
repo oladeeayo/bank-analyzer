@@ -55,6 +55,19 @@ interface Transaction {
   category: { name: string; icon: string } | null;
 }
 
+interface RecurringPattern {
+  merchantId: string | null;
+  description: string;
+  normalizedDescription: string;
+  frequency: string;
+  avgAmount: number;
+  transactionCount: number;
+  lastSeenDate: string;
+  nextExpectedDate: string | null;
+  confidence: number;
+  type?: string;
+}
+
 const CHART_COLORS = ["#003527", "#416900", "#95d3ba", "#acf847", "#91db2a"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const availableYears = [2023, 2024, 2025, 2026, 2027];
@@ -63,6 +76,7 @@ export default function DashboardPage() {
   const { user, loading: userLoading } = useUser();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [recurring, setRecurring] = useState<RecurringPattern[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("monthly");
   const [year, setYear] = useState(new Date().getFullYear());
@@ -73,6 +87,7 @@ export default function DashboardPage() {
     if (user) {
       fetchDashboard();
       fetchTransactions();
+      fetchRecurring();
     }
   }, [period, month, year, quarter, user]);
 
@@ -106,6 +121,18 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error("Failed to fetch transactions:", err);
+    }
+  };
+
+  const fetchRecurring = async () => {
+    try {
+      const res = await fetch(`/api/recurring?userId=${user!.id}`);
+      if (res.ok) {
+        const result = await res.json();
+        setRecurring(result.patterns || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch recurring:", err);
     }
   };
 
@@ -406,6 +433,39 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Recurring Transactions */}
+      {recurring.length > 0 && (
+        <div className="bg-paper-white border border-[#ececec] p-6 rounded-cards shadow-subtle">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="font-signifier text-xl text-ink-black">Recurring Transactions</h2>
+              <p className="text-xs text-ash-gray mt-1">Detected from your transaction history</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recurring.slice(0, 6).map((r, idx) => (
+              <div key={idx} className="p-4 bg-mist-gray rounded-cards">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-ink-black truncate">{r.normalizedDescription}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                    r.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-[#8BC34A]/20 text-[#4a7c0f]"
+                  }`}>
+                    {r.frequency}
+                  </span>
+                </div>
+                <div className="text-lg font-mono font-medium text-forest">{formatCurrency(r.avgAmount)}</div>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-[10px] text-ash-gray">{r.transactionCount}x transactions</span>
+                  {r.nextExpectedDate && (
+                    <span className="text-[10px] text-ash-gray">Next: {new Date(r.nextExpectedDate).toLocaleDateString("en", { month: "short", day: "numeric" })}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Transactions */}
       <div className="bg-paper-white border border-[#ececec] rounded-cards shadow-subtle overflow-hidden">

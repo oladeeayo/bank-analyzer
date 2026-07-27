@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
-import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, X } from "lucide-react";
 
 interface AnalyticsData {
   period: string;
@@ -44,6 +44,8 @@ export default function AnalyticsPage() {
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [quarter, setQuarter] = useState(Math.ceil((new Date().getMonth() + 1) / 3));
   const [selectedBar, setSelectedBar] = useState<{ label: string; income: number; expense: number; net: number } | null>(null);
+  const [drilldown, setDrilldown] = useState<{ type: "category" | "merchant"; name: string; icon: string } | null>(null);
+  const [drilldownData, setDrilldownData] = useState<{ totalCredits: number; totalDebits: number; transactions: any[] } | null>(null);
 
   useEffect(() => {
     if (user) fetchAnalytics();
@@ -64,6 +66,35 @@ export default function AnalyticsPage() {
       console.error("Failed to fetch analytics:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDrilldown = async (type: "category" | "merchant", name: string, icon: string) => {
+    if (drilldown?.name === name) {
+      setDrilldown(null);
+      setDrilldownData(null);
+      return;
+    }
+    setDrilldown({ type, name, icon });
+    setDrilldownData(null);
+    try {
+      let url = `/api/transactions?userId=${user.id}&limit=100`;
+      if (type === "category") {
+        // Search by category name in description
+        url += `&search=${encodeURIComponent(name)}`;
+      } else {
+        url += `&search=${encodeURIComponent(name)}`;
+      }
+      const res = await fetch(url);
+      if (res.ok) {
+        const result = await res.json();
+        const txs = result.transactions || [];
+        const totalCredits = txs.filter((t: any) => t.type === "credit").reduce((s: number, t: any) => s + t.amount, 0);
+        const totalDebits = txs.filter((t: any) => t.type === "debit").reduce((s: number, t: any) => s + t.amount, 0);
+        setDrilldownData({ totalCredits, totalDebits, transactions: txs.slice(0, 10) });
+      }
+    } catch (err) {
+      console.error("Failed to fetch drilldown:", err);
     }
   };
 
@@ -363,13 +394,21 @@ export default function AnalyticsPage() {
               </div>
               <div className="space-y-2">
                 {donutSegments.map((seg, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
+                  <button
+                    key={i}
+                    onClick={() => fetchDrilldown("category", seg.name, seg.icon)}
+                    className={`w-full flex items-center justify-between text-sm p-1.5 rounded transition-colors ${
+                      drilldown?.type === "category" && drilldown?.name === seg.name
+                        ? "bg-lime-vibrant/10"
+                        : "hover:bg-mist-gray"
+                    }`}
+                  >
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: seg.color }} />
-                      <span className="text-ash-gray">{seg.icon} {seg.name}</span>
+                      <span className="text-ink-black">{seg.icon} {seg.name}</span>
                     </div>
-                    <span className="font-mono text-ink-black">{seg.percent.toFixed(0)}%</span>
-                  </div>
+                    <span className="font-mono text-ash-gray">{seg.percent.toFixed(0)}%</span>
+                  </button>
                 ))}
               </div>
             </>
@@ -390,6 +429,74 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
+      {/* Drilldown Panel */}
+      {drilldown && (
+        <div className="bg-paper-white border border-[#ececec] rounded-cards p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{drilldown.icon}</span>
+              <div>
+                <h3 className="font-semibold text-ink-black">{drilldown.name}</h3>
+                <p className="text-xs text-ash-gray capitalize">{drilldown.type} Details · {data?.periodLabel}</p>
+              </div>
+            </div>
+            <button onClick={() => { setDrilldown(null); setDrilldownData(null); }} className="text-ash-gray hover:text-ink-black">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          {drilldownData ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-4 bg-lime-vibrant/10 rounded-lg">
+                  <p className="text-[10px] uppercase text-forest/60">Inflow (Credit)</p>
+                  <p className="text-xl font-mono font-medium text-forest">{formatCurrency(drilldownData.totalCredits)}</p>
+                </div>
+                <div className="p-4 bg-[#8BC34A]/10 rounded-lg">
+                  <p className="text-[10px] uppercase text-[#4a7c0f]/60">Outflow (Debit)</p>
+                  <p className="text-xl font-mono font-medium text-[#4a7c0f]">{formatCurrency(drilldownData.totalDebits)}</p>
+                </div>
+                <div className="p-4 bg-mist-gray rounded-lg">
+                  <p className="text-[10px] uppercase text-ash-gray">Net</p>
+                  <p className={`text-xl font-mono font-medium ${drilldownData.totalCredits - drilldownData.totalDebits >= 0 ? "text-forest" : "text-error"}`}>
+                    {formatCurrency(drilldownData.totalCredits - drilldownData.totalDebits)}
+                  </p>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#ececec]">
+                      <th className="text-left text-[10px] text-ash-gray uppercase py-2">Date</th>
+                      <th className="text-left text-[10px] text-ash-gray uppercase py-2">Description</th>
+                      <th className="text-left text-[10px] text-ash-gray uppercase py-2">Type</th>
+                      <th className="text-right text-[10px] text-ash-gray uppercase py-2">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#ececec]">
+                    {drilldownData.transactions.map((tx: any) => (
+                      <tr key={tx.id}>
+                        <td className="py-2 text-ash-gray">{formatDate(tx.date)}</td>
+                        <td className="py-2 text-ink-black truncate max-w-[200px]">{tx.normalizedDescription || tx.description}</td>
+                        <td className="py-2">
+                          <span className={`text-[10px] px-2 py-0.5 rounded ${tx.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-[#8BC34A]/20 text-[#4a7c0f]"}`}>
+                            {tx.type.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className={`py-2 text-right font-mono ${tx.type === "credit" ? "text-forest" : "text-[#4a7c0f]"}`}>
+                          {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-ash-gray text-sm">Loading details...</div>
+          )}
+        </div>
+      )}
+
       <div className="grid md:grid-cols-2 gap-6">
         {/* Merchant Ranking */}
         <div className="bg-paper-white border border-[#ececec] rounded-cards p-6">
@@ -399,7 +506,15 @@ export default function AnalyticsPage() {
               {merchantRanking.slice(0, 8).map((m, idx) => {
                 const pct = summary.totalExpenses > 0 ? (m.amount / summary.totalExpenses) * 100 : 0;
                 return (
-                  <div key={idx} className="flex items-center gap-3 group">
+                  <button
+                    key={idx}
+                    onClick={() => fetchDrilldown("merchant", m.name, m.icon)}
+                    className={`w-full flex items-center gap-3 group p-1.5 rounded transition-colors ${
+                      drilldown?.type === "merchant" && drilldown?.name === m.name
+                        ? "bg-lime-vibrant/10"
+                        : "hover:bg-mist-gray"
+                    }`}
+                  >
                     <span className="text-lg w-8 text-center">{m.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between text-sm">
@@ -411,7 +526,7 @@ export default function AnalyticsPage() {
                       </div>
                     </div>
                     <span className="text-xs text-ash-gray w-10 text-right">{m.count}x</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -428,7 +543,15 @@ export default function AnalyticsPage() {
               {categoryBreakdown.map((cat, idx) => {
                 const pct = summary.totalExpenses > 0 ? (cat.amount / summary.totalExpenses) * 100 : 0;
                 return (
-                  <div key={idx} className="flex items-center gap-3">
+                  <button
+                    key={idx}
+                    onClick={() => fetchDrilldown("category", cat.name, cat.icon)}
+                    className={`w-full flex items-center gap-3 p-1.5 rounded transition-colors ${
+                      drilldown?.type === "category" && drilldown?.name === cat.name
+                        ? "bg-lime-vibrant/10"
+                        : "hover:bg-mist-gray"
+                    }`}
+                  >
                     <span className="text-lg w-8 text-center">{cat.icon}</span>
                     <div className="flex-1">
                       <div className="flex justify-between text-sm">
@@ -440,7 +563,7 @@ export default function AnalyticsPage() {
                       </div>
                     </div>
                     <span className="text-xs text-ash-gray w-10 text-right">{pct.toFixed(0)}%</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
