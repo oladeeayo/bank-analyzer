@@ -1,5 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse");
+const PDFParser = require("pdf2json");
 import { ParsedTransaction, ParseResult, BankFormat } from "./types";
 
 function detectBankFormat(text: string): BankFormat {
@@ -53,123 +53,192 @@ function normalizeAmount(val: string): number {
   return Math.abs(parseFloat(cleaned) || 0);
 }
 
-function parsePalmPayPDF(text: string, fileName: string): ParseResult {
-  console.log(`[PalmPayPDF] Raw text length: ${text.length}`);
-  console.log(`[PalmPayPDF] First 2000 chars:\n${text.substring(0, 2000)}`);
+function extractTextFromPDF2Json(pdfData: any): string {
+  const lines: string[] = [];
 
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-  console.log(`[PalmPayPDF] Total lines: ${lines.length}`);
-  if (lines.length > 0) console.log(`[PalmPayPDF] First 10 lines:`, lines.slice(0, 10));
+  if (pdfData.Pages) {
+    for (const page of pdfData.Pages) {
+      if (page.Texts) {
+        for (const text of page.Texts) {
+          if (text.R) {
+            for (const r of text.R) {
+              if (r.T) {
+                lines.push(decodeURIComponent(r.T));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
+  return lines.join("\n");
+}
+
+function extractTableRows(pdfData: any): string[][] {
+  const allRows: string[][] = [];
+
+  if (pdfData.Pages) {
+    for (const page of pdfData.Pages) {
+      if (!page.Texts) continue;
+
+      const textsByY: Record<number, { x: number; text: string }[]> = {};
+
+      for (const text of page.Texts) {
+        if (!text.R || text.R.length === 0) continue;
+        const decoded = decodeURIComponent(text.R[0].T || "");
+        if (!decoded.trim()) continue;
+        const y = Math.round(text.y * 10) / 10;
+        const x = Math.round(text.x * 10) / 10;
+        if (!textsByY[y]) textsByY[y] = [];
+        textsByY[y].push({ x, text: decoded.trim() });
+      }
+
+      const sortedYs = Object.keys(textsByY)
+        .map(Number)
+        .sort((a, b) => a - b);
+
+      for (const y of sortedYs) {
+        const cells = textsByY[y].sort((a, b) => a.x - b.x);
+        if (cells.length > 0) {
+          allRows.push(cells.map(c => c.text));
+        }
+      }
+    }
+  }
+
+  return allRows;
+}
+
+function parseTransactionsFromRows(rows: string[][], bankFormat: BankFormat, fileName: string): ParseResult {
   const transactions: ParsedTransaction[] = [];
   const errors: string[] = [];
 
-  // PalmPay PDF has lines like:
-  // "Transaction Date: 2025-06-01 12:00:00 | Description: Transfer to ... | Amount: 5000 | Type: Debit"
-  // OR table-like format with pipe separators or tab-separated
-  // Try to find transaction lines by looking for date patterns
-
   const datePattern = /(\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4}|\d{2}\s+\w{3}\s+\d{4})/;
 
-  for (const line of lines) {
-    // Skip header/metadata lines
-    if (line.toLowerCase().includes("palmpay") && line.length < 50) continue;
-    if (line.toLowerCase().includes("statement")) continue;
-    if (line.toLowerCase().includes("account")) continue;
-    if (line.toLowerCase().includes("total money")) continue;
-    if (line.toLowerCase().includes("page")) continue;
+  let headerIdx = -1;
+  let dateCol = -1;
+  let descCol = -1;
+  let debitCol = -1;
+  let creditCol = -1;
+  let amountCol = -1;
+  let balanceCol = -1;
+  let refCol = -1;
 
-    const dateMatch = line.match(datePattern);
-    if (!dateMatch) continue;
-
-    const date = parseDate(dateMatch[1]);
-    if (isNaN(date.getTime())) continue;
-
-    // Try to extract description and amount from the line
-    // Common formats: pipe-separated, tab-separated, or space-separated
-    let parts: string[] = [];
-    if (line.includes("|")) {
-      parts = line.split("|").map(p => p.trim());
-    } else if (line.includes("\t")) {
-      parts = line.split("\t").map(p => p.trim());
-    } else {
-      // Try to split by multiple spaces
-      parts = line.split(/\s{2,}/).map(p => p.trim());
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const row = rows[i];
+    const joined = row.join(" ").toLowerCase();
+    if (
+      (joined.includes("date") && (joined.includes("description") || joined.includes("narration"))) ||
+      (joined.includes("trans") && joined.includes("date"))
+    ) {
+      headerIdx = i;
+      for (let j = 0; j < row.length; j++) {
+        const h = row[j].toLowerCase();
+        if (h.includes("date")) dateCol = j;
+        else if (h.includes("description") || h.includes("narration") || h.includes("details")) descCol = j;
+        else if (h.includes("debit") || h.includes("withdrawal")) debitCol = j;
+        else if (h.includes("credit") || h.includes("deposit")) creditCol = j;
+        else if (h.includes("amount") && debitCol === -1) amountCol = j;
+        else if (h.includes("balance")) balanceCol = j;
+        else if (h.includes("reference") || h.includes("ref")) refCol = j;
+      }
+      break;
     }
+  }
 
-    if (parts.length < 2) continue;
+  const startRow = headerIdx >= 0 ? headerIdx + 1 : 0;
 
-    // Find the amount (look for numbers with optional commas and decimals)
-    let amount = 0;
-    let type: "debit" | "credit" = "debit";
-    let description = "";
-    let balance: number | undefined;
-    let reference: string | undefined;
+  for (let i = startRow; i < rows.length; i++) {
+    try {
+      const row = rows[i];
+      if (row.length < 2) continue;
 
-    for (const part of parts) {
-      const numMatch = part.match(/[\d,]+\.?\d*/);
-      if (numMatch && !datePattern.test(part)) {
-        const num = normalizeAmount(numMatch[0]);
-        if (num > 0) {
-          if (part.includes("-") || part.toLowerCase().includes("debit") || part.toLowerCase().includes("out")) {
-            type = "debit";
-            amount = num;
-          } else if (part.includes("+") || part.toLowerCase().includes("credit") || part.toLowerCase().includes("in")) {
-            type = "credit";
-            amount = num;
-          } else if (amount === 0) {
-            amount = num;
+      let dateStr = "";
+      let description = "";
+      let amount = 0;
+      let type: "debit" | "credit" = "debit";
+      let balance: number | undefined;
+      let reference: string | undefined;
+
+      if (headerIdx >= 0) {
+        dateStr = dateCol >= 0 ? row[dateCol] || "" : "";
+        description = descCol >= 0 ? row[descCol] || "" : "";
+
+        if (debitCol >= 0 && row[debitCol]) {
+          const debit = normalizeAmount(row[debitCol]);
+          if (debit > 0) { amount = debit; type = "debit"; }
+        }
+        if (creditCol >= 0 && row[creditCol]) {
+          const credit = normalizeAmount(row[creditCol]);
+          if (credit > 0) { amount = credit; type = "credit"; }
+        }
+        if (amount === 0 && amountCol >= 0 && row[amountCol]) {
+          amount = normalizeAmount(row[amountCol]);
+          type = row[amountCol].includes("-") ? "debit" : "credit";
+        }
+        if (balanceCol >= 0 && row[balanceCol]) balance = normalizeAmount(row[balanceCol]);
+        if (refCol >= 0 && row[refCol]) reference = row[refCol];
+      } else {
+        for (const cell of row) {
+          if (!dateStr && datePattern.test(cell)) {
+            const m = cell.match(datePattern);
+            if (m) dateStr = m[1];
           }
         }
-      } else if (part.toLowerCase().includes("debit") || part.toLowerCase().includes("out")) {
-        type = "debit";
-      } else if (part.toLowerCase().includes("credit") || part.toLowerCase().includes("in")) {
-        type = "credit";
-      } else if (!datePattern.test(part) && part.length > 3) {
-        if (!description) description = part;
-        else description += " " + part;
+        for (const cell of row) {
+          if (cell.match(/[\d,]+\.?\d*/) && !datePattern.test(cell) && cell.length < 30) {
+            const num = normalizeAmount(cell);
+            if (num > 0) {
+              if (amount === 0) {
+                amount = num;
+                type = cell.includes("-") || cell.toLowerCase().includes("dr") ? "debit" : "credit";
+              }
+            }
+          } else if (!datePattern.test(cell) && cell.length > 2 && !cell.match(/^[\d,]+\.?\d*$/)) {
+            if (!description) description = cell;
+            else description += " " + cell;
+          }
+        }
       }
-    }
 
-    // If we still don't have a description, use the whole line minus date and amount
-    if (!description) {
-      description = line.replace(dateMatch[0], "").replace(/[\d,]+\.?\d*/g, "").trim();
-    }
-
-    if (amount === 0) {
-      // Try to find amount in the line by looking for the last number
-      const allNumbers = line.match(/[\d,]+\.?\d*/g);
-      if (allNumbers && allNumbers.length > 0) {
-        amount = normalizeAmount(allNumbers[allNumbers.length - 1]);
+      if (!dateStr) {
+        for (const cell of row) {
+          if (datePattern.test(cell)) {
+            const m = cell.match(datePattern);
+            if (m) { dateStr = m[1]; break; }
+          }
+        }
       }
-    }
 
-    if (amount === 0) {
-      errors.push(`Line: Could not parse amount from "${line.substring(0, 80)}"`);
-      continue;
-    }
+      if (!dateStr || !description) continue;
 
-    transactions.push({
-      date: date.toISOString(),
-      description: description || "Unknown transaction",
-      amount,
-      type,
-      balance,
-      reference,
-      narration: description,
-    });
+      const date = parseDate(dateStr);
+      if (isNaN(date.getTime())) {
+        errors.push(`Row ${i + 1}: Invalid date "${dateStr}"`);
+        continue;
+      }
+
+      if (amount === 0) {
+        errors.push(`Row ${i + 1}: Zero amount`);
+        continue;
+      }
+
+      transactions.push({
+        date: date.toISOString(),
+        description: description.trim(),
+        amount,
+        type,
+        balance,
+        reference: reference || undefined,
+        narration: description.trim(),
+      });
+    } catch (err) {
+      errors.push(`Row ${i + 1}: Parse error - ${err}`);
+    }
   }
 
   const dates = transactions.map(t => new Date(t.date).getTime()).sort((a, b) => a - b);
-
-  console.log(`[PalmPayPDF] Parsed ${transactions.length} transactions, ${errors.length} errors`);
-  if (transactions.length > 0) {
-    console.log(`[PalmPayPDF] First transaction:`, transactions[0]);
-    console.log(`[PalmPayPDF] Last transaction:`, transactions[transactions.length - 1]);
-  }
-  if (errors.length > 0) {
-    console.log(`[PalmPayPDF] Errors:`, errors.slice(0, 5));
-  }
 
   return {
     transactions,
@@ -177,7 +246,7 @@ function parsePalmPayPDF(text: string, fileName: string): ParseResult {
     metadata: {
       fileName,
       fileType: "pdf",
-      totalRows: lines.length,
+      totalRows: rows.length,
       parsedRows: transactions.length,
       dateRange: dates.length > 0
         ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() }
@@ -187,117 +256,63 @@ function parsePalmPayPDF(text: string, fileName: string): ParseResult {
 }
 
 export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<ParseResult> {
-  try {
-    const data = await pdfParse(Buffer.from(buffer));
-    const text = data.text;
+  return new Promise((resolve) => {
+    try {
+      const pdfParser = new PDFParser();
 
-    if (!text || text.trim().length === 0) {
-      return {
-        transactions: [],
-        errors: ["PDF contains no extractable text. The PDF may be scanned/image-based. Please export as CSV or Excel."],
-        metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 },
-      };
-    }
+      pdfParser.on("pdfParser_dataError", (errData: any) => {
+        console.error("[PDFParser] Error:", errData.parserError);
+        resolve({
+          transactions: [],
+          errors: [`PDF parse error: ${errData.parserError}`],
+          metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 },
+        });
+      });
 
-    const bankFormat = detectBankFormat(text);
+      pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
+        try {
+          const text = extractTextFromPDF2Json(pdfData);
+          console.log(`[PDFParser] Extracted text length: ${text.length}`);
 
-    // For PalmPay PDFs, use the dedicated parser
-    if (bankFormat === "palmpay-pdf") {
-      return parsePalmPayPDF(text, fileName);
-    }
-
-    // For other banks, try generic table extraction
-    // Look for lines that contain dates and amounts
-    const lines = text.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 5);
-    const transactions: ParsedTransaction[] = [];
-    const errors: string[] = [];
-
-    const datePattern = /(\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4}|\d{2}\s+\w{3}\s+\d{4})/;
-
-    for (const line of lines) {
-      const dateMatch = line.match(datePattern);
-      if (!dateMatch) continue;
-
-      const date = parseDate(dateMatch[1]);
-      if (isNaN(date.getTime())) continue;
-
-      let parts: string[] = [];
-      if (line.includes("|")) {
-        parts = line.split("|").map((p: string) => p.trim());
-      } else if (line.includes("\t")) {
-        parts = line.split("\t").map((p: string) => p.trim());
-      } else {
-        parts = line.split(/\s{2,}/).map((p: string) => p.trim());
-      }
-
-      if (parts.length < 2) continue;
-
-      let amount = 0;
-      let type: "debit" | "credit" = "debit";
-      let description = "";
-
-      for (const part of parts) {
-        const numMatch = part.match(/[\d,]+\.?\d*/);
-        if (numMatch && !datePattern.test(part)) {
-          const num = normalizeAmount(numMatch[0]);
-          if (num > 0) {
-            if (part.includes("-") || part.toLowerCase().includes("debit")) {
-              type = "debit";
-              amount = num;
-            } else if (part.includes("+") || part.toLowerCase().includes("credit")) {
-              type = "credit";
-              amount = num;
-            } else if (amount === 0) {
-              amount = num;
-            }
+          if (!text || text.trim().length === 0) {
+            resolve({
+              transactions: [],
+              errors: ["PDF contains no extractable text. It may be a scanned/image-based PDF."],
+              metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 },
+            });
+            return;
           }
-        } else if (!datePattern.test(part) && part.length > 3 && !description) {
-          description = part;
+
+          const bankFormat = detectBankFormat(text);
+          console.log(`[PDFParser] Detected bank format: ${bankFormat}`);
+
+          const rows = extractTableRows(pdfData);
+          console.log(`[PDFParser] Extracted ${rows.length} table rows`);
+          if (rows.length > 0) {
+            console.log(`[PDFParser] First 5 rows:`, rows.slice(0, 5));
+          }
+
+          const result = parseTransactionsFromRows(rows, bankFormat, fileName);
+          console.log(`[PDFParser] Parsed ${result.transactions.length} transactions, ${result.errors.length} errors`);
+
+          resolve(result);
+        } catch (err) {
+          console.error("[PDFParser] Processing error:", err);
+          resolve({
+            transactions: [],
+            errors: [`PDF processing error: ${err}`],
+            metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 },
+          });
         }
-      }
+      });
 
-      if (!description) {
-        description = line.replace(dateMatch[0], "").replace(/[\d,]+\.?\d*/g, "").trim();
-      }
-
-      if (amount === 0) {
-        const allNumbers = line.match(/[\d,]+\.?\d*/g);
-        if (allNumbers && allNumbers.length > 0) {
-          amount = normalizeAmount(allNumbers[allNumbers.length - 1]);
-        }
-      }
-
-      if (amount === 0) continue;
-
-      transactions.push({
-        date: date.toISOString(),
-        description: description || "Unknown transaction",
-        amount,
-        type,
-        narration: description,
+      pdfParser.parseBuffer(Buffer.from(buffer));
+    } catch (error) {
+      resolve({
+        transactions: [],
+        errors: [`PDF init error: ${error}`],
+        metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 },
       });
     }
-
-    const dates = transactions.map(t => new Date(t.date).getTime()).sort((a, b) => a - b);
-
-    return {
-      transactions,
-      errors,
-      metadata: {
-        fileName,
-        fileType: "pdf",
-        totalRows: lines.length,
-        parsedRows: transactions.length,
-        dateRange: dates.length > 0
-          ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() }
-          : undefined,
-      },
-    };
-  } catch (error) {
-    return {
-      transactions: [],
-      errors: [`PDF parse error: ${error}`],
-      metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 },
-    };
-  }
+  });
 }
