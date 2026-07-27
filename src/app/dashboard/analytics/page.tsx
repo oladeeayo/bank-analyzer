@@ -184,46 +184,93 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Daily/Period Spending Chart */}
+        {/* Cashflow Dual-Direction Chart */}
         <div className="lg:col-span-2 bg-paper-white border border-[#ececec] rounded-cards p-6">
-          <h2 className="font-semibold text-ink-black mb-4">
-            {period === "monthly" ? "Daily Spending" : period === "yearly" ? "Monthly Spending" : "Spending Overview"}
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-ink-black">
+              {period === "monthly" ? "Daily Cashflow" : "Cashflow"}
+            </h2>
+            <div className="flex items-center gap-4 text-[11px]">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-forest/80" /> Income</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-error/70" /> Expense</span>
+            </div>
+          </div>
 
           {monthlyChart.length > 0 && period !== "monthly" ? (
-            <div className="flex items-end gap-2 h-48">
-              {monthlyChart.map((m, i) => {
-                const h = maxMonthly > 0 ? Math.max((m.debits / maxMonthly) * 100, 2) : 0;
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-                    <div className="w-full bg-forest/80 hover:bg-lime-vibrant rounded-t transition-colors cursor-pointer"
-                      style={{ height: `${h}%` }}
-                      title={`${MONTH_NAMES[m.month - 1]} ${m.year}: ${formatCurrency(m.debits)} spent, ${formatCurrency(m.credits)} received`} />
-                    <span className="text-[8px] text-ash-gray">{MONTH_NAMES[m.month - 1]}</span>
+            /* Monthly dual bars for yearly/all views */
+            (() => {
+              const allValues = monthlyChart.flatMap(m => [m.credits, m.debits]);
+              const maxVal = Math.max(...allValues, 1);
+              return (
+                <div className="relative">
+                  {/* Zero line */}
+                  <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
+                  <div className="flex items-center gap-3 h-64">
+                    {monthlyChart.map((m, i) => {
+                      const creditH = (m.credits / maxVal) * 48;
+                      const debitH = (m.debits / maxVal) * 48;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center h-full relative">
+                          <div className="flex-1 w-full flex flex-col justify-end items-center" />
+                          {/* Income bar (above zero) */}
+                          <div className="w-full flex justify-center mb-0" style={{ height: `${creditH}%` }}>
+                            <div className="w-3/4 max-w-[40px] bg-forest/80 hover:bg-lime-vibrant rounded-t-sm transition-colors cursor-pointer"
+                              title={`${MONTH_NAMES[m.month - 1]} ${m.year} Income: ${formatCurrency(m.credits)}`} />
+                          </div>
+                          {/* Expense bar (below zero) */}
+                          <div className="w-full flex justify-center mt-0" style={{ height: `${debitH}%` }}>
+                            <div className="w-3/4 max-w-[40px] bg-error/70 hover:bg-error/90 rounded-b-sm transition-colors cursor-pointer"
+                              title={`${MONTH_NAMES[m.month - 1]} ${m.year} Expense: ${formatCurrency(m.debits)}`} />
+                          </div>
+                          <div className="flex-1 w-full flex flex-col justify-start items-center" />
+                          <span className="text-[10px] text-ash-gray mt-2">{MONTH_NAMES[m.month - 1]}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })()
           ) : sortedDays.length > 0 ? (
-            <div className="flex items-end gap-1 h-48">
-              {sortedDays.slice(-31).map(dateStr => {
-                const amount = dailySpending[dateStr] || 0;
-                const height = amount > 0 ? Math.max((amount / maxDailyValue) * 100, 2) : 0;
-                const credit = dailyCredits[dateStr] || 0;
-                const creditHeight = credit > 0 ? Math.max((credit / maxDailyValue) * 100, 2) : 0;
-                const dayLabel = dateStr.split("-")[2]?.replace(/^0/, "") || dateStr;
-                return (
-                  <div key={dateStr} className="flex-1 flex flex-col items-center gap-0.5 group relative min-w-0">
-                    <div className="w-full bg-forest/60 hover:bg-lime-vibrant rounded-t transition-colors cursor-pointer"
-                      style={{ height: `${height}%` }}
-                      title={`${dateStr}: Spent ${formatCurrency(amount)}`} />
-                    <span className="text-[7px] text-ash-gray leading-none">{dayLabel}</span>
+            /* Daily dual bars for monthly/quarterly views */
+            (() => {
+              const allValues = sortedDays.flatMap(d => [dailySpending[d] || 0, dailyCredits[d] || 0]);
+              const maxVal = Math.max(...allValues, 1);
+              return (
+                <div className="relative">
+                  {/* Zero line */}
+                  <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
+                  <div className="flex items-end gap-px h-56">
+                    {sortedDays.slice(-31).map(dateStr => {
+                      const expense = dailySpending[dateStr] || 0;
+                      const income = dailyCredits[dateStr] || 0;
+                      const expH = (expense / maxVal) * 48;
+                      const incH = (income / maxVal) * 48;
+                      const dayLabel = dateStr.split("-")[2]?.replace(/^0/, "") || dateStr;
+                      return (
+                        <div key={dateStr} className="flex-1 flex flex-col items-center h-full min-w-0">
+                          <div className="flex-1 w-full flex flex-col justify-end items-center" />
+                          {/* Income bar (above zero) */}
+                          <div className="w-full flex justify-center" style={{ height: `${incH}%` }}>
+                            <div className="w-full max-w-[20px] bg-forest/80 hover:bg-lime-vibrant rounded-t-sm transition-colors cursor-pointer"
+                              title={`${dateStr} Income: ${formatCurrency(income)}`} />
+                          </div>
+                          {/* Expense bar (below zero) */}
+                          <div className="w-full flex justify-center" style={{ height: `${expH}%` }}>
+                            <div className="w-full max-w-[20px] bg-error/70 hover:bg-error/90 rounded-b-sm transition-colors cursor-pointer"
+                              title={`${dateStr} Expense: ${formatCurrency(expense)}`} />
+                          </div>
+                          <div className="flex-1 w-full flex flex-col justify-start items-center" />
+                          <span className="text-[7px] text-ash-gray leading-none mt-1">{dayLabel}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })()
           ) : (
-            <div className="flex items-center justify-center h-48 text-ash-gray text-sm">No spending data for this period</div>
+            <div className="flex items-center justify-center h-48 text-ash-gray text-sm">No data for this period</div>
           )}
         </div>
 
