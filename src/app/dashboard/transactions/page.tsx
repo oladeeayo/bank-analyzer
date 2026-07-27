@@ -262,10 +262,11 @@ export default function TransactionsPage() {
       setMerchantName(data.transaction.merchant?.displayName || newMerchant || "");
       setRuleForm(prev => ({ ...prev, categoryId: data.transaction.categoryId || "" }));
 
-      // Apply same changes to all similar transactions
+      // Apply same changes to non-dismissed similar transactions only
       let updatedSimilar = 0;
-      if (similarTxs.length > 0 && (newMerchant || newCategoryId)) {
-        const similarPromises = similarTxs.map(s =>
+      const activeSimilar = similarTxs.filter(s => !dismissedIds.has(s.id));
+      if (activeSimilar.length > 0 && (newMerchant || newCategoryId)) {
+        const similarPromises = activeSimilar.map(s =>
           fetch(`/api/transactions/${s.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
