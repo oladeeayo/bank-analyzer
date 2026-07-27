@@ -10,6 +10,7 @@ export async function parseStatement(
   fileName: string
 ): Promise<ParseResult> {
   const ext = fileName.split(".").pop()?.toLowerCase();
+  console.log(`[Parser] File: ${fileName}, ext: ${ext}, type: ${typeof file}, constructor: ${file?.constructor?.name}`);
 
   if (ext === "csv") {
     let content: string;
