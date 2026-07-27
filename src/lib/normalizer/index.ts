@@ -25,6 +25,7 @@ const NOISE_WORDS = [
   "transfer",
   "trf",
   "sent to",
+  "send to",
   "received from",
   "funded by",
   "wallet funding",
@@ -264,11 +265,30 @@ function extractMerchant(cleaned: string): string {
     }
   }
 
-  // Handle non-pipe transfer descriptions
+  // Handle non-pipe transfer descriptions (OPay)
   // "Transfer from OLADEJI ISAIAH OLADIPUPO | OPay"
   const transferMatch = cleaned.match(/^Transfer\s+(to|from)\s+(.+?)$/i);
   if (transferMatch) {
     const name = transferMatch[2].trim();
+    if (name.length >= 3) {
+      return name.toUpperCase();
+    }
+  }
+
+  // Handle PalmPay Send to/Received from patterns
+  // "Send to NOC Integrated Service Ltd. (Ologuneru outlet)"
+  // "Received from OLADAYO ISAAC OLADIPUPO"
+  const sendMatch = cleaned.match(/^Send\s+to\s+(.+?)$/i);
+  if (sendMatch) {
+    const name = sendMatch[1].trim();
+    if (name.length >= 3) {
+      return name.toUpperCase();
+    }
+  }
+
+  const receivedMatch = cleaned.match(/^Received\s+from\s+(.+?)$/i);
+  if (receivedMatch) {
+    const name = receivedMatch[1].trim();
     if (name.length >= 3) {
       return name.toUpperCase();
     }
@@ -292,6 +312,22 @@ function extractMerchant(cleaned: string): string {
     // For "Mobile Data | ..." → "MOBILE DATA"
     if (service.length >= 3) {
       return service.toUpperCase();
+    }
+  }
+
+  // Handle PalmPay-specific service descriptions
+  // "CashBox Interest", "CashBox Auto Save", "Stamp Duty", "Betting Deposit"
+  const palmPayServices = [
+    /^CashBox\s+(.+)$/i,
+    /^(Stamp\s+Duty)$/i,
+    /^(Betting\s+Deposit)$/i,
+    /^(Electronic\s+Money\s+Transfer\s+Levy)$/i,
+    /^(Buy\s+Data\s+bundle)$/i,
+  ];
+  for (const pattern of palmPayServices) {
+    const match = cleaned.match(pattern);
+    if (match) {
+      return (match[1] || match[0]).toUpperCase();
     }
   }
 

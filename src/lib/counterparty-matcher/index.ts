@@ -29,6 +29,8 @@ const SERVICE_PREFIXES = [
   "electricity", "prepaid", "meter",
   "cable tv", "dstv", "gotv", "startimes",
   "internet", "data plan", "data",
+  "cashbox", "stamp duty", "betting deposit",
+  "electronic money transfer levy", "buy data",
 ];
 
 const PHONE_PATTERN = /^\d{10,11}$/;
@@ -59,6 +61,8 @@ function cleanupName(name: string): string {
     .replace(/^POS\s+/i, "")
     .replace(/^WEB\s+/i, "")
     .replace(/^ITF\s+/i, "")
+    .replace(/^SEND\s+TO\s+/i, "")
+    .replace(/^RECEIVED\s+FROM\s+/i, "")
     .replace(/\s+REF\s+\w+/gi, "")
     .replace(/\b(REF|NARR|TRANSACTION)\b\s*:?\s*\w+/gi, "")
     .replace(/\bTRANSFER\b/gi, "")
@@ -191,8 +195,8 @@ export function extractCounterpartyInfo(
 
   const upper = desc.toUpperCase();
 
-  const isCredit = /^(TRANSFER FROM|TRF FROM|NIP CREDIT|MOBILE TRANSFER FROM|MOBILE TRF FROM|ITF )/i.test(upper);
-  const isDebit = /^(TRANSFER TO|TRF TO|NIP DEBIT|MOBILE TRANSFER TO|MOBILE TRF TO)/i.test(upper);
+  const isCredit = /^(TRANSFER FROM|TRF FROM|NIP CREDIT|MOBILE TRANSFER FROM|MOBILE TRF FROM|ITF |RECEIVED FROM)/i.test(upper);
+  const isDebit = /^(TRANSFER TO|TRF TO|NIP DEBIT|MOBILE TRANSFER TO|MOBILE TRF TO|SEND TO)/i.test(upper);
 
   if (isCredit) {
     direction = "credit";
@@ -240,7 +244,7 @@ export function extractCounterpartyInfo(
       bank = parts[1];
     }
   } else if (parts.length === 1) {
-    const transferMatch = desc.match(/^(?:Transfer|TRF)\s+(?:to|from)\s+(.+?)(?:\||$)/i);
+    const transferMatch = desc.match(/^(?:Transfer|TRF|Send to|Received from)\s+(?:to|from)\s+(.+?)(?:\||$)/i);
     if (transferMatch) {
       name = transferMatch[1].trim();
     } else {
