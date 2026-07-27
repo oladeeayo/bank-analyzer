@@ -27,11 +27,11 @@ function parseDate(dateStr: string): Date {
     const ampm = match[7].toUpperCase();
     if (ampm === "PM" && hours < 12) hours += 12;
     if (ampm === "AM" && hours === 12) hours = 0;
-    return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]), hours, minutes, seconds);
+    return new Date(parseInt(match[3]), parseInt(match[1]) - 1, parseInt(match[2]), hours, minutes, seconds);
   }
 
   match = clean.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-  if (match) return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+  if (match) return new Date(parseInt(match[3]), parseInt(match[1]) - 1, parseInt(match[2]));
 
   match = clean.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (match) return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
