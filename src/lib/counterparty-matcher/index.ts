@@ -195,8 +195,8 @@ export function extractCounterpartyInfo(
 
   const upper = desc.toUpperCase();
 
-  const isCredit = /^(TRANSFER FROM|TRF FROM|NIP CREDIT|MOBILE TRANSFER FROM|MOBILE TRF FROM|ITF |RECEIVED FROM)/i.test(upper);
-  const isDebit = /^(TRANSFER TO|TRF TO|NIP DEBIT|MOBILE TRANSFER TO|MOBILE TRF TO|SEND TO)/i.test(upper);
+  const isCredit = /^(TRANSFER FROM|TRF FROM|NIP CREDIT|MOBILE TRANSFER FROM|MOBILE TRF FROM|ITF )/i.test(upper) || /\bRECEIVED\s+FROM\b/i.test(upper);
+  const isDebit = /^(TRANSFER TO|TRF TO|NIP DEBIT|MOBILE TRANSFER TO|MOBILE TRF TO)/i.test(upper) || /\bSEND\s+TO\b/i.test(upper);
 
   if (isCredit) {
     direction = "credit";
@@ -208,7 +208,10 @@ export function extractCounterpartyInfo(
 
   if (parts.length >= 3) {
     if (isCredit || isDebit) {
-      const cleaned = parts[0].replace(/^(Transfer|TRF|Mobile Transfer|Mobile TRF|NIP Credit|NIP Debit|ITF)\s+(to|from|credit|debit)\s*/i, "").trim();
+      const cleaned = parts[0]
+        .replace(/^(Transfer|TRF|Mobile Transfer|Mobile TRF|NIP Credit|NIP Debit|ITF|Send to|Received from)\s+(to|from|credit|debit)\s*/i, "")
+        .replace(/^(Send|Received)\s+/i, "")
+        .trim();
       name = cleaned;
       bank = parts[1];
       accountNumber = parts[2].replace(/\s+\S+$/g, "").trim();
@@ -244,8 +247,16 @@ export function extractCounterpartyInfo(
       bank = parts[1];
     }
   } else if (parts.length === 1) {
-    const transferMatch = desc.match(/^(?:Transfer|TRF|Send to|Received from)\s+(?:to|from)\s+(.+?)(?:\||$)/i);
-    if (transferMatch) {
+    // Try to extract name after "Send to" / "Received from" / "Transfer to/from" anywhere in description
+    const sendMatch = desc.match(/Send\s+to\s+(.+?)$/i);
+    const receivedMatch = desc.match(/Received\s+from\s+(.+?)$/i);
+    const transferMatch = desc.match(/(?:Transfer|TRF)\s+(?:to|from)\s+(.+?)(?:\||$)/i);
+
+    if (sendMatch) {
+      name = sendMatch[1].trim();
+    } else if (receivedMatch) {
+      name = receivedMatch[1].trim();
+    } else if (transferMatch) {
       name = transferMatch[1].trim();
     } else {
       const debitMatch = desc.match(/(?:POS|WEB|CARD)\s+PURCHASE\s+(?:AT\s+)?(.+?)(?:\d{4,}|$)/i);

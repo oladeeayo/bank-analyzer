@@ -278,7 +278,8 @@ function extractMerchant(cleaned: string): string {
   // Handle PalmPay Send to/Received from patterns
   // "Send to NOC Integrated Service Ltd. (Ologuneru outlet)"
   // "Received from OLADAYO ISAAC OLADIPUPO"
-  const sendMatch = cleaned.match(/^Send\s+to\s+(.+?)$/i);
+  // "IYANUOLUWA OKE Send to ADAOBI CHRISTIANA" → extract "ADAOBI CHRISTIANA"
+  const sendMatch = cleaned.match(/Send\s+to\s+(.+?)$/i);
   if (sendMatch) {
     const name = sendMatch[1].trim();
     if (name.length >= 3) {
@@ -286,7 +287,7 @@ function extractMerchant(cleaned: string): string {
     }
   }
 
-  const receivedMatch = cleaned.match(/^Received\s+from\s+(.+?)$/i);
+  const receivedMatch = cleaned.match(/Received\s+from\s+(.+?)$/i);
   if (receivedMatch) {
     const name = receivedMatch[1].trim();
     if (name.length >= 3) {
