@@ -46,16 +46,54 @@ export async function PUT(
 
     const userId = currentTx.bank.userId;
 
-    // Update the transaction
+    let finalMerchantId = body.merchantId || null;
+
+    // If a new merchant name was typed, find or create the merchant
+    if (body.normalizedDescription && body.normalizedDescription.trim()) {
+      const newName = body.normalizedDescription.trim();
+      const normalizedName = newName.toLowerCase().replace(/\s+/g, "_");
+
+      if (finalMerchantId) {
+        const currentMerchant = await db.merchant.findUnique({
+          where: { id: finalMerchantId },
+          select: { normalizedName: true },
+        });
+        if (currentMerchant && currentMerchant.normalizedName !== normalizedName) {
+          finalMerchantId = null;
+        }
+      }
+
+      if (!finalMerchantId) {
+        const existing = await db.merchant.findUnique({
+          where: { normalizedName },
+          select: { id: true },
+        });
+
+        if (existing) {
+          finalMerchantId = existing.id;
+        } else {
+          const created = await db.merchant.create({
+            data: {
+              normalizedName,
+              displayName: newName,
+            },
+            select: { id: true },
+          });
+          finalMerchantId = created.id;
+        }
+      }
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (finalMerchantId !== undefined) updateData.merchantId = finalMerchantId;
+    if (body.categoryId) updateData.categoryId = body.categoryId;
+    if (body.normalizedDescription) updateData.normalizedDescription = body.normalizedDescription;
+    if (body.isTransfer !== undefined) updateData.isTransfer = body.isTransfer;
+    if (body.isSelfTransfer !== undefined) updateData.isSelfTransfer = body.isSelfTransfer;
+
     const transaction = await db.transaction.update({
       where: { id },
-      data: {
-        merchantId: body.merchantId || undefined,
-        categoryId: body.categoryId || undefined,
-        normalizedDescription: body.normalizedDescription || undefined,
-        isTransfer: body.isTransfer || undefined,
-        isSelfTransfer: body.isSelfTransfer || undefined,
-      },
+      data: updateData,
       include: {
         bank: true,
         merchant: true,
@@ -64,7 +102,7 @@ export async function PUT(
     });
 
     // Save manual override for future uploads
-    if (body.merchantId || body.categoryId) {
+    if (finalMerchantId || body.categoryId) {
       const existingOverride = await db.manualOverride.findUnique({
         where: {
           userId_description: {
@@ -78,7 +116,7 @@ export async function PUT(
         await db.manualOverride.update({
           where: { id: existingOverride.id },
           data: {
-            merchantId: body.merchantId || existingOverride.merchantId,
+            merchantId: finalMerchantId || existingOverride.merchantId,
             categoryId: body.categoryId || existingOverride.categoryId,
           },
         });
@@ -87,7 +125,7 @@ export async function PUT(
           data: {
             userId,
             description: transaction.description,
-            merchantId: body.merchantId || null,
+            merchantId: finalMerchantId || null,
             categoryId: body.categoryId || null,
           },
         });
