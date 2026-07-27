@@ -16,10 +16,9 @@ function detectBankFormat(text: string): BankFormat {
   return "generic-pdf";
 }
 
-function parseDate(dateStr: string): Date {
+function parseDate(dateStr: string, dateFormat?: "MM/DD/YYYY" | "DD/MM/YYYY"): Date {
   const clean = dateStr.trim();
 
-  // DD/MM/YYYY HH:MM:SS AM/PM (Nigerian format)
   let match = clean.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
   if (match) {
     let hours = parseInt(match[4]);
@@ -28,13 +27,29 @@ function parseDate(dateStr: string): Date {
     const ampm = match[7].toUpperCase();
     if (ampm === "PM" && hours < 12) hours += 12;
     if (ampm === "AM" && hours === 12) hours = 0;
-    // DD/MM/YYYY format
-    return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]), hours, minutes, seconds);
+    let month: number, day: number;
+    if (dateFormat === "MM/DD/YYYY") {
+      month = parseInt(match[1]);
+      day = parseInt(match[2]);
+    } else {
+      month = parseInt(match[2]);
+      day = parseInt(match[1]);
+    }
+    return new Date(parseInt(match[3]), month - 1, day, hours, minutes, seconds);
   }
 
-  // DD/MM/YYYY format
   match = clean.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-  if (match) return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
+  if (match) {
+    let month: number, day: number;
+    if (dateFormat === "MM/DD/YYYY") {
+      month = parseInt(match[1]);
+      day = parseInt(match[2]);
+    } else {
+      month = parseInt(match[2]);
+      day = parseInt(match[1]);
+    }
+    return new Date(parseInt(match[3]), month - 1, day);
+  }
 
   match = clean.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (match) return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
@@ -144,8 +159,6 @@ function parsePalmPayRows(rows: string[][]): ParseResult {
 
   const dataRows = rows.slice(headerIdx + 1);
 
-  let pendingDetail = "";
-
   for (let i = 0; i < dataRows.length; i++) {
     const row = dataRows[i];
     if (row.length === 0) continue;
@@ -155,21 +168,22 @@ function parsePalmPayRows(rows: string[][]): ParseResult {
 
     if (!hasDate) {
       const text = row.join(" ").trim();
-      if (text && !text.startsWith("PalmPay") && !text.startsWith("Digital Finance") &&
-          !text.includes("Account Statement") && !text.includes("Total Money") &&
-          !text.includes("Statement Period") && !text.includes("Print Time") &&
-          !text.includes("Transaction Date") && !text.includes("support@") &&
-          !text.includes("www.palmpay") && !text.includes("018886888") &&
-          !text.includes("20 Opebi") && !text.includes("Phone Number") &&
-          !text.includes("Account Number") && !text.includes("NGN") &&
-          !AMOUNT_PATTERN.test(text) && !/^\d{4,}$/.test(text.replace(/\s/g, ""))) {
-        pendingDetail += (pendingDetail ? " " : "") + text;
+      if (!text || transactions.length === 0) continue;
+
+      const prev = transactions[transactions.length - 1];
+      const stripped = text.replace(/\s/g, "");
+
+      if (/^\d{4,}$/.test(stripped)) {
+        prev.reference = prev.reference ? prev.reference + stripped : stripped;
+      } else if (!AMOUNT_PATTERN.test(text)) {
+        prev.description = (prev.description + " " + text).trim();
+        prev.narration = prev.description;
       }
       continue;
     }
 
     let dateStr = firstCell;
-    const date = parseDate(dateStr);
+    const date = parseDate(dateStr, "MM/DD/YYYY");
     if (isNaN(date.getTime())) {
       errors.push(`Row ${headerIdx + i + 2}: Invalid date "${dateStr}"`);
       continue;
@@ -223,14 +237,6 @@ function parsePalmPayRows(rows: string[][]): ParseResult {
         amount = Math.abs(parseFloat(cell3.replace(/,/g, "")));
         type = cell3.startsWith("-") || (!cell3.startsWith("+") && amount > 0) ? "debit" : "credit";
       }
-    }
-
-    if (pendingDetail && !detail) {
-      detail = pendingDetail;
-      pendingDetail = "";
-    } else if (pendingDetail && detail) {
-      detail = pendingDetail + " " + detail;
-      pendingDetail = "";
     }
 
     if (!detail) detail = "Unknown transaction";
