@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
         { reference: { contains: search, mode: "insensitive" } },
         { merchant: { displayName: { contains: search, mode: "insensitive" } } },
         { merchant: { normalizedName: { contains: search.toLowerCase().replace(/\s+/g, "_"), mode: "insensitive" } } },
+        { category: { name: { contains: search, mode: "insensitive" } } },
       ];
     }
 

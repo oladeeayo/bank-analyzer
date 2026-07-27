@@ -654,23 +654,12 @@ export default function TransactionsPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={tx.categoryId || ""}
-                          onChange={(e) => handleQuickCategory(tx.id, e.target.value)}
-                          className={`text-[11px] px-2 py-1 rounded border border-[#ececec] bg-paper-white cursor-pointer hover:bg-mist-gray transition-colors ${
-                            tx.category ? "text-ink-black" : "text-error italic"
-                          }`}
-                        >
-                          <option value=""> Uncategorized</option>
-                          {categories.filter(c => !c.parentId).map(parent => (
-                            <optgroup key={parent.id} label={`${parent.icon} ${parent.name}`}>
-                              {categories.filter(c => c.parentId === parent.id).map(cat => (
-                                <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-                              ))}
-                            </optgroup>
-                          ))}
-                        </select>
+                      <td className="px-4 py-3">
+                        {tx.category ? (
+                          <Badge variant="default">{tx.category.icon} {tx.category.name}</Badge>
+                        ) : (
+                          <Badge variant="destructive">Uncategorized</Badge>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold ${
