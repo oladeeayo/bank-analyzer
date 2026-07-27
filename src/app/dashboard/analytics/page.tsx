@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 interface AnalyticsData {
   period: string;
@@ -43,6 +43,7 @@ export default function AnalyticsPage() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [quarter, setQuarter] = useState(Math.ceil((new Date().getMonth() + 1) / 3));
+  const [selectedBar, setSelectedBar] = useState<{ label: string; income: number; expense: number; net: number } | null>(null);
 
   useEffect(() => {
     if (user) fetchAnalytics();
@@ -191,81 +192,119 @@ export default function AnalyticsPage() {
               {period === "monthly" ? "Daily Cashflow" : "Cashflow"}
             </h2>
             <div className="flex items-center gap-4 text-[11px]">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-forest/80" /> Income</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-error/70" /> Expense</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#003527]" /> Income</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#8BC34A]" /> Expense</span>
             </div>
           </div>
 
           {monthlyChart.length > 0 && period !== "monthly" ? (
-            /* Monthly dual bars for yearly/all views */
             (() => {
               const allValues = monthlyChart.flatMap(m => [m.credits, m.debits]);
               const maxVal = Math.max(...allValues, 1);
               return (
-                <div className="relative">
-                  {/* Zero line */}
-                  <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
-                  <div className="flex items-center gap-3 h-64">
-                    {monthlyChart.map((m, i) => {
-                      const creditH = (m.credits / maxVal) * 48;
-                      const debitH = (m.debits / maxVal) * 48;
-                      return (
-                        <div key={i} className="flex-1 flex flex-col items-center h-full relative">
-                          <div className="flex-1 w-full flex flex-col justify-end items-center" />
-                          {/* Income bar (above zero) */}
-                          <div className="w-full flex justify-center mb-0" style={{ height: `${creditH}%` }}>
-                            <div className="w-3/4 max-w-[40px] bg-forest/80 hover:bg-lime-vibrant rounded-t-sm transition-colors cursor-pointer"
-                              title={`${MONTH_NAMES[m.month - 1]} ${m.year} Income: ${formatCurrency(m.credits)}`} />
+                <div>
+                  <div className="relative">
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/15 z-10" />
+                    <div className="flex items-center gap-2 h-72 px-2">
+                      {monthlyChart.map((m, i) => {
+                        const creditH = Math.max((m.credits / maxVal) * 46, m.credits > 0 ? 3 : 0);
+                        const debitH = Math.max((m.debits / maxVal) * 46, m.debits > 0 ? 3 : 0);
+                        const isSelected = selectedBar?.label === `${MONTH_NAMES[m.month - 1]} ${m.year}`;
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center h-full relative group">
+                            <div className="flex-1 w-full flex flex-col justify-end items-center" />
+                            <div
+                              className="w-full flex justify-center mb-0 cursor-pointer"
+                              style={{ height: `${creditH}%` }}
+                              onClick={() => setSelectedBar(isSelected ? null : { label: `${MONTH_NAMES[m.month - 1]} ${m.year}`, income: m.credits, expense: m.debits, net: m.net })}
+                            >
+                              <div className={`w-full max-w-[52px] rounded-sm transition-all ${isSelected ? "bg-[#003527] ring-2 ring-[#003527]/30 scale-105" : "bg-[#003527] hover:bg-[#003527]/90"}`} />
+                            </div>
+                            <div
+                              className="w-full flex justify-center mt-0 cursor-pointer"
+                              style={{ height: `${debitH}%` }}
+                              onClick={() => setSelectedBar(isSelected ? null : { label: `${MONTH_NAMES[m.month - 1]} ${m.year}`, income: m.credits, expense: m.debits, net: m.net })}
+                            >
+                              <div className={`w-full max-w-[52px] rounded-sm transition-all ${isSelected ? "bg-[#8BC34A] ring-2 ring-[#8BC34A]/30 scale-105" : "bg-[#8BC34A] hover:bg-[#8BC34A]/80"}`} />
+                            </div>
+                            <div className="flex-1 w-full flex flex-col justify-start items-center" />
+                            <span className="text-[10px] text-ash-gray mt-2 font-medium">{MONTH_NAMES[m.month - 1]}</span>
                           </div>
-                          {/* Expense bar (below zero) */}
-                          <div className="w-full flex justify-center mt-0" style={{ height: `${debitH}%` }}>
-                            <div className="w-3/4 max-w-[40px] bg-error/70 hover:bg-error/90 rounded-b-sm transition-colors cursor-pointer"
-                              title={`${MONTH_NAMES[m.month - 1]} ${m.year} Expense: ${formatCurrency(m.debits)}`} />
-                          </div>
-                          <div className="flex-1 w-full flex flex-col justify-start items-center" />
-                          <span className="text-[10px] text-ash-gray mt-2">{MONTH_NAMES[m.month - 1]}</span>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
+                  {selectedBar && (
+                    <div className="mt-4 flex items-center gap-4 p-3 bg-mist-gray rounded-lg">
+                      <span className="text-sm font-medium text-ink-black">{selectedBar.label}</span>
+                      <div className="flex items-center gap-1.5">
+                        <ArrowUpRight className="h-3.5 w-3.5 text-[#003527]" />
+                        <span className="text-sm font-mono text-[#003527]">{formatCurrency(selectedBar.income)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <ArrowDownRight className="h-3.5 w-3.5 text-[#8BC34A]" />
+                        <span className="text-sm font-mono text-[#8BC34A]">{formatCurrency(selectedBar.expense)}</span>
+                      </div>
+                      <div className="ml-auto text-sm font-mono font-medium text-ink-black">Net: {formatCurrency(selectedBar.net)}</div>
+                    </div>
+                  )}
                 </div>
               );
             })()
           ) : sortedDays.length > 0 ? (
-            /* Daily dual bars for monthly/quarterly views */
             (() => {
               const allValues = sortedDays.flatMap(d => [dailySpending[d] || 0, dailyCredits[d] || 0]);
               const maxVal = Math.max(...allValues, 1);
               return (
-                <div className="relative">
-                  {/* Zero line */}
-                  <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
-                  <div className="flex items-end gap-px h-56">
-                    {sortedDays.slice(-31).map(dateStr => {
-                      const expense = dailySpending[dateStr] || 0;
-                      const income = dailyCredits[dateStr] || 0;
-                      const expH = (expense / maxVal) * 48;
-                      const incH = (income / maxVal) * 48;
-                      const dayLabel = dateStr.split("-")[2]?.replace(/^0/, "") || dateStr;
-                      return (
-                        <div key={dateStr} className="flex-1 flex flex-col items-center h-full min-w-0">
-                          <div className="flex-1 w-full flex flex-col justify-end items-center" />
-                          {/* Income bar (above zero) */}
-                          <div className="w-full flex justify-center" style={{ height: `${incH}%` }}>
-                            <div className="w-full max-w-[20px] bg-forest/80 hover:bg-lime-vibrant rounded-t-sm transition-colors cursor-pointer"
-                              title={`${dateStr} Income: ${formatCurrency(income)}`} />
+                <div>
+                  <div className="relative">
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/15 z-10" />
+                    <div className="flex items-center gap-px h-64 px-1">
+                      {sortedDays.slice(-31).map(dateStr => {
+                        const expense = dailySpending[dateStr] || 0;
+                        const income = dailyCredits[dateStr] || 0;
+                        const expH = Math.max((expense / maxVal) * 46, expense > 0 ? 3 : 0);
+                        const incH = Math.max((income / maxVal) * 46, income > 0 ? 3 : 0);
+                        const dayLabel = dateStr.split("-")[2]?.replace(/^0/, "") || dateStr;
+                        const isSelected = selectedBar?.label === dateStr;
+                        return (
+                          <div key={dateStr} className="flex-1 flex flex-col items-center h-full min-w-0 group">
+                            <div className="flex-1 w-full flex flex-col justify-end items-center" />
+                            <div
+                              className="w-full flex justify-center cursor-pointer"
+                              style={{ height: `${incH}%` }}
+                              onClick={() => setSelectedBar(isSelected ? null : { label: dateStr, income, expense, net: income - expense })}
+                            >
+                              <div className={`w-full max-w-[28px] rounded-sm transition-all ${isSelected ? "bg-[#003527] ring-2 ring-[#003527]/30 scale-110" : "bg-[#003527] hover:bg-[#003527]/90"}`} />
+                            </div>
+                            <div
+                              className="w-full flex justify-center cursor-pointer"
+                              style={{ height: `${expH}%` }}
+                              onClick={() => setSelectedBar(isSelected ? null : { label: dateStr, income, expense, net: income - expense })}
+                            >
+                              <div className={`w-full max-w-[28px] rounded-sm transition-all ${isSelected ? "bg-[#8BC34A] ring-2 ring-[#8BC34A]/30 scale-110" : "bg-[#8BC34A] hover:bg-[#8BC34A]/80"}`} />
+                            </div>
+                            <div className="flex-1 w-full flex flex-col justify-start items-center" />
+                            <span className="text-[8px] text-ash-gray leading-none mt-1 font-medium">{dayLabel}</span>
                           </div>
-                          {/* Expense bar (below zero) */}
-                          <div className="w-full flex justify-center" style={{ height: `${expH}%` }}>
-                            <div className="w-full max-w-[20px] bg-error/70 hover:bg-error/90 rounded-b-sm transition-colors cursor-pointer"
-                              title={`${dateStr} Expense: ${formatCurrency(expense)}`} />
-                          </div>
-                          <div className="flex-1 w-full flex flex-col justify-start items-center" />
-                          <span className="text-[7px] text-ash-gray leading-none mt-1">{dayLabel}</span>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
+                  {selectedBar && (
+                    <div className="mt-4 flex items-center gap-4 p-3 bg-mist-gray rounded-lg">
+                      <span className="text-sm font-medium text-ink-black">{selectedBar.label}</span>
+                      <div className="flex items-center gap-1.5">
+                        <ArrowUpRight className="h-3.5 w-3.5 text-[#003527]" />
+                        <span className="text-sm font-mono text-[#003527]">{formatCurrency(selectedBar.income)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <ArrowDownRight className="h-3.5 w-3.5 text-[#8BC34A]" />
+                        <span className="text-sm font-mono text-[#8BC34A]">{formatCurrency(selectedBar.expense)}</span>
+                      </div>
+                      <div className="ml-auto text-sm font-mono font-medium text-ink-black">Net: {formatCurrency(selectedBar.net)}</div>
+                    </div>
+                  )}
                 </div>
               );
             })()
