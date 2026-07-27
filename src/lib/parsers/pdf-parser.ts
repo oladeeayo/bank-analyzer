@@ -136,6 +136,13 @@ function isPalmPayFormat(rows: string[][]): boolean {
   return false;
 }
 
+function extractAmountAndType(text: string): { amount: number; type: "debit" | "credit" } | null {
+  if (!AMOUNT_PATTERN.test(text)) return null;
+  const amount = Math.abs(parseFloat(text.replace(/,/g, "")));
+  const type = text.startsWith("-") || (!text.startsWith("+") && amount > 0) ? "debit" : "credit";
+  return { amount, type };
+}
+
 function parsePalmPayRows(rows: string[][]): ParseResult {
   const transactions: ParsedTransaction[] = [];
   const errors: string[] = [];
@@ -160,105 +167,127 @@ function parsePalmPayRows(rows: string[][]): ParseResult {
   console.log(`[PalmPay] Header found at row ${headerIdx}, processing ${rows.length - headerIdx - 1} data rows`);
   const dataRows = rows.slice(headerIdx + 1);
 
+  let pendingDate: Date | null = null;
+  let pendingDetail = "";
+
   for (let i = 0; i < dataRows.length; i++) {
     const row = dataRows[i];
     if (row.length === 0) continue;
 
-    if (i < 5) {
+    if (i < 10) {
       console.log(`[PalmPay] Row ${i}: cells=${row.length} | ${row.map(c => `[${c}]`).join(" | ")}`);
     }
 
     const firstCell = row[0];
     const hasDate = DATE_PATTERN.test(firstCell) || SIMPLE_DATE_PATTERN.test(firstCell);
 
-    if (!hasDate) {
-      const text = row.join(" ").trim();
-      if (!text || transactions.length === 0) continue;
+    if (hasDate) {
+      const date = parseDate(firstCell, "MM/DD/YYYY");
+      if (isNaN(date.getTime())) {
+        errors.push(`Row ${headerIdx + i + 2}: Invalid date "${firstCell}"`);
+        continue;
+      }
 
-      const prev = transactions[transactions.length - 1];
-      const stripped = text.replace(/\s/g, "");
+      let detail = "";
+      let amount = 0;
+      let type: "debit" | "credit" = "debit";
+      let reference = "";
 
-      if (/^\d{4,}$/.test(stripped)) {
+      const cells = row.slice(1);
+
+      for (let c = 0; c < cells.length; c++) {
+        const cell = cells[c];
+        const amt = extractAmountAndType(cell);
+        if (amt && amount === 0) {
+          amount = amt.amount;
+          type = amt.type;
+        } else if (cell && !amt) {
+          if (!detail) detail = cell;
+          else if (!reference && !AMOUNT_PATTERN.test(cell)) reference = cell;
+        } else if (cell && amt && amount !== 0 && !reference && !AMOUNT_PATTERN.test(cell)) {
+          reference = cell;
+        }
+      }
+
+      if (amount > 0) {
+        if (pendingDetail && detail) {
+          detail = pendingDetail + " " + detail;
+        } else if (pendingDetail && !detail) {
+          detail = pendingDetail;
+        }
+        pendingDetail = "";
+        pendingDate = null;
+
+        if (!detail) detail = "Unknown transaction";
+
+        transactions.push({
+          date: date.toISOString(),
+          description: detail.trim(),
+          amount,
+          type,
+          reference: reference || undefined,
+          narration: detail.trim(),
+        });
+      } else {
+        pendingDate = date;
+        pendingDetail = detail || "";
+      }
+      continue;
+    }
+
+    const text = row.join(" ").trim();
+    if (!text) continue;
+
+    const stripped = text.replace(/\s/g, "");
+
+    let nonDateAmount = 0;
+    let nonDateType: "debit" | "credit" = "debit";
+    let nonDateDetail = "";
+    let nonDateRef = "";
+    for (const cell of row) {
+      const amt = extractAmountAndType(cell);
+      if (amt && nonDateAmount === 0) {
+        nonDateAmount = amt.amount;
+        nonDateType = amt.type;
+      } else if (cell && !amt && !AMOUNT_PATTERN.test(cell)) {
+        if (!nonDateDetail) nonDateDetail = cell;
+        else if (!nonDateRef) nonDateRef = cell;
+      } else if (cell && amt && nonDateAmount !== 0 && !nonDateRef) {
+        nonDateRef = cell;
+      }
+    }
+
+    if (nonDateAmount > 0 && pendingDate) {
+      let detail = nonDateDetail || pendingDetail || "Unknown transaction";
+      if (pendingDetail && nonDateDetail) detail = pendingDetail + " " + nonDateDetail;
+      pendingDetail = "";
+      const usedDate = pendingDate;
+      pendingDate = null;
+
+      transactions.push({
+        date: usedDate.toISOString(),
+        description: detail.trim(),
+        amount: nonDateAmount,
+        type: nonDateType,
+        reference: nonDateRef || undefined,
+        narration: detail.trim(),
+      });
+      continue;
+    }
+
+    if (/^\d{4,}$/.test(stripped)) {
+      if (transactions.length > 0) {
+        const prev = transactions[transactions.length - 1];
         prev.reference = prev.reference ? prev.reference + stripped : stripped;
-      } else if (!AMOUNT_PATTERN.test(text)) {
-        prev.description = (prev.description + " " + text).trim();
-        prev.narration = prev.description;
+      } else {
+        pendingDetail += (pendingDetail ? " " : "") + text;
       }
       continue;
     }
 
-    let dateStr = firstCell;
-    const date = parseDate(dateStr, "MM/DD/YYYY");
-    if (isNaN(date.getTime())) {
-      errors.push(`Row ${headerIdx + i + 2}: Invalid date "${dateStr}"`);
-      continue;
+    if (!AMOUNT_PATTERN.test(text)) {
+      pendingDetail += (pendingDetail ? " " : "") + text;
     }
-    console.log(`[PalmPay] Date parsed: "${dateStr}" -> ${date.toISOString()} (year: ${date.getFullYear()})`);
-
-    let detail = "";
-    let amount = 0;
-    let type: "debit" | "credit" = "debit";
-    let reference = "";
-
-    if (row.length === 2) {
-      const cell1 = row[1];
-      if (AMOUNT_PATTERN.test(cell1)) {
-        amount = Math.abs(parseFloat(cell1.replace(/,/g, "")));
-        type = cell1.startsWith("-") || (!cell1.startsWith("+") && amount > 0) ? "debit" : "credit";
-      }
-    } else if (row.length === 3) {
-      const cell1 = row[1];
-      const cell2 = row[2];
-      if (AMOUNT_PATTERN.test(cell1)) {
-        amount = Math.abs(parseFloat(cell1.replace(/,/g, "")));
-        type = cell1.startsWith("-") || (!cell1.startsWith("+") && amount > 0) ? "debit" : "credit";
-        reference = AMOUNT_PATTERN.test(cell2) ? "" : cell2;
-      } else if (AMOUNT_PATTERN.test(cell2)) {
-        detail = cell1;
-        amount = Math.abs(parseFloat(cell2.replace(/,/g, "")));
-        type = cell2.startsWith("-") || (!cell2.startsWith("+") && amount > 0) ? "debit" : "credit";
-      }
-    } else if (row.length === 4) {
-      detail = row[1];
-      const cell2 = row[2];
-      const cell3 = row[3];
-      if (AMOUNT_PATTERN.test(cell2)) {
-        amount = Math.abs(parseFloat(cell2.replace(/,/g, "")));
-        type = cell2.startsWith("-") || (!cell2.startsWith("+") && amount > 0) ? "debit" : "credit";
-        reference = cell3;
-      } else if (AMOUNT_PATTERN.test(cell3)) {
-        amount = Math.abs(parseFloat(cell3.replace(/,/g, "")));
-        type = cell3.startsWith("-") || (!cell3.startsWith("+") && amount > 0) ? "debit" : "credit";
-      }
-    } else if (row.length >= 5) {
-      detail = row[1];
-      const cell2 = row[2];
-      const cell3 = row[3];
-      reference = row[4] || "";
-      if (AMOUNT_PATTERN.test(cell2)) {
-        amount = Math.abs(parseFloat(cell2.replace(/,/g, "")));
-        type = cell2.startsWith("-") || (!cell2.startsWith("+") && amount > 0) ? "debit" : "credit";
-      } else if (AMOUNT_PATTERN.test(cell3)) {
-        amount = Math.abs(parseFloat(cell3.replace(/,/g, "")));
-        type = cell3.startsWith("-") || (!cell3.startsWith("+") && amount > 0) ? "debit" : "credit";
-      }
-    }
-
-    if (!detail) detail = "Unknown transaction";
-
-    if (amount === 0) {
-      errors.push(`Row ${headerIdx + i + 2}: Zero or missing amount for "${detail.substring(0, 40)}"`);
-      continue;
-    }
-
-    transactions.push({
-      date: date.toISOString(),
-      description: detail.trim(),
-      amount,
-      type,
-      reference: reference || undefined,
-      narration: detail.trim(),
-    });
   }
 
   const dates = transactions.map(t => new Date(t.date).getTime()).sort((a, b) => a - b);
