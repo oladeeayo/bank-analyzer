@@ -24,6 +24,15 @@ const KNOWN_BANKS = [
   "chipper", "chipper cash", "flutterwave", "paystack",
 ];
 
+const SERVICE_PREFIXES = [
+  "mobile data", "mobile airtime", "airtime", "vtu", "data bundle",
+  "electricity", "prepaid", "meter",
+  "cable tv", "dstv", "gotv", "startimes",
+  "internet", "data plan", "data",
+];
+
+const PHONE_PATTERN = /^\d{10,11}$/;
+
 const SELF_NAMES = [
   "oladayo", "oladipupo", "isaac oladipupo",
   "oladayo isaac", "oladayo isaac oladipupo",
@@ -207,8 +216,17 @@ export function extractCounterpartyInfo(
         name = parts.slice(1).join(" | ");
       } else {
         name = parts[0];
-        bank = parts[1];
-        accountNumber = parts[2].replace(/\s+\S+$/g, "").trim();
+        const isService = SERVICE_PREFIXES.some(p => firstPart.startsWith(p));
+        const secondIsPhone = PHONE_PATTERN.test(parts[1].replace(/\D/g, ""));
+        if (isService || secondIsPhone) {
+          // Service description: parts[1] is phone/meter, parts[2] is provider
+          // Only use the service type as name, don't set bank/account
+          bank = undefined;
+          accountNumber = undefined;
+        } else {
+          bank = parts[1];
+          accountNumber = parts[2].replace(/\s+\S+$/g, "").trim();
+        }
       }
     }
   } else if (parts.length === 2) {
