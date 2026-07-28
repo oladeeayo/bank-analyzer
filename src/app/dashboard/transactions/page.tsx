@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Wand2, ChevronLeft, ChevronRight, Check, AlertCircle, X, Link, Edit, Plus } from "lucide-react";
+import { Calendar, Wand2, ChevronLeft, ChevronRight, Check, AlertCircle, X, Link, Edit, Plus, Zap } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
 
@@ -94,6 +94,7 @@ export default function TransactionsPage() {
   const [aiApproved, setAiApproved] = useState<Set<string>>(new Set());
   const [showAiReview, setShowAiReview] = useState(false);
   const [aiApplying, setAiApplying] = useState(false);
+  const [reclassifying, setReclassifying] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -237,6 +238,31 @@ export default function TransactionsPage() {
     setSaveMessage({ type: "success", text: `Applied ${applied} AI classifications` });
     setRefreshKey(k => k + 1);
     setTimeout(() => setSaveMessage(null), 3000);
+  };
+
+  const handleReclassify = async () => {
+    if (!user) return;
+    setReclassifying(true);
+    try {
+      const res = await fetch("/api/transactions/reclassify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSaveMessage({ type: "success", text: `Re-classified ${data.updatedCount} of ${data.totalTransactions} transactions` });
+        setRefreshKey(k => k + 1);
+      } else {
+        const err = await res.json();
+        setSaveMessage({ type: "error", text: err.error || "Failed to re-classify" });
+      }
+    } catch (err: any) {
+      setSaveMessage({ type: "error", text: err.message || "Network error" });
+    } finally {
+      setReclassifying(false);
+      setTimeout(() => setSaveMessage(null), 5000);
+    }
   };
 
   if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
@@ -524,6 +550,16 @@ export default function TransactionsPage() {
             >
               <Wand2 className={`h-3.5 w-3.5 ${aiLoading ? "animate-spin" : ""}`} />
               {aiLoading ? "Classifying..." : "AI Classify"}
+            </Button>
+            <Button
+              onClick={handleReclassify}
+              disabled={reclassifying}
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+            >
+              <Zap className={`h-3.5 w-3.5 ${reclassifying ? "animate-spin" : ""}`} />
+              {reclassifying ? "Re-classifying..." : "Reclassify"}
             </Button>
             <Button
               onClick={handleExportCsv}
@@ -1036,6 +1072,21 @@ export default function TransactionsPage() {
               <div className="pt-4 flex flex-col gap-3 border-t border-[#ececec]">
                 <Button onClick={handleSave} className="w-full" disabled={saving}>
                   {saving ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full border-[#ececec]"
+                  onClick={() => {
+                    const desc = selectedTx.description;
+                    const pattern = desc.length > 30 ? desc.substring(0, 30) : desc;
+                    window.open(
+                      `/dashboard/settings/rules?create=1&pattern=${encodeURIComponent(pattern)}&categoryId=${ruleForm.categoryId || ""}`,
+                      "_blank"
+                    );
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Rule from This
                 </Button>
                 {undoStack.length > 0 && (
                   <Button variant="outline" className="w-full" onClick={handleUndo} disabled={saving}>

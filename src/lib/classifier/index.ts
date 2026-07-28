@@ -33,17 +33,17 @@ const KEYWORD_PATTERNS: Array<{
   // Salary / Income
   { patterns: [/salary/i, /wages?/i, /payroll/i, /income/i], categoryName: "Income", confidence: 0.9 },
   // Electricity / Utilities
-  { patterns: [/electricity/i, /power\s+(supply|bill|payment)/i, /ikeja\s+electric/i, /bedc/i, /ibedc/i, /aedc/i, /kedco/i, /phcn/i, /prepaid\s+meter/i, /capricorn/i, /kwh/i], categoryName: "Bills & Utilities", confidence: 0.95 },
+  { patterns: [/electricity/i, /power\s+(supply|bill|payment)/i, /ikeja\s+electric/i, /bedc/i, /ibedc/i, /aedc/i, /kedco/i, /phcn/i, /prepaid\s+meter/i, /capricorn/i, /kwh/i], categoryName: "Utilities", confidence: 0.95 },
   // Water
-  { patterns: [/water\s+(board|supply|bill|payment)/i, /water\s+vendor/i], categoryName: "Bills & Utilities", confidence: 0.9 },
+  { patterns: [/water\s+(board|supply|bill|payment)/i, /water\s+vendor/i], categoryName: "Utilities", confidence: 0.9 },
   // Airtime / Data
-  { patterns: [/airtime/i, /data\s+(bundle|plan|purchase)/i, /recharge/i, /\bvtu\b/i, /glo\s+data/i, /mtn\s+data/i, /9mobile/i, /airtel\s+data/i], categoryName: "Bills & Utilities", confidence: 0.9 },
+  { patterns: [/airtime/i, /data\s+(bundle|plan|purchase)/i, /recharge/i, /\bvtu\b/i, /glo\s+data/i, /mtn\s+data/i, /9mobile/i, /airtel\s+data/i], categoryName: "Utilities", confidence: 0.9 },
   // Subscriptions / Streaming
   { patterns: [/spotify/i, /netflix/i, /showmax/i, /dstv\s+(explora|subscription)/i, /youtube\s+(premium|music)/i, /apple\s+(music|tv)/i, /prime\s+video/i, /hulu/i, /disney\+/i, /iroll/i, /tv\s+subscription/i], categoryName: "Entertainment", confidence: 0.95 },
   // Food & Dining
   { patterns: [/restaurant/i, /food\s+(vendor|court|court|delivery)/i, /chicken\s+republic/i, /pizza/i, /dominos/i, /kfc/i, /burger\s+king/i, /eatwell/i, /buka/i, /mama\s+put/i, /canteen/i], categoryName: "Food & Dining", confidence: 0.85 },
   // Transport
-  { patterns: [/uber/i, /bolt/i, /taxify/i, /ride\s+(share|hailing)/i, /transport\s+(fare|payment)/i, /bus\s+(fare|ticket)/i, /danfo/i, /keke/i, /okada/i, /uber\s+trip/i], categoryName: "Transport", confidence: 0.9 },
+  { patterns: [/uber/i, /bolt/i, /taxify/i, /ride\s+(share|hailing)/i, /transport\s+(fare|payment)/i, /bus\s+(fare|ticket)/i, /danfo/i, /keke/i, /okada/i, /uber\s+trip/i], categoryName: "Transportation", confidence: 0.9 },
   // Shopping
   { patterns: [/shoprite/i, /jumia/i, /konga/i, /slot/i, /computer\s+village/i, /market/i, /mall/i, /store/i, /retail/i], categoryName: "Shopping", confidence: 0.8 },
   // Healthcare
@@ -53,7 +53,13 @@ const KEYWORD_PATTERNS: Array<{
   // Housing
   { patterns: [/rent/i, /landlord/i, /accommodation/i, /house\s+(rent|payment)/i, /mortgage/i], categoryName: "Housing", confidence: 0.85 },
   // Investment
-  { patterns: [/investment/i, /dividend/i, /mutual\s+fund/i, /stock/i, /treasury\s+bills/i, /fixed\s+deposit/i, /bond/i, /crypto/i, /bitcoin/i], categoryName: "Investment", confidence: 0.85 },
+  { patterns: [/investment/i, /dividend/i, /mutual\s+fund/i, /stock/i, /treasury\s+bills/i, /fixed\s+deposit/i, /bond/i, /crypto/i, /bitcoin/i], categoryName: "Savings & Investments", confidence: 0.85 },
+  // Betting / Gambling
+  { patterns: [/bet9ja/i, /sportybet/i, /betway/i, /betting/i, /gambling/i, /casino/i, /lottery/i], categoryName: "Entertainment", confidence: 0.8 },
+  // POS / ATM
+  { patterns: [/pos\s+(purchase|terminal|trans)/i, /atm\s+(withdrawal|cash)/i, /card\s+(purchase|payment)/i], categoryName: "Banking & Financial", confidence: 0.7 },
+  // Transfer
+  { patterns: [/transfer/i, /trf/i, /sent\s+to/i, /received\s+from/i], categoryName: "Banking & Financial", confidence: 0.6 },
 ];
 
 function matchKeywords(tx: NormalizedTransaction, cache: ClassificationCache): ClassificationResult | null {

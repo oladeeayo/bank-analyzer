@@ -150,8 +150,8 @@ export default function SettingsPage() {
           <p className="text-ash-gray text-sm mb-4">
             Manage rules for automatic transaction classification. Rules are checked in priority order.
           </p>
-          <Button variant="outline" className="border-[#ececec] rounded-xl">
-            Manage Rules
+          <Button variant="outline" className="border-[#ececec] rounded-xl" asChild>
+            <a href="/dashboard/settings/rules">Manage Rules</a>
           </Button>
         </CardContent>
       </Card>
