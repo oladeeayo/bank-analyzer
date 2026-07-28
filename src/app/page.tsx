@@ -81,10 +81,6 @@ export default function HomePage() {
           <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full bg-lime-vibrant/3 blur-3xl" />
           <div className="absolute top-20 right-1/4 w-[400px] h-[400px] rounded-full bg-forest/3 blur-3xl" />
         </div>
-        <div className="inline-flex items-center gap-2 bg-forest/5 border border-forest/10 rounded-buttons px-4 py-1.5 mb-6 text-sm text-forest">
-          <Sparkles className="h-3.5 w-3.5 text-lime-vibrant" />
-          <span>Financial intelligence for Nigerians</span>
-        </div>
         <h1 className="font-signifier text-[44px] sm:text-[64px] md:text-[76px] leading-[1.15] text-ink-black mb-5 text-balance" style={{ letterSpacing: "-1.2px" }}>
           Financial intelligence<br />
           <span className="italic">for every naira</span>
