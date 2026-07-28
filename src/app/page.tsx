@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, FileSpreadsheet, PieChart, TrendingUp, Sparkles, Send, CreditCard, Wallet, BarChart3 } from "lucide-react";
+import { ArrowRight, TrendingUp, FileSpreadsheet, PieChart, Building2, Sparkles } from "lucide-react";
 
 function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -24,49 +24,22 @@ function Reveal({ children, delay = 0, className = "" }: { children: React.React
     return () => observer.disconnect();
   }, [delay]);
 
-  return (
-    <div ref={ref} className={`reveal ${className}`}>
-      {children}
-    </div>
-  );
+  return <div ref={ref} className={`reveal ${className}`}>{children}</div>;
 }
 
-function RevealScale({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setTimeout(() => el.classList.add("visible"), delay);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [delay]);
-
-  return (
-    <div ref={ref} className={`reveal-scale ${className}`}>
-      {children}
-    </div>
-  );
-}
-
-const AVATARS = [
-  { initials: "TO", color: "#e8f5e9", textColor: "#2e7d32" },
-  { initials: "AK", color: "#e3f2fd", textColor: "#1565c0" },
-  { initials: "SE", color: "#fce4ec", textColor: "#c62828" },
+const banks = [
+  { name: "GTBank", color: "#d4541e", short: "GT" },
+  { name: "Access Bank", color: "#006e46", short: "AB" },
+  { name: "OPay", color: "#11418b", short: "OP" },
+  { name: "Kuda", color: "#8b1d8b", short: "KU" },
+  { name: "Moniepoint", color: "#0062a0", short: "MP" },
+  { name: "First Bank", color: "#003069", short: "FB" },
 ];
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-paper-white">
-      {/* Navigation — Steep transparent style */}
+      {/* Navigation */}
       <nav className="flex items-center justify-between px-4 sm:px-8 py-5 max-w-[1200px] mx-auto">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-forest-container rounded-buttons flex items-center justify-center text-white">
@@ -74,161 +47,109 @@ export default function HomePage() {
           </div>
           <span className="font-signifier text-xl text-forest">CONYEST</span>
         </div>
-        <div className="hidden md:flex items-center gap-8">
-          <a href="#" className="text-sm text-slate-gray hover:text-forest transition-colors">Product</a>
-          <a href="#" className="text-sm text-slate-gray hover:text-forest transition-colors">Resources</a>
-          <a href="#" className="text-sm text-slate-gray hover:text-forest transition-colors">Pricing</a>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/login" className="hidden sm:inline text-sm text-slate-gray hover:text-forest transition-colors">
+        <div className="flex items-center gap-4 sm:gap-6">
+          <Link href="/login" className="text-sm text-slate-gray hover:text-forest transition-colors">
             Sign In
           </Link>
           <Link href="/register">
-            <Button variant="default" size="sm" className="btn-lift">Get Started</Button>
+            <Button variant="default" size="sm">Get Started</Button>
           </Link>
         </div>
       </nav>
 
-      {/* Hero — Steep editorial layout with floating artifacts */}
-      <section className="max-w-[1200px] mx-auto px-4 sm:px-8 pt-16 sm:pt-24 pb-16 relative">
-        <div className="text-center max-w-3xl mx-auto relative z-10">
+      {/* Hero */}
+      <section className="max-w-[1200px] mx-auto px-4 sm:px-8 pt-16 sm:pt-24 pb-16 sm:pb-24 text-center">
+        <Reveal>
           <div className="inline-flex items-center gap-2 bg-mist-gray rounded-buttons px-4 py-1.5 mb-6 text-sm text-slate-gray">
             <Sparkles className="h-3.5 w-3.5 text-lime-vibrant" />
             <span>Financial intelligence for Nigerians</span>
           </div>
-          <h1 className="font-signifier text-[40px] sm:text-[56px] md:text-[64px] leading-[1.3] text-ink-black mb-5" style={{ letterSpacing: "-0.96px" }}>
-            Financial intelligence<br />
-            <span className="italic">for every naira</span>
-          </h1>
-          <p className="text-[17px] text-slate-gray max-w-xl mx-auto mb-8 leading-relaxed">
-            Upload bank statements, track every transaction, and gain deep insights
-            into your spending habits across all your Nigerian bank accounts.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-16">
-            <Link href="/register">
-              <Button variant="default" size="lg" className="gap-2 btn-lift w-full sm:w-auto">
-                Get Started <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button variant="outline" size="lg" className="btn-lift w-full sm:w-auto">
-                Book a Demo
-              </Button>
-            </Link>
-          </div>
-
-          {/* AI Composer — Steep-style input artifact */}
-          <div className="floating-artifact p-3 sm:p-4 max-w-xl mx-auto">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <span className="w-8 h-8 rounded-full bg-forest/10 flex items-center justify-center text-xs text-forest font-medium">@</span>
-                <span className="w-8 h-8 rounded-full bg-mist-gray flex items-center justify-center text-xs text-smoke-gray">ⓘ</span>
-              </div>
-              <input
-                type="text"
-                placeholder="Ask anything about your finances..."
-                className="flex-1 bg-transparent border-none text-sm text-ink-black placeholder:text-smoke-gray focus:outline-none"
-              />
-              <button className="w-10 h-10 bg-forest rounded-full flex items-center justify-center text-white shrink-0 hover:bg-forest-container transition-colors">
-                <Send className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+        </Reveal>
+        <h1 className="font-signifier text-[40px] sm:text-[56px] md:text-[64px] leading-[1.3] text-ink-black mb-5 reveal delay-1" style={{ letterSpacing: "-0.96px" }}>
+          Financial intelligence<br />
+          <span className="italic">for every naira</span>
+        </h1>
+        <p className="text-[17px] text-slate-gray max-w-xl mx-auto mb-8 leading-relaxed reveal delay-2">
+          Upload bank statements, track every transaction, and gain deep insights
+          into your spending habits across all your Nigerian bank accounts.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center reveal delay-3">
+          <Link href="/register">
+            <Button variant="default" size="lg" className="gap-2 w-full sm:w-auto">
+              Get Started <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href="/login">
+            <Button variant="outline" size="lg" className="w-full sm:w-auto">
+              Sign In
+            </Button>
+          </Link>
         </div>
+      </section>
 
-        {/* Floating artifacts around hero */}
-        <div className="hidden lg:block">
-          {/* Stat card — top right */}
-          <div className="floating-artifact p-4 absolute right-4 top-20 w-56">
-            <p className="text-[11px] text-ash-gray mb-1">Total Balance</p>
-            <p className="text-xl font-mono font-medium text-ink-black">₦2,847,500</p>
-            <div className="flex items-center gap-1.5 mt-2">
-              <TrendingUp className="h-3 w-3 text-forest" />
-              <span className="text-[11px] text-slate-gray">↑ 5.5x vs last month</span>
-            </div>
-            {/* Mini chart line */}
-            <svg className="w-full h-8 mt-2" viewBox="0 0 200 30">
-              <path d="M0,25 Q25,20 50,22 Q75,18 100,10 Q125,15 150,5 Q175,8 200,3" fill="none" stroke="#5d2a1a" strokeWidth="2" />
-            </svg>
-          </div>
-
-          {/* Avatar bubbles — left side */}
-          <div className="absolute left-2 top-40 flex -space-x-2">
-            {AVATARS.map((a, i) => (
-              <div key={i} className="avatar-bubble" style={{ background: a.color, color: a.textColor, zIndex: 10 - i }}>
-                {a.initials}
+      {/* Bank logos */}
+      <section className="max-w-[1200px] mx-auto px-4 sm:px-8 pb-16 sm:pb-24">
+        <p className="text-xs text-ash-gray text-center mb-6">Works with all major Nigerian banks</p>
+        <Reveal>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            {banks.map((bank) => (
+              <div key={bank.name} className="flex items-center gap-2.5 bg-mist-gray rounded-buttons px-4 py-2.5">
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                  style={{ backgroundColor: bank.color }}
+                >
+                  {bank.short}
+                </div>
+                <span className="text-sm text-ink-black font-medium">{bank.name}</span>
               </div>
             ))}
-            <div className="ml-3 mt-2">
-              <p className="text-[11px] text-ash-gray">Active users</p>
-              <p className="text-sm font-medium text-ink-black">3 analyzing now</p>
-            </div>
           </div>
-
-          {/* Registration stat card — bottom right */}
-          <div className="floating-artifact p-4 absolute right-0 bottom-4 w-48">
-            <p className="text-[11px] text-ash-gray mb-1">Registrations</p>
-            <p className="text-xl font-mono font-medium text-ink-black">2.4k</p>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-lime-vibrant/20 text-forest font-medium">↑ 12%</span>
-              <span className="text-[10px] text-ash-gray">vs last week</span>
-            </div>
-          </div>
-        </div>
+        </Reveal>
       </section>
 
-      {/* Trusted by — subtle line */}
-      <section className="max-w-[1200px] mx-auto px-4 sm:px-8 pb-16 text-center">
-        <p className="text-xs text-ash-gray mb-6">Trusted by financial analysts across Nigeria</p>
-        <div className="flex items-center justify-center gap-8 sm:gap-12 opacity-40">
-          <span className="text-lg font-semibold text-ink-black">GTBank</span>
-          <span className="text-lg font-semibold text-ink-black">Access</span>
-          <span className="text-lg font-semibold text-ink-black">OPay</span>
-          <span className="text-lg font-semibold text-ink-black">Kuda</span>
-          <span className="text-lg font-semibold text-ink-black">Moniepoint</span>
-        </div>
-      </section>
-
-      {/* Feature columns — Steep 3-column layout */}
-      <section className="bg-section-fog py-20 sm:py-24">
+      {/* Feature cards */}
+      <section className="bg-fog-white py-20 sm:py-24">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
           <Reveal>
-            <h2 className="font-signifier text-[40px] sm:text-[44px] text-ink-black text-center mb-16" style={{ letterSpacing: "-0.66px" }}>
-              A new kind of<br />
-              <span className="italic">financial analytics</span>
+            <h2 className="font-signifier text-[36px] sm:text-[44px] text-ink-black text-center mb-4" style={{ letterSpacing: "-0.66px" }}>
+              Everything you need<br />
+              <span className="italic">to understand your money</span>
             </h2>
+            <p className="text-[15px] text-slate-gray text-center max-w-lg mx-auto mb-12">
+              From multi-bank support to AI-powered categorization — CONYEST brings clarity to your finances.
+            </p>
           </Reveal>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
             <Reveal delay={100}>
-              <div className="bg-mist-gray rounded-cards p-6 sm:p-8 card-lift">
+              <div className="bg-paper-white border border-[#ececec] rounded-cards p-6 sm:p-8">
                 <div className="w-11 h-11 bg-forest/10 rounded-xl flex items-center justify-center mb-4">
-                  <BarChart3 className="h-5 w-5 text-forest" />
+                  <Building2 className="h-5 w-5 text-forest" />
                 </div>
-                <h3 className="text-base font-medium text-ink-black mb-2">Built on metrics</h3>
+                <h3 className="text-base font-medium text-ink-black mb-2">Multi-Bank Support</h3>
                 <p className="text-sm text-slate-gray leading-relaxed">
-                  No more manual tracking. CONYEST normalizes all your bank data into governed financial metrics you can trust.
+                  Add all your banks — GTBank, Access, OPay, Kuda, Moniepoint, First Bank, and more. See everything in one view.
                 </p>
               </div>
             </Reveal>
             <Reveal delay={200}>
-              <div className="bg-mist-gray rounded-cards p-6 sm:p-8 card-lift">
+              <div className="bg-paper-white border border-[#ececec] rounded-cards p-6 sm:p-8">
                 <div className="w-11 h-11 bg-lime/10 rounded-xl flex items-center justify-center mb-4">
-                  <Sparkles className="h-5 w-5 text-lime" />
+                  <FileSpreadsheet className="h-5 w-5 text-lime" />
                 </div>
-                <h3 className="text-base font-medium text-ink-black mb-2">Powered by AI</h3>
+                <h3 className="text-base font-medium text-ink-black mb-2">Smart Statement Parsing</h3>
                 <p className="text-sm text-slate-gray leading-relaxed">
-                  AI-powered categorization and anomaly detection. Ask questions about your spending in plain English.
+                  Upload CSV, Excel, or PDF statements. Automatic format detection, normalization, and self-transfer detection.
                 </p>
               </div>
             </Reveal>
             <Reveal delay={300}>
-              <div className="bg-mist-gray rounded-cards p-6 sm:p-8 card-lift">
+              <div className="bg-paper-white border border-[#ececec] rounded-cards p-6 sm:p-8">
                 <div className="w-11 h-11 bg-forest-container/10 rounded-xl flex items-center justify-center mb-4">
-                  <Wallet className="h-5 w-5 text-forest-container" />
+                  <PieChart className="h-5 w-5 text-forest-container" />
                 </div>
-                <h3 className="text-base font-medium text-ink-black mb-2">Designed for clarity</h3>
+                <h3 className="text-base font-medium text-ink-black mb-2">Deep Analytics</h3>
                 <p className="text-sm text-slate-gray leading-relaxed">
-                  Beautiful reports, clear categories, and actionable insights. Understand your money at a glance.
+                  Category breakdown, merchant ranking, spending velocity, recurring transaction detection, and actionable insights.
                 </p>
               </div>
             </Reveal>
@@ -236,111 +157,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Feature detail — 2-column text + AI card */}
+      {/* Peach accent card */}
       <section className="py-20 sm:py-24">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <Reveal>
-              <div>
-                <p className="text-xs uppercase tracking-widest text-ash-gray font-medium mb-3">AI-Powered Analysis</p>
-                <h2 className="font-signifier text-[36px] sm:text-[44px] text-ink-black mb-5" style={{ letterSpacing: "-0.66px" }}>
-                  Ask anything about<br />
-                  <span className="italic">your finances</span>
-                </h2>
-                <p className="text-[15px] text-slate-gray leading-relaxed mb-6">
-                  Get deep insights about your spending patterns, recurring charges, and financial health — all in plain English.
-                </p>
-                <Link href="/register" className="inline-flex items-center gap-1.5 text-sm text-ink-black font-medium hover:underline">
-                  Learn more <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            </Reveal>
-            <RevealScale delay={100}>
-              {/* AI Chat card — floating artifact */}
-              <div className="floating-artifact p-5">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="avatar-bubble" style={{ background: "#e8f5e9", color: "#2e7d32" }}>
-                    MF
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-ink-black">Mary (Finance)</p>
-                    <p className="text-xs text-ash-gray">Asked 2 min ago</p>
-                  </div>
-                </div>
-                <div className="bg-mist-gray rounded-xl p-4 mb-4">
-                  <p className="text-sm text-ink-black">&ldquo;Are subscriptions growing in line with revenue expectations?&rdquo;</p>
-                </div>
-                <div className="bg-forest/5 rounded-xl p-4 border border-forest/10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-3.5 w-3.5 text-lime-vibrant" />
-                    <span className="text-xs font-medium text-forest">AI Response</span>
-                  </div>
-                  <p className="text-sm text-ink-black leading-relaxed">
-                    Subscriptions grew 23% this month vs 18% last month. Revenue is tracking 5% above projections. Top driver: Premium plan upgrades (+31%).
-                  </p>
-                </div>
-              </div>
-            </RevealScale>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature detail 2 — reversed layout */}
-      <section className="bg-section-fog py-20 sm:py-24">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <RevealScale delay={100} className="order-2 lg:order-1">
-              {/* Multi-bank card — floating artifact */}
-              <div className="floating-artifact p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-forest/10 flex items-center justify-center">
-                    <Building2 className="h-5 w-5 text-forest" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-ink-black">Multi-Bank Support</p>
-                    <p className="text-xs text-ash-gray">18+ Nigerian banks supported</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {[
-                    { bank: "GTBank", type: "credit", amount: "+₦450,000" },
-                    { bank: "Access Bank", type: "debit", amount: "-₦125,000" },
-                    { bank: "OPay", type: "credit", amount: "+₦89,000" },
-                    { bank: "Kuda", type: "debit", amount: "-₦34,500" },
-                  ].map((row, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-[#ececec]/50 last:border-0">
-                      <span className="text-sm text-ink-black">{row.bank}</span>
-                      <span className={`text-sm font-mono font-medium ${row.type === "credit" ? "text-forest" : "text-error"}`}>
-                        {row.amount}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </RevealScale>
-            <Reveal delay={100} className="order-1 lg:order-2">
-              <div>
-                <p className="text-xs uppercase tracking-widest text-ash-gray font-medium mb-3">Multi-Bank</p>
-                <h2 className="font-signifier text-[36px] sm:text-[44px] text-ink-black mb-5" style={{ letterSpacing: "-0.66px" }}>
-                  All your accounts<br />
-                  <span className="italic">in one place</span>
-                </h2>
-                <p className="text-[15px] text-slate-gray leading-relaxed mb-6">
-                  Connect GTBank, Access, OPay, Kuda, Moniepoint, and 13 more. See your complete financial picture across every account.
-                </p>
-                <Link href="/register" className="inline-flex items-center gap-1.5 text-sm text-ink-black font-medium hover:underline">
-                  Learn more <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      {/* Accent Peach Card — Editorial highlight */}
-      <section className="py-20 sm:py-24">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
-          <RevealScale>
+          <Reveal>
             <div className="bg-blush-peach rounded-cards p-8 sm:p-12 text-sienna-brown">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                 <div>
@@ -353,27 +173,27 @@ export default function HomePage() {
                     detects self-transfers, and auto-categorizes your spending.
                   </p>
                   <Link href="/register">
-                    <Button variant="default" size="lg" className="gap-2 btn-lift">
+                    <Button variant="default" size="lg" className="gap-2">
                       Start Analyzing <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  <div className="bg-white/60 rounded-xl p-4 flex items-center gap-4 card-lift">
+                  <div className="bg-white/60 rounded-xl p-4 flex items-center gap-4">
                     <TrendingUp className="h-8 w-8 text-forest shrink-0" />
                     <div>
                       <p className="font-semibold text-sm">Track Inflows & Outflows</p>
                       <p className="text-xs opacity-70">See where every naira goes</p>
                     </div>
                   </div>
-                  <div className="bg-white/60 rounded-xl p-4 flex items-center gap-4 card-lift">
+                  <div className="bg-white/60 rounded-xl p-4 flex items-center gap-4">
                     <span className="text-2xl shrink-0">🔄</span>
                     <div>
                       <p className="font-semibold text-sm">Self-Transfer Detection</p>
                       <p className="text-xs opacity-70">Automatically identify internal moves</p>
                     </div>
                   </div>
-                  <div className="bg-white/60 rounded-xl p-4 flex items-center gap-4 card-lift">
+                  <div className="bg-white/60 rounded-xl p-4 flex items-center gap-4">
                     <span className="text-2xl shrink-0">📊</span>
                     <div>
                       <p className="font-semibold text-sm">Monthly Reports</p>
@@ -383,11 +203,11 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          </RevealScale>
+          </Reveal>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* CTA */}
       <section className="bg-mist-gray py-20 sm:py-24">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-8 text-center">
           <Reveal>
@@ -400,13 +220,13 @@ export default function HomePage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/register">
-                <Button variant="default" size="lg" className="gap-2 btn-lift w-full sm:w-auto">
+                <Button variant="default" size="lg" className="gap-2 w-full sm:w-auto">
                   Get Started Free <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/login">
-                <Button variant="outline" size="lg" className="btn-lift w-full sm:w-auto">
-                  Book a Demo →
+                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  Sign In
                 </Button>
               </Link>
             </div>
