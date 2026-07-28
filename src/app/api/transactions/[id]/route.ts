@@ -130,6 +130,46 @@ export async function PUT(
           },
         });
       }
+
+      // Auto-create a classification rule from the merchant/counterparty name
+      if (body.categoryId && finalMerchantId) {
+        const merchant = await db.merchant.findUnique({
+          where: { id: finalMerchantId },
+          select: { displayName: true },
+        });
+
+        if (merchant) {
+          const pattern = merchant.displayName.toLowerCase().trim();
+          if (pattern.length >= 3) {
+            const existingRule = await db.classificationRule.findFirst({
+              where: {
+                userId,
+                pattern,
+                categoryId: body.categoryId,
+              },
+            });
+
+            if (!existingRule) {
+              const maxPriority = await db.classificationRule.aggregate({
+                where: { userId },
+                _max: { priority: true },
+              });
+
+              await db.classificationRule.create({
+                data: {
+                  userId,
+                  name: merchant.displayName,
+                  type: "contains",
+                  pattern,
+                  merchantId: finalMerchantId,
+                  categoryId: body.categoryId,
+                  priority: (maxPriority._max.priority || 0) + 1,
+                },
+              });
+            }
+          }
+        }
+      }
     }
 
     return NextResponse.json({
