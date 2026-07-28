@@ -17,9 +17,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   ReferenceLine,
 } from "recharts";
 import SpendingRhythm from "@/components/spending-rhythm";
@@ -69,7 +66,6 @@ interface RecurringPattern {
   type?: string;
 }
 
-const CHART_COLORS = ["#003527", "#416900", "#95d3ba", "#acf847", "#91db2a"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const availableYears = [2023, 2024, 2025, 2026, 2027];
 
@@ -165,7 +161,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { summary, categoryBreakdown, dailySpending, dailyCredits, monthlyChart } = data;
+  const { summary, dailySpending, dailyCredits, monthlyChart } = data;
 
   // Real cashflow chart data
   const cashflowChartData = (() => {
@@ -188,14 +184,6 @@ export default function DashboardPage() {
       net: Math.round((dailyCredits[day] || 0) - (dailySpending[day] || 0)),
     }));
   })();
-
-  const categoryPieData = categoryBreakdown.slice(0, 5).map((cat, idx) => ({
-    name: cat.name,
-    value: cat.amount,
-    color: CHART_COLORS[idx % CHART_COLORS.length],
-  }));
-
-  const totalPieExpenses = categoryPieData.reduce((sum, cat) => sum + cat.value, 0);
 
   const periodOptions = [
     { value: "monthly", label: "Monthly" },
@@ -255,9 +243,6 @@ export default function DashboardPage() {
           <span className="text-xs text-ash-gray ml-2">{data.transactionCount} transactions</span>
         </div>
       )}
-
-      {/* Spending Rhythm Heatmap */}
-      <SpendingRhythm />
 
       {/* Hero Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -368,65 +353,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Category Donut */}
-        <div className="bg-paper-white border border-[#ececec] p-4 sm:p-6 rounded-cards shadow-subtle">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-signifier text-xl text-ink-black">Category Split</h2>
-              <p className="text-xs text-ash-gray mt-1">Expense distribution</p>
-            </div>
-          </div>
-
-          {totalPieExpenses > 0 ? (
-            <>
-              <div className="flex justify-center mb-6">
-                <div className="relative">
-                  <ResponsiveContainer width={180} height={180}>
-                    <PieChart>
-                      <Pie
-                        data={categoryPieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={55}
-                        outerRadius={80}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {categoryPieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="text-[10px] uppercase tracking-widest text-ash-gray">Total</div>
-                    <div className="text-lg font-mono font-medium text-ink-black">{formatCurrency(totalPieExpenses)}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {categoryPieData.map((cat, idx) => {
-                  const percentage = totalPieExpenses > 0 ? (cat.value / totalPieExpenses) * 100 : 0;
-                  return (
-                    <div key={idx} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                        <span className="text-sm text-ink-black">{cat.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-ash-gray">{percentage.toFixed(0)}%</span>
-                        <span className="text-sm font-mono font-medium text-ink-black w-24 text-right">{formatCurrency(cat.value)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center justify-center h-48 text-ash-gray text-sm">No expenses categorized</div>
-          )}
-        </div>
+        {/* Spending Intensity */}
+        <SpendingRhythm />
       </div>
 
       {/* Recurring Transactions */}
