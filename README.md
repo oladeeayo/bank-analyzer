@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CONYEST
 
-## Getting Started
+**Financial intelligence for every naira.**
 
-First, run the development server:
+CONYEST is a full-stack personal finance manager built for the Nigerian banking ecosystem. Upload bank statements from 18+ Nigerian banks, and get instant clarity on where your money goes — with AI-powered categorization, recurring transaction detection, and multi-period analytics.
+
+## Features
+
+- **Multi-bank upload** — Import CSV, Excel, or PDF statements from GTBank, Access, OPay, Kuda, Moniepoint, First Bank, UBA, and more
+- **Smart parsing** — Automatic format detection, transaction normalization, and merchant extraction
+- **AI-powered classification** — Google Gemini categorizes each transaction (Food, Transport, Utilities, Entertainment, etc.) with confidence scores
+- **Self-transfer detection** — Automatically identifies transfers between your own accounts
+- **Recurring detection** — Algorithmic discovery of daily, weekly, monthly, and yearly patterns
+- **Dashboards & analytics** — Cash flow charts, category breakdowns, bank comparisons, and spending trends
+- **Budgeting & goals** — Per-category budgets and savings goal tracking
+- **Multi-period reporting** — Daily, monthly, quarterly, yearly, and all-time views
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, Tailwind CSS v4, Radix UI, Recharts |
+| Language | TypeScript (strict) |
+| Database | PostgreSQL (Neon) |
+| ORM | Prisma |
+| Auth | Better Auth |
+| AI | Google Gemini (`gemini-3.1-flash-lite`) |
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20+
+- A PostgreSQL database (Neon recommended)
+
+### Setup
+
+```bash
+git clone https://github.com/oladeeayo/bank-analyzer.git
+cd bank-analyzer
+npm install
+```
+
+Create a `.env` file:
+
+```env
+DATABASE_URL=postgresql://...
+GEMINI_API_KEY=your_gemini_key
+```
+
+Run the database migrations and seed:
+
+```bash
+npx prisma migrate dev
+```
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+├── app/              # Next.js App Router pages and API routes
+│   ├── (auth)/       # Login and registration
+│   ├── api/          # 14 route groups (analytics, statements, transactions, etc.)
+│   └── dashboard/    # Dashboard pages (home, upload, banks, budgets, goals, etc.)
+├── components/
+│   ├── layout/       # Dashboard layout and sidebar
+│   └── ui/           # Shared UI components (button, card, badge, etc.)
+└── lib/
+    ├── ai/           # Gemini integration
+    ├── classifier/   # Rule-based transaction classification
+    ├── parser/       # Merchant extraction
+    ├── parsers/      # CSV, Excel, PDF parsing
+    └── normalizer/   # Transaction description normalization
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Supported banks
 
-## Learn More
+GTBank, Access Bank, OPay, Kuda, Moniepoint, First Bank, UBA, Zenith Bank, Fidelity Bank, Union Bank, Sterling Bank, FCMB, Stanbic IBTC, PalmPay, Wema Bank, Polaris Bank, Ecobank, and more.
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
