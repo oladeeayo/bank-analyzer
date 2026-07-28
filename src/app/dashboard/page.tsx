@@ -22,6 +22,7 @@ import {
   Cell,
   ReferenceLine,
 } from "recharts";
+import SpendingRhythm from "@/components/spending-rhythm";
 
 interface AnalyticsData {
   period: string;
@@ -113,7 +114,7 @@ export default function DashboardPage() {
 
   const fetchTransactions = async () => {
     try {
-      let url = `/api/transactions?userId=${user!.id}&page=1&limit=5`;
+      const url = `/api/transactions?userId=${user!.id}&page=1&limit=5`;
       const res = await fetch(url);
       if (res.ok) {
         const result = await res.json();
@@ -254,6 +255,9 @@ export default function DashboardPage() {
           <span className="text-xs text-ash-gray ml-2">{data.transactionCount} transactions</span>
         </div>
       )}
+
+      {/* Spending Rhythm Heatmap */}
+      <SpendingRhythm />
 
       {/* Hero Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
