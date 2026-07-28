@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { extractCounterparty } from "@/lib/classifier/nigerian-context";
 
 export async function GET(
   request: NextRequest,
@@ -27,6 +28,16 @@ export async function GET(
   }
 }
 
+function sanitizePattern(description: string): string {
+  return description
+    .toLowerCase()
+    .replace(/^(transfer\s+(to|from)|send\s+to|received?\s+from|payment\s+to|funded\s+by)\s+/i, "")
+    .replace(/\s*\|.*/i, "")
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -46,12 +57,16 @@ export async function PUT(
 
     const userId = currentTx.bank.userId;
 
+    // Extract counterparty from the description
+    const extracted = extractCounterparty(body.normalizedDescription || currentTx.description);
+    const counterpartyName = extracted.counterparty || body.normalizedDescription || null;
+
     let finalMerchantId = body.merchantId || null;
 
-    // If a new merchant name was typed, find or create the merchant
-    if (body.normalizedDescription && body.normalizedDescription.trim()) {
-      const newName = body.normalizedDescription.trim();
-      const normalizedName = newName.toLowerCase().replace(/\s+/g, "_");
+    // If a counterparty was extracted or merchant name was provided, find or create
+    const merchantName = counterpartyName || (body.normalizedDescription && body.normalizedDescription.trim()) || null;
+    if (merchantName) {
+      const normalizedName = merchantName.toLowerCase().replace(/[^a-z0-9]/g, "_");
 
       if (finalMerchantId) {
         const currentMerchant = await db.merchant.findUnique({
@@ -64,7 +79,7 @@ export async function PUT(
       }
 
       if (!finalMerchantId) {
-        const existing = await db.merchant.findUnique({
+        const existing = await db.merchant.findFirst({
           where: { normalizedName },
           select: { id: true },
         });
@@ -75,7 +90,7 @@ export async function PUT(
           const created = await db.merchant.create({
             data: {
               normalizedName,
-              displayName: newName,
+              displayName: merchantName,
             },
             select: { id: true },
           });
@@ -87,7 +102,7 @@ export async function PUT(
     const updateData: Record<string, unknown> = {};
     if (finalMerchantId !== undefined) updateData.merchantId = finalMerchantId;
     if (body.categoryId) updateData.categoryId = body.categoryId;
-    if (body.normalizedDescription) updateData.normalizedDescription = body.normalizedDescription;
+    if (counterpartyName) updateData.normalizedDescription = counterpartyName;
     if (body.isTransfer !== undefined) updateData.isTransfer = body.isTransfer;
     if (body.isSelfTransfer !== undefined) updateData.isSelfTransfer = body.isSelfTransfer;
 
@@ -101,8 +116,9 @@ export async function PUT(
       },
     });
 
-    // Save manual override for future uploads
+    // Active Learning: Save manual override + auto-create rule + backfill
     if (finalMerchantId || body.categoryId) {
+      // 1. Save manual override (exact description match)
       const existingOverride = await db.manualOverride.findUnique({
         where: {
           userId_description: {
@@ -131,51 +147,71 @@ export async function PUT(
         });
       }
 
-      // Auto-create a classification rule from the merchant/counterparty name
-      if (body.categoryId && finalMerchantId) {
-        const merchant = await db.merchant.findUnique({
-          where: { id: finalMerchantId },
-          select: { displayName: true },
-        });
+      // 2. Create sanitized classification rule for future imports
+      if (body.categoryId && merchantName) {
+        const cleanPattern = sanitizePattern(transaction.description);
 
-        if (merchant) {
-          const pattern = merchant.displayName.toLowerCase().trim();
-          if (pattern.length >= 3) {
-            const existingRule = await db.classificationRule.findFirst({
-              where: {
-                userId,
-                pattern,
-                categoryId: body.categoryId,
-              },
+        if (cleanPattern.length >= 3) {
+          const existingRule = await db.classificationRule.findFirst({
+            where: {
+              userId,
+              pattern: cleanPattern,
+              categoryId: body.categoryId,
+            },
+          });
+
+          if (!existingRule) {
+            const maxPriority = await db.classificationRule.aggregate({
+              where: { userId },
+              _max: { priority: true },
             });
 
-            if (!existingRule) {
-              const maxPriority = await db.classificationRule.aggregate({
-                where: { userId },
-                _max: { priority: true },
-              });
-
-              await db.classificationRule.create({
-                data: {
-                  userId,
-                  name: merchant.displayName,
-                  type: "contains",
-                  pattern,
-                  merchantId: finalMerchantId,
-                  categoryId: body.categoryId,
-                  priority: (maxPriority._max.priority || 0) + 1,
-                },
-              });
-            }
+            await db.classificationRule.create({
+              data: {
+                userId,
+                name: merchantName,
+                type: "contains",
+                pattern: cleanPattern,
+                merchantId: finalMerchantId,
+                categoryId: body.categoryId,
+                priority: (maxPriority._max.priority || 0) + 1,
+              },
+            });
           }
         }
       }
+
+      // 3. Backfill: Update all past uncategorized transactions matching this counterparty
+      let backfillCount = 0;
+      if (counterpartyName && body.categoryId) {
+        const backfillResult = await db.transaction.updateMany({
+          where: {
+            bank: { userId },
+            id: { not: id },
+            OR: [
+              { categoryId: null },
+              { category: { name: "Others" } },
+            ],
+            description: {
+              contains: counterpartyName,
+              mode: "insensitive",
+            },
+          },
+          data: {
+            merchantId: finalMerchantId || undefined,
+            categoryId: body.categoryId,
+          },
+        });
+        backfillCount = backfillResult.count;
+      }
+
+      return NextResponse.json({
+        transaction,
+        updatedSimilarCount: backfillCount,
+      });
     }
 
-    return NextResponse.json({
-      transaction,
-      updatedSimilarCount: 0,
-    });
+    return NextResponse.json({ transaction, updatedSimilarCount: 0 });
   } catch (error) {
     console.error("Update transaction error:", error);
     return NextResponse.json({ error: "Failed to update transaction" }, { status: 500 });

@@ -99,6 +99,12 @@ const MERCHANT_DB: Record<string, { name: string; category: string; keywords: st
   bienvenue: { name: "Bienvenue", category: "Supermarket", keywords: ["bienvenue"] },
   figue: { name: "Figue", category: "Supermarket", keywords: ["figue"] },
   market: { name: "Market", category: "Supermarket", keywords: ["market", "market place", "open market"] },
+  brent: { name: "Brent Stores", category: "Supermarket", keywords: ["brent stores", "brent"] },
+  ebano: { name: "Ebano", category: "Supermarket", keywords: ["ebano", "ebano supermarket"] },
+  blenco: { name: "Blenco", category: "Supermarket", keywords: ["blenco"] },
+  prince_ebeano: { name: "Prince Ebeano", category: "Supermarket", keywords: ["prince ebeano", "ebeano"] },
+  just_rite: { name: "Just Rite", category: "Supermarket", keywords: ["just rite"] },
+  foodco: { name: "Foodco", category: "Supermarket", keywords: ["foodco", "foodco nigeria"] },
   chicken: { name: "Chicken Republic", category: "Food", keywords: ["chicken republic", "chicken rep"] },
   kfc: { name: "KFC", category: "Food", keywords: ["kfc", "kfc Nigeria"] },
   dominos: { name: "Dominos Pizza", category: "Food", keywords: ["dominos", "domino pizza", "dominos pizza"] },
@@ -107,6 +113,12 @@ const MERCHANT_DB: Record<string, { name: string; category: string; keywords: st
   taco: { name: "Taco Bell", category: "Food", keywords: ["taco", "taco bell"] },
   subway: { name: "Subway", category: "Food", keywords: ["subway"] },
   starbucks: { name: "Starbucks", category: "Food", keywords: ["starbucks"] },
+  kilimanjaro: { name: "Kilimanjaro", category: "Food", keywords: ["kilimanjaro"] },
+  eatngo: { name: "Eat'N'Go", category: "Food", keywords: ["eat'ngo", "eat n go", "eatngo"] },
+  sweet_sensation: { name: "Sweet Sensation", category: "Food", keywords: ["sweet sensation"] },
+  tantalizers: { name: "Tantalizers", category: "Food", keywords: ["tantalizers"] },
+  mega_chicken: { name: "Mega Chicken", category: "Food", keywords: ["mega chicken"] },
+  the_place: { name: "The Place", category: "Food", keywords: ["the place"] },
   coffee: { name: "Coffee Shop", category: "Food", keywords: ["coffee", "cafe", "cafeone", "buka"] },
   restaurant: { name: "Restaurant", category: "Food", keywords: ["restaurant", "restuarant", "eatery", "buka", "canteen", "bar", "lounge", "pub", "tavern"] },
   food: { name: "Food Purchase", category: "Food", keywords: ["food", "meal", "lunch", "dinner", "breakfast", "snack", "chops"] },
@@ -119,13 +131,30 @@ const MERCHANT_DB: Record<string, { name: string; category: string; keywords: st
   opay_transport: { name: "OPay Transport", category: "Transport", keywords: ["opay transport", "opay ride"] },
   lagbus: { name: "LagBus", category: "Transport", keywords: ["lagbus", "lag bus"] },
   BRT: { name: "BRT", category: "Transport", keywords: ["brt", "brt lagos"] },
-  fuel: { name: "Fuel Station", category: "Fuel", keywords: ["petrol station", "filling station", "total Nigeria", "mobil Nigeria", " NNPC filling", "oando Nigeria", "atmc Nigeria", "fuel station", "fuel purchase"] },
+  peace_mass: { name: "Peace Mass Transit", category: "Transport", keywords: ["peace mass", "peace mass transit"] },
+  gigm: { name: "GIG Logistics", category: "Transport", keywords: ["gigm", "gig logistics", "gig mobile"] },
+
+  // Fuel Stations
+  fuel: { name: "Fuel Station", category: "Fuel", keywords: ["petrol station", "filling station", "fuel station", "fuel purchase"] },
+  total: { name: "Total Energies", category: "Fuel", keywords: ["total nigeria", "total energ"] },
+  mobil: { name: "Mobil", category: "Fuel", keywords: ["mobil nigeria", "mobil oil"] },
+  oando: { name: "Oando", category: "Fuel", keywords: ["oando nigeria", "oando filling"] },
+  bovas: { name: "Bovas", category: "Fuel", keywords: ["bovas", "bovas filling"] },
+  conoil: { name: "Conoil", category: "Fuel", keywords: ["conoil"] },
+  enyo: { name: "Enyo", category: "Fuel", keywords: ["enyo", "enyo energy"] },
+  nipco: { name: "NIPCO", category: "Fuel", keywords: ["nipco"] },
+  arnova: { name: "Arnova", category: "Fuel", keywords: ["arnova"] },
 
   // Telecoms
   mtn: { name: "MTN", category: "Bills", keywords: ["mtn", "mtn ng", "mtn nigeria", "mtn airtime", "mtn data"] },
   airtel: { name: "Airtel", category: "Bills", keywords: ["airtel", "airtel ng", "airtel nigeria"] },
   glo: { name: "Glo", category: "Bills", keywords: ["glo", "glo ng", "glo nigeria", "glo data"] },
   mobile9: { name: "9mobile", category: "Bills", keywords: ["9mobile", "etisalat", "etisalat nigeria"] },
+
+  // Internet & Cable
+  smile: { name: "Smile Communications", category: "Bills", keywords: ["smile", "smile communications"] },
+  spectranet: { name: "Spectranet", category: "Bills", keywords: ["spectranet"] },
+  starlink: { name: "Starlink", category: "Bills", keywords: ["starlink", "starlink internet"] },
 
   // Electricity
   ikeja_electric: { name: "Ikeja Electric", category: "Bills", keywords: ["ikeja electric", "ikedc", "ikeja disco"] },
@@ -196,6 +225,8 @@ const MERCHANT_DB: Record<string, { name: string; category: string; keywords: st
   // Healthcare
   hospital: { name: "Hospital", category: "Health", keywords: ["hospital", "medical", "clinic", "health care", "healthcare"] },
   pharmacy: { name: "Pharmacy", category: "Health", keywords: ["pharmacy", "pharm", "drug", "medication"] },
+  medplus: { name: "Medplus", category: "Health", keywords: ["medplus", "med plus"] },
+  healthplus: { name: "Healthplus", category: "Health", keywords: ["healthplus", "health plus"] },
   lab: { name: "Laboratory", category: "Health", keywords: ["lab", "laboratory", "diagnostic", "test"] },
   health: { name: "Health Service", category: "Health", keywords: ["health", "wellness", "therapy", "dental"] },
 

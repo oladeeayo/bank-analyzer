@@ -1,12 +1,13 @@
 import { db } from "@/lib/db";
 import { NormalizedTransaction } from "@/lib/normalizer";
 import { mapToDbCategory } from "@/lib/category-map";
+import { evaluateContextRules, UserIdentity, extractCounterparty } from "./nigerian-context";
 
 export interface ClassificationResult {
   merchantId: string | null;
   categoryId: string | null;
   confidence: number;
-  source: "override" | "rule" | "merchant" | "pattern" | "keyword" | "none";
+  source: "override" | "rule" | "context" | "merchant" | "pattern" | "keyword" | "none";
 }
 
 interface ClassificationCache {
@@ -338,14 +339,14 @@ async function findOrCreateMerchant(
 
 export async function classifyBatch(
   transactions: NormalizedTransaction[],
-  userId: string
+  userId: string,
+  user?: UserIdentity
 ): Promise<Map<string, ClassificationResult>> {
   const cache = await buildClassificationCache(userId);
   const results = new Map<string, ClassificationResult>();
 
   for (let idx = 0; idx < transactions.length; idx++) {
     const tx = transactions[idx];
-    // Use index to avoid key collisions for same-day same-amount transactions
     const key = `${idx}_${tx.date}_${tx.description}_${tx.amount}`;
 
     // 1. Check manual overrides (highest priority - learned from user edits)
@@ -356,21 +357,38 @@ export async function classifyBatch(
       result = matchRule(tx, cache);
     }
 
-    // 3. Check keyword patterns (auto-categorize by description)
+    // 3. Check Nigerian context rules (self-transfer, POS, statutory fees, family)
+    if (!result && user) {
+      const isCredit = tx.type === "credit";
+      const ctxMatch = evaluateContextRules(tx.description, tx.amount, isCredit, user);
+      if (ctxMatch) {
+        const dbCategoryName = ctxMatch.categoryName;
+        const categoryKey = `system_${dbCategoryName}`;
+        const categoryKeyLower = `system_${dbCategoryName.toLowerCase()}`;
+        const categoryId = cache.categoryMap.get(categoryKey) || cache.categoryMap.get(categoryKeyLower) || null;
+        result = {
+          merchantId: null,
+          categoryId,
+          confidence: ctxMatch.confidence,
+          source: "context",
+        };
+      }
+    }
+
+    // 4. Check keyword patterns (auto-categorize by description)
     if (!result) {
       result = matchKeywords(tx, cache);
     }
 
-    // 4. Check if merchant already exists in DB
+    // 5. Check if merchant already exists in DB
     if (!result) {
       result = matchMerchant(tx, cache);
     }
 
-    // 5. If merchant guess exists but not in DB, create it
+    // 6. If merchant guess exists but not in DB, create it
     if (!result && tx.merchantGuess) {
       const merchantId = await findOrCreateMerchant(tx.merchantGuess, cache);
       if (merchantId && tx.categoryGuess) {
-        // Map normalizer category to DB category
         const dbCategoryName = mapToDbCategory(tx.categoryGuess);
         const categoryKey = `system_${dbCategoryName}`;
         const categoryKeyLower = `system_${dbCategoryName.toLowerCase()}`;
@@ -392,12 +410,12 @@ export async function classifyBatch(
       }
     }
 
-    // 6. Try pattern-based category guess
+    // 7. Try pattern-based category guess
     if (!result) {
       result = matchCategory(tx, cache);
     }
 
-    // 7. Fallback to Others
+    // 8. Fallback to Others
     if (!result) {
       result = {
         merchantId: null,
