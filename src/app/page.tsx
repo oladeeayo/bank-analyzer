@@ -28,12 +28,75 @@ function Reveal({ children, delay = 0, className = "" }: { children: React.React
 }
 
 const banks = [
-  { name: "GTBank", color: "#d4541e", short: "GT" },
-  { name: "Access Bank", color: "#006e46", short: "AB" },
-  { name: "OPay", color: "#11418b", short: "OP" },
-  { name: "Kuda", color: "#8b1d8b", short: "KU" },
-  { name: "Moniepoint", color: "#0062a0", short: "MP" },
-  { name: "First Bank", color: "#003069", short: "FB" },
+  {
+    name: "GTBank",
+    logo: (
+      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0">
+        <rect width="28" height="28" rx="6" fill="#d4541e" />
+        <text x="14" y="19" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold" fontFamily="sans-serif">G</text>
+        <text x="14" y="19" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold" fontFamily="sans-serif" dx="7" dy="-2">T</text>
+      </svg>
+    ),
+  },
+  {
+    name: "Access Bank",
+    logo: (
+      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0">
+        <rect width="28" height="28" rx="6" fill="#006e46" />
+        <circle cx="14" cy="14" r="6" fill="none" stroke="white" strokeWidth="1.5" />
+        <path d="M14 8 L14 20 M8 14 L20 14" stroke="white" strokeWidth="1.5" />
+      </svg>
+    ),
+  },
+  {
+    name: "OPay",
+    logo: (
+      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0">
+        <rect width="28" height="28" rx="6" fill="#11418b" />
+        <circle cx="14" cy="14" r="7" fill="none" stroke="white" strokeWidth="1.5" />
+        <text x="14" y="18" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" fontFamily="sans-serif">O</text>
+      </svg>
+    ),
+  },
+  {
+    name: "Kuda",
+    logo: (
+      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0">
+        <rect width="28" height="28" rx="6" fill="#8b1d8b" />
+        <path d="M8 8 Q14 4 16 10 Q18 16 20 14" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="20" cy="14" r="1.5" fill="white" />
+      </svg>
+    ),
+  },
+  {
+    name: "Moniepoint",
+    logo: (
+      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0">
+        <rect width="28" height="28" rx="6" fill="#0062a0" />
+        <polygon points="10,20 14,8 18,20" fill="none" stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+        <line x1="10" y1="20" x2="18" y2="20" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    name: "First Bank",
+    logo: (
+      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0">
+        <rect width="28" height="28" rx="6" fill="#003069" />
+        <path d="M14 6 L6 14 L14 22 L22 14 Z" fill="none" stroke="white" strokeWidth="1.5" />
+        <text x="14" y="18" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="sans-serif">F</text>
+      </svg>
+    ),
+  },
+  {
+    name: "UBA",
+    logo: (
+      <svg viewBox="0 0 28 28" className="w-7 h-7 shrink-0">
+        <rect width="28" height="28" rx="6" fill="#c8102e" />
+        <text x="14" y="18" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold" fontFamily="sans-serif">U</text>
+      </svg>
+    ),
+  },
 ];
 
 export default function HomePage() {
@@ -70,8 +133,7 @@ export default function HomePage() {
           <span className="italic">for every naira</span>
         </h1>
         <p className="text-[17px] text-slate-gray max-w-xl mx-auto mb-8 leading-relaxed reveal delay-2">
-          Upload bank statements, track every transaction, and gain deep insights
-          into your spending habits across all your Nigerian bank accounts.
+          Upload statements from any Nigerian bank and see exactly where your money goes.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center reveal delay-3">
           <Link href="/register">
@@ -94,12 +156,7 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center justify-center gap-4">
             {banks.map((bank) => (
               <div key={bank.name} className="flex items-center gap-2.5 bg-mist-gray rounded-buttons px-4 py-2.5">
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                  style={{ backgroundColor: bank.color }}
-                >
-                  {bank.short}
-                </div>
+                {bank.logo}
                 <span className="text-sm text-ink-black font-medium">{bank.name}</span>
               </div>
             ))}
@@ -127,7 +184,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-base font-medium text-ink-black mb-2">Multi-Bank Support</h3>
                 <p className="text-sm text-slate-gray leading-relaxed">
-                  Add all your banks — GTBank, Access, OPay, Kuda, Moniepoint, First Bank, and more. See everything in one view.
+                  Add all your banks — GTBank, Access, OPay, Kuda, Moniepoint, First Bank, and more — and see everything in one place.
                 </p>
               </div>
             </Reveal>
@@ -138,7 +195,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-base font-medium text-ink-black mb-2">Smart Statement Parsing</h3>
                 <p className="text-sm text-slate-gray leading-relaxed">
-                  Upload CSV, Excel, or PDF statements. Automatic format detection, normalization, and self-transfer detection.
+                  Upload CSV, Excel, or PDF statements — we detect the format, normalize every transaction, and flag transfers between your own accounts.
                 </p>
               </div>
             </Reveal>
@@ -149,7 +206,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-base font-medium text-ink-black mb-2">Deep Analytics</h3>
                 <p className="text-sm text-slate-gray leading-relaxed">
-                  Category breakdown, merchant ranking, spending velocity, recurring transaction detection, and actionable insights.
+                  See category breakdowns, merchant rankings, and recurring charges. Actionable insights, not just numbers.
                 </p>
               </div>
             </Reveal>
@@ -169,8 +226,8 @@ export default function HomePage() {
                     <span className="italic">into clarity</span>
                   </h2>
                   <p className="text-[17px] leading-relaxed mb-6 opacity-80">
-                    Our intelligent parser normalizes transaction data from 18+ Nigerian banks,
-                    detects self-transfers, and auto-categorizes your spending.
+                    Upload statements from 18+ Nigerian banks. CONYEST normalizes the data,
+                    detects transfers between your accounts, and categorizes every transaction automatically.
                   </p>
                   <Link href="/register">
                     <Button variant="default" size="lg" className="gap-2">
@@ -182,7 +239,7 @@ export default function HomePage() {
                   <div className="bg-white/60 rounded-xl p-4 flex items-center gap-4">
                     <TrendingUp className="h-8 w-8 text-forest shrink-0" />
                     <div>
-                      <p className="font-semibold text-sm">Track Inflows & Outflows</p>
+                      <p className="font-semibold text-sm">Track Money In & Money Out</p>
                       <p className="text-xs opacity-70">See where every naira goes</p>
                     </div>
                   </div>
@@ -190,14 +247,14 @@ export default function HomePage() {
                     <span className="text-2xl shrink-0">🔄</span>
                     <div>
                       <p className="font-semibold text-sm">Self-Transfer Detection</p>
-                      <p className="text-xs opacity-70">Automatically identify internal moves</p>
+                      <p className="text-xs opacity-70">Automatically find transfers between your own accounts</p>
                     </div>
                   </div>
                   <div className="bg-white/60 rounded-xl p-4 flex items-center gap-4">
                     <span className="text-2xl shrink-0">📊</span>
                     <div>
                       <p className="font-semibold text-sm">Monthly Reports</p>
-                      <p className="text-xs opacity-70">Beautiful spending summaries</p>
+                      <p className="text-xs opacity-70">Clear summaries of what you earned and spent</p>
                     </div>
                   </div>
                 </div>
@@ -216,7 +273,7 @@ export default function HomePage() {
               <span className="italic">of your finances?</span>
             </h2>
             <p className="text-[17px] text-slate-gray max-w-lg mx-auto mb-8">
-              Join thousands of Nigerians who trust CONYEST to track, analyze, and optimize their financial life.
+              Join thousands of Nigerians who use CONYEST to understand and manage their finances.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/register">
