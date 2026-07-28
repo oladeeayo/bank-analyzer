@@ -275,15 +275,15 @@ export default function AnalyticsPage() {
               return (
                 <div>
                   <div className="relative h-72">
-                    {/* Zero line at exact center */}
+                    {/* Zero line at center */}
                     <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
-                    {/* Income bars: grow UP from center */}
+                    {/* Income bars */}
                     <div className="absolute top-0 left-0 right-0 h-1/2 flex items-end gap-2 px-2">
                       {monthlyChart.map((m, i) => {
                         const pct = maxVal > 0 ? (m.credits / maxVal) * 100 : 0;
                         const isSelected = selectedBar?.label === `${MONTH_NAMES[m.month - 1]} ${m.year}`;
                         return (
-                          <div key={i} className="flex-1 flex justify-center" style={{ height: `${pct}%` }}>
+                          <div key={i} className="flex-1 flex justify-center self-end" style={{ height: `${pct}%` }}>
                             <div
                               onClick={() => setSelectedBar(isSelected ? null : { label: `${MONTH_NAMES[m.month - 1]} ${m.year}`, income: m.credits, expense: m.debits, net: m.credits - m.debits })}
                               className={`w-full max-w-[52px] rounded-t-sm transition-all cursor-pointer ${isSelected ? "bg-[#003527] ring-2 ring-[#003527]/30 scale-105" : "bg-[#003527] hover:bg-[#003527]/80"}`}
@@ -292,13 +292,13 @@ export default function AnalyticsPage() {
                         );
                       })}
                     </div>
-                    {/* Expense bars: grow DOWN from center */}
-                    <div className="absolute top-1/2 left-0 right-0 h-1/2 flex items-start gap-2 px-2">
+                    {/* Expense bars */}
+                    <div className="absolute top-1/2 left-0 right-0 bottom-8 flex items-start gap-2 px-2">
                       {monthlyChart.map((m, i) => {
                         const pct = maxVal > 0 ? (m.debits / maxVal) * 100 : 0;
                         const isSelected = selectedBar?.label === `${MONTH_NAMES[m.month - 1]} ${m.year}`;
                         return (
-                          <div key={i} className="flex-1 flex justify-center" style={{ height: `${pct}%` }}>
+                          <div key={i} className="flex-1 flex justify-center self-start" style={{ height: `${pct}%` }}>
                             <div
                               onClick={() => setSelectedBar(isSelected ? null : { label: `${MONTH_NAMES[m.month - 1]} ${m.year}`, income: m.credits, expense: m.debits, net: m.credits - m.debits })}
                               className={`w-full max-w-[52px] rounded-b-sm transition-all cursor-pointer ${isSelected ? "bg-[#8BC34A] ring-2 ring-[#8BC34A]/30 scale-105" : "bg-[#8BC34A] hover:bg-[#8BC34A]/80"}`}
@@ -307,11 +307,11 @@ export default function AnalyticsPage() {
                         );
                       })}
                     </div>
-                    {/* Month labels below */}
+                    {/* Month labels */}
                     <div className="absolute bottom-0 left-0 right-0 flex gap-2 px-2">
                       {monthlyChart.map((m, i) => (
                         <div key={i} className="flex-1 text-center">
-                          <span className="text-[10px] text-ash-gray font-medium">{MONTH_NAMES[m.month - 1]}</span>
+                          <span className="text-[11px] text-ink-black font-medium">{MONTH_NAMES[m.month - 1]}</span>
                         </div>
                       ))}
                     </div>
