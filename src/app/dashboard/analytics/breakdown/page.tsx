@@ -27,6 +27,12 @@ interface GroupEntry {
   months: MonthData[];
 }
 
+interface Bank {
+  id: string;
+  bankName: string;
+  nickname: string | null;
+}
+
 type GroupBy = "merchant" | "category" | "subcategory";
 
 const MONTH_NAMES = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -36,17 +42,29 @@ export default function BreakdownPage() {
   const [data, setData] = useState<{ groupBy: GroupBy; groups: GroupEntry[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [groupBy, setGroupBy] = useState<GroupBy>("merchant");
+  const [filterBank, setFilterBank] = useState("");
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    fetch(`/api/analytics/breakdown?userId=${user.id}&groupBy=${groupBy}`)
+    let url = `/api/analytics/breakdown?userId=${user.id}&groupBy=${groupBy}`;
+    if (filterBank) url += `&bankId=${filterBank}`;
+    fetch(url)
       .then(r => r.json())
       .then(d => setData(d))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [user, groupBy]);
+  }, [user, groupBy, filterBank]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch(`/api/banks?userId=${user.id}`)
+      .then(r => r.json())
+      .then(d => setBanks(d))
+      .catch(console.error);
+  }, [user]);
 
   if (userLoading || !user) {
     return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
@@ -82,6 +100,15 @@ export default function BreakdownPage() {
               {g === "merchant" ? "By Merchant" : g === "category" ? "By Category" : "By Subcategory"}
             </button>
           ))}
+          <div className="w-px h-6 bg-[#ececec]" />
+          <select value={filterBank} onChange={(e) => setFilterBank(e.target.value)}
+            className="bg-paper-white border border-[#ececec] text-ink-black rounded-lg px-3 py-1.5 text-sm max-w-[200px]"
+          >
+            <option value="">All Banks</option>
+            {banks.map(bank => (
+              <option key={bank.id} value={bank.id}>{bank.nickname || bank.bankName}</option>
+            ))}
+          </select>
         </div>
       </div>
 

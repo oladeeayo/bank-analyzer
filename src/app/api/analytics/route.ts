@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
+    const bankId = searchParams.get("bankId");
     const period = searchParams.get("period") || "monthly";
     const year = searchParams.get("year") ? parseInt(searchParams.get("year")!) : new Date().getFullYear();
     const month = searchParams.get("month") ? parseInt(searchParams.get("month")!) : new Date().getMonth() + 1;
@@ -14,7 +15,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
-    const banks = await db.bank.findMany({ where: { userId } });
+    const banks = bankId
+      ? [await db.bank.findFirstOrThrow({ where: { id: bankId, userId } })]
+      : await db.bank.findMany({ where: { userId } });
     const bankIds = banks.map(b => b.id);
 
     let dateFilter: { gte: Date; lte: Date } | null = null;

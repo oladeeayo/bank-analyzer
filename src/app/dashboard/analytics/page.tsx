@@ -35,6 +35,12 @@ const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 
 const availableYears = [2023, 2024, 2025, 2026, 2027];
 
+interface Bank {
+  id: string;
+  bankName: string;
+  nickname: string | null;
+}
+
 export default function AnalyticsPage() {
   const { user, loading: userLoading } = useUser();
   const [data, setData] = useState<AnalyticsData | null>(null);
@@ -43,21 +49,36 @@ export default function AnalyticsPage() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [quarter, setQuarter] = useState(Math.ceil((new Date().getMonth() + 1) / 3));
+  const [filterBank, setFilterBank] = useState("");
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [selectedBar, setSelectedBar] = useState<{ label: string; income: number; expense: number; net: number } | null>(null);
   const [drilldown, setDrilldown] = useState<{ type: "category" | "merchant"; name: string; icon: string } | null>(null);
   const [drilldownData, setDrilldownData] = useState<{ totalCredits: number; totalDebits: number; transactions: any[] } | null>(null);
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (user) fetchAnalytics();
-  }, [period, month, year, quarter, user]);
+    if (user) {
+      fetchBanks();
+      fetchAnalytics();
+    }
+  }, [period, month, year, quarter, filterBank, user]);
 
   if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
+
+  const fetchBanks = async () => {
+    try {
+      const res = await fetch(`/api/banks?userId=${user.id}`);
+      if (res.ok) setBanks(await res.json());
+    } catch (err) {
+      console.error("Failed to fetch banks:", err);
+    }
+  };
 
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
       let url = `/api/analytics?userId=${user.id}&period=${period}`;
+      if (filterBank) url += `&bankId=${filterBank}`;
       if (period === "monthly") url += `&month=${month}&year=${year}`;
       else if (period === "quarterly") url += `&quarter=${quarter}&year=${year}`;
       else if (period === "yearly") url += `&year=${year}`;
@@ -80,6 +101,7 @@ export default function AnalyticsPage() {
     setDrilldownData(null);
     try {
       let url = `/api/analytics/drilldown?userId=${user.id}&type=${type}&name=${encodeURIComponent(name)}&period=${period}`;
+      if (filterBank) url += `&bankId=${filterBank}`;
       if (period === "monthly") url += `&month=${month}&year=${year}`;
       else if (period === "quarterly") url += `&quarter=${quarter}&year=${year}`;
       else if (period === "yearly") url += `&year=${year}`;
@@ -163,6 +185,15 @@ export default function AnalyticsPage() {
               {p.label}
             </button>
           ))}
+          <div className="w-px h-6 bg-[#ececec]" />
+          <select value={filterBank} onChange={(e) => setFilterBank(e.target.value)}
+            className="bg-paper-white border border-[#ececec] text-ink-black rounded-lg px-3 py-1.5 text-sm max-w-[200px]"
+          >
+            <option value="">All Banks</option>
+            {banks.map(bank => (
+              <option key={bank.id} value={bank.id}>{bank.nickname || bank.bankName}</option>
+            ))}
+          </select>
         </div>
       </div>
 

@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
+    const bankId = searchParams.get("bankId");
     const groupBy = searchParams.get("groupBy") || "merchant";
     const period = searchParams.get("period") || "all";
     const year = searchParams.get("year") ? parseInt(searchParams.get("year")!) : new Date().getFullYear();
@@ -39,10 +40,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "groupBy must be merchant, category, or subcategory" }, { status: 400 });
     }
 
-    const banks = await db.bank.findMany({
-      where: { userId },
-      select: { id: true },
-    });
+    const banks = bankId
+      ? [{ id: (await db.bank.findFirstOrThrow({ where: { id: bankId, userId }, select: { id: true } })).id }]
+      : await db.bank.findMany({ where: { userId }, select: { id: true } });
     const bankIds = banks.map(b => b.id);
 
     let dateFilter: { gte: Date; lte: Date } | undefined = undefined;
