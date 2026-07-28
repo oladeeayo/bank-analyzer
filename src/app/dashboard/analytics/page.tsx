@@ -341,17 +341,17 @@ export default function AnalyticsPage() {
               const showEveryN = displayDays.length > 15 ? Math.ceil(displayDays.length / 15) : 1;
               return (
                 <div>
-                  <div className="relative h-72 pb-8">
-                    {/* Zero line at exact center */}
-                    <div className="absolute top-[36px] left-0 right-0 h-px bg-ink-black/20 z-10" />
-                    {/* Income bars: grow UP from zero line */}
-                    <div className="absolute top-[36px] left-0 right-0 h-[calc(50%-18px)] flex items-end gap-px px-1">
+                  <div className="relative h-72">
+                    {/* Zero line at center */}
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
+                    {/* Income bars: container fills top half, bars align to bottom (zero line) */}
+                    <div className="absolute top-0 left-0 right-0 h-1/2 flex items-end gap-px px-1">
                       {displayDays.map(dateStr => {
                         const income = dailyCredits[dateStr] || 0;
                         const pct = maxVal > 0 ? (income / maxVal) * 100 : 0;
                         const isSelected = selectedBar?.label === dateStr;
                         return (
-                          <div key={dateStr} className="flex-1 flex justify-center" style={{ height: `${pct}%` }}>
+                          <div key={dateStr} className="flex-1 flex justify-center self-end" style={{ height: `${pct}%` }}>
                             <div
                               onClick={() => {
                                 const expense = dailySpending[dateStr] || 0;
@@ -363,14 +363,14 @@ export default function AnalyticsPage() {
                         );
                       })}
                     </div>
-                    {/* Expense bars: grow DOWN from zero line */}
-                    <div className="absolute top-[36px] left-0 right-0 h-[calc(50%-18px)] flex items-start gap-px px-1">
+                    {/* Expense bars: container fills bottom half minus labels, bars align to top (zero line) */}
+                    <div className="absolute top-1/2 left-0 right-0 bottom-8 flex items-start gap-px px-1">
                       {displayDays.map(dateStr => {
                         const expense = dailySpending[dateStr] || 0;
                         const pct = maxVal > 0 ? (expense / maxVal) * 100 : 0;
                         const isSelected = selectedBar?.label === dateStr;
                         return (
-                          <div key={dateStr} className="flex-1 flex justify-center" style={{ height: `${pct}%` }}>
+                          <div key={dateStr} className="flex-1 flex justify-center self-start" style={{ height: `${pct}%` }}>
                             <div
                               onClick={() => {
                                 const income = dailyCredits[dateStr] || 0;
