@@ -93,6 +93,15 @@ export default function SpendingRhythm() {
 
   const activeDays = cells.filter((c) => c.amount > 0).length;
   const totalSpent = cells.reduce((s, c) => s + c.amount, 0);
+  const numWeeks = weeks.length;
+
+  // Flatten grid: 7 rows × numWeeks columns
+  const gridCells: (CellData | null)[] = [];
+  for (let row = 0; row < 7; row++) {
+    for (let col = 0; col < numWeeks; col++) {
+      gridCells.push(weeks[col]?.[row] ?? null);
+    }
+  }
 
   return (
     <div className="bg-paper-white border border-[#ececec] p-4 sm:p-5 rounded-cards shadow-subtle flex flex-col h-full">
@@ -108,48 +117,54 @@ export default function SpendingRhythm() {
           <div className="w-4 h-4 border-2 border-forest border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Month labels */}
-          <div className="flex mb-1 overflow-hidden">
+          <div className="relative h-3 mb-1 overflow-hidden" style={{ width: `${numWeeks * 12}px`, maxWidth: "100%" }}>
             {monthPositions.map((m, i) => {
-              const nextWeekIdx = i < monthPositions.length - 1 ? monthPositions[i + 1].weekIdx : weeks.length;
-              const span = nextWeekIdx - m.weekIdx;
+              const nextWeekIdx = i < monthPositions.length - 1 ? monthPositions[i + 1].weekIdx : numWeeks;
               return (
-                <div key={i} className="text-[9px] text-ash-gray leading-none shrink-0" style={{ width: `${span * 14}px` }}>
+                <div
+                  key={i}
+                  className="absolute top-0 text-[9px] text-ash-gray leading-none whitespace-nowrap"
+                  style={{ left: `${m.weekIdx * 12}px` }}
+                >
                   {m.label}
                 </div>
               );
             })}
           </div>
 
-          {/* Heatmap grid: rows=days (7), cols=weeks */}
-          <div className="flex-1 flex items-start">
-            <div className="w-full">
-              {/* Day labels */}
-              <div className="flex gap-[3px] mb-[3px]">
-                {["", "M", "", "W", "", "F", ""].map((d, i) => (
-                  <div key={i} className="w-[10px] h-[10px] text-[8px] text-ash-gray leading-[10px] text-center">{d}</div>
-                ))}
-              </div>
+          {/* Day labels + Grid */}
+          <div className="flex gap-[3px] min-w-0">
+            {/* Day-of-week labels */}
+            <div className="flex flex-col gap-[3px] shrink-0">
+              {["", "M", "", "W", "", "F", ""].map((d, i) => (
+                <div key={i} className="w-[14px] h-[10px] text-[8px] text-ash-gray leading-[10px] text-center">{d}</div>
+              ))}
+            </div>
 
-              {/* Weeks grid */}
-              <div className="flex gap-[3px]">
-                {weeks.map((week, weekIdx) => (
-                  <div key={weekIdx} className="flex flex-col gap-[3px]">
-                    {week.map((cell, dayIdx) =>
-                      cell ? (
-                        <div
-                          key={dayIdx}
-                          className={`w-[10px] h-[10px] rounded-[2px] cursor-pointer transition-all hover:ring-2 hover:ring-forest/40 hover:scale-150 ${CELL_COLORS[cell.intensity]}`}
-                          title={`${cell.date.toLocaleDateString("en-NG", { month: "short", day: "numeric" })}: ${cell.amount > 0 ? "₦" + cell.amount.toLocaleString() : "No spending"}`}
-                        />
-                      ) : (
-                        <div key={dayIdx} className="w-[10px] h-[10px]" />
-                      )
-                    )}
-                  </div>
-                ))}
-              </div>
+            {/* CSS Grid heatmap */}
+            <div
+              className="min-w-0 flex-1 overflow-hidden"
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${numWeeks}, 1fr)`,
+                gridTemplateRows: "repeat(7, 1fr)",
+                gap: "3px",
+              }}
+            >
+              {gridCells.map((cell, i) =>
+                cell ? (
+                  <div
+                    key={i}
+                    className={`rounded-[2px] cursor-pointer transition-all hover:ring-2 hover:ring-forest/40 hover:scale-150 ${CELL_COLORS[cell.intensity]}`}
+                    style={{ minWidth: 0, minHeight: 0, aspectRatio: "1" }}
+                    title={`${cell.date.toLocaleDateString("en-NG", { month: "short", day: "numeric" })}: ${cell.amount > 0 ? "₦" + cell.amount.toLocaleString() : "No spending"}`}
+                  />
+                ) : (
+                  <div key={i} style={{ minWidth: 0, minHeight: 0, aspectRatio: "1" }} />
+                )
+              )}
             </div>
           </div>
 
