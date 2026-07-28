@@ -216,7 +216,7 @@ export default function DashboardPage() {
             <button
               key={p.value}
               onClick={() => setPeriod(p.value)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all active:scale-[0.96] ${
                 period === p.value
                   ? "bg-forest text-lime-vibrant"
                   : "bg-paper-white border border-[#ececec] text-ink-black hover:bg-mist-gray"

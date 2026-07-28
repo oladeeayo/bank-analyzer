@@ -421,7 +421,7 @@ export default function TransactionsPage() {
       <div className="bg-paper-white border border-[#ececec] rounded-cards p-4 space-y-3">
         {/* Row 1: Search + Type */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <div className="relative flex-1 min-w-[160px] sm:min-w-[200px] max-w-xs">
             <Input
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -510,21 +510,21 @@ export default function TransactionsPage() {
         </div>
         {/* Row 2: Date Range + Amount Range */}
         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[#ececec]">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-slate-gray" />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <Calendar className="h-4 w-4 text-slate-gray shrink-0" />
             <span className="text-xs text-ash-gray">Date:</span>
             <Input
               type="date"
               value={startDate}
               onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-              className="bg-paper-white border-[#ececec] rounded-lg px-2 py-1 text-xs w-[140px]"
+              className="bg-paper-white border-[#ececec] rounded-lg px-2 py-1 text-xs w-[120px] sm:w-[140px]"
             />
             <span className="text-xs text-ash-gray">to</span>
             <Input
               type="date"
               value={endDate}
               onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-              className="bg-paper-white border-[#ececec] rounded-lg px-2 py-1 text-xs w-[140px]"
+              className="bg-paper-white border-[#ececec] rounded-lg px-2 py-1 text-xs w-[120px] sm:w-[140px]"
             />
           </div>
           <div className="flex items-center gap-2">

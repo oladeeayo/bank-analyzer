@@ -78,7 +78,7 @@ export default function BudgetsPage() {
       {showForm && (
         <Card className="bg-white border-gray-100">
           <CardContent className="p-4">
-            <div className="flex gap-4 items-end">
+            <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end">
               <div className="flex-1">
                 <Label className="text-gray-700">Category ID</Label>
                 <Input

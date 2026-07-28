@@ -61,7 +61,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               href={item.href}
               onClick={onClose}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-buttons text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 px-4 py-3 rounded-buttons text-sm font-medium transition-all duration-200 active:scale-[0.97]",
                 isActive
                   ? "bg-lime-vibrant text-forest font-semibold"
                   : "text-slate-gray hover:text-forest hover:bg-mist-gray"
@@ -80,7 +80,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           href="/dashboard/settings"
           onClick={onClose}
           className={cn(
-            "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-[0.97]",
             pathname === "/dashboard/settings"
               ? "text-forest bg-mist-gray"
               : "text-slate-gray hover:text-forest hover:bg-mist-gray"
@@ -89,7 +89,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           <Settings className="h-5 w-5 shrink-0" />
           Settings
         </Link>
-        <button className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest hover:bg-mist-gray transition-colors">
+        <button className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest hover:bg-mist-gray transition-all active:scale-[0.97]">
           <LogOut className="h-5 w-5 shrink-0" />
           Logout
         </button>

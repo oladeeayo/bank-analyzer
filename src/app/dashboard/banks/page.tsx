@@ -242,7 +242,7 @@ export default function BanksPage() {
                 </div>
 
                 {/* Bank Grid */}
-                <div className="p-6 grid grid-cols-4 gap-4 max-h-[300px] overflow-y-auto">
+                <div className="p-6 grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4 max-h-[300px] overflow-y-auto">
                   {filteredBanks.map((bank) => (
                     <button
                       key={bank}

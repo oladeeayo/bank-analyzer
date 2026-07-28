@@ -171,12 +171,12 @@ export default function AnalyticsPage() {
           <h1 className="font-signifier text-[28px] text-ink-black">Spending Analytics</h1>
           <p className="text-sm text-ash-gray">{data.periodLabel}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {periodOptions.map(p => (
             <button
               key={p.value}
               onClick={() => setPeriod(p.value)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all active:scale-[0.96] ${
                 period === p.value
                   ? "bg-forest text-lime-vibrant"
                   : "bg-paper-white border border-[#ececec] text-ink-black hover:bg-mist-gray"
@@ -187,7 +187,7 @@ export default function AnalyticsPage() {
           ))}
           <div className="w-px h-6 bg-[#ececec]" />
           <select value={filterBank} onChange={(e) => setFilterBank(e.target.value)}
-            className="bg-paper-white border border-[#ececec] text-ink-black rounded-lg px-3 py-1.5 text-sm max-w-[200px]"
+            className="bg-paper-white border border-[#ececec] text-ink-black rounded-lg px-3 py-1.5 text-sm max-w-[180px] sm:max-w-[200px]"
           >
             <option value="">All Banks</option>
             {banks.map(bank => (
@@ -476,7 +476,7 @@ export default function AnalyticsPage() {
       {drilldown && (
         <div className="bg-paper-white border border-[#ececec] rounded-cards p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
+<div className="flex flex-wrap items-center gap-3">
               <span className="text-2xl">{drilldown.icon}</span>
               <div>
                 <h3 className="font-semibold text-ink-black">{drilldown.name}</h3>
