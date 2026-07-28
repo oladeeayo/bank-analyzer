@@ -3,11 +3,7 @@
 import { useEffect, useState } from "react";
 import { useUser } from "@/lib/hooks";
 
-const MONTH_ABBRS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-function getDaysInYear(year: number): number {
-  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 366 : 365;
-}
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function dateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -39,30 +35,33 @@ interface CellData {
 
 export default function SpendingRhythm() {
   const { user } = useUser();
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
   const [spending, setSpending] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    fetch(`/api/analytics?userId=${user.id}&period=yearly&year=${currentYear}`)
+    fetch(`/api/analytics?userId=${user.id}&period=monthly&year=${year}&month=${month}`)
       .then((res) => res.json())
       .then((data) => {
         setSpending(data.dailySpending || {});
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [currentYear, user]);
+  }, [year, month, user]);
 
-  const daysInYear = getDaysInYear(currentYear);
-  const jan1 = new Date(currentYear, 0, 1);
-  const firstDayOffset = jan1.getDay();
+  const firstDay = new Date(year, month - 1, 1);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstDayOffset = firstDay.getDay();
+
   const maxSpending = Math.max(...Object.values(spending), 1);
 
   const cells: CellData[] = [];
-  for (let i = 0; i < daysInYear; i++) {
-    const d = new Date(currentYear, 0, 1 + i);
+  for (let i = 0; i < daysInMonth; i++) {
+    const d = new Date(year, month - 1, 1 + i);
     const key = dateKey(d);
     const amount = spending[key] || 0;
     cells.push({ date: d, key, amount, intensity: getIntensity(amount, maxSpending) });
@@ -82,80 +81,82 @@ export default function SpendingRhythm() {
     weeks.push(currentWeek);
   }
 
-  const monthPositions: { label: string; weekIdx: number }[] = [];
-  let lastMonth = -1;
-  weeks.forEach((week, weekIdx) => {
-    for (const cell of week) {
-      if (cell && cell.date.getMonth() !== lastMonth) {
-        lastMonth = cell.date.getMonth();
-        monthPositions.push({ label: MONTH_ABBRS[lastMonth], weekIdx });
-      }
-    }
-  });
-
-  const activeDays = Object.keys(spending).filter((k) => spending[k] > 0).length;
+  const activeDays = cells.filter((c) => c.amount > 0).length;
+  const totalSpent = cells.reduce((s, c) => s + c.amount, 0);
 
   return (
     <div className="bg-paper-white border border-[#ececec] p-4 sm:p-5 rounded-cards shadow-subtle flex flex-col h-full">
-      <div className="mb-4">
-        <h2 className="font-signifier text-lg text-ink-black">Spending Intensity</h2>
-        <p className="text-[11px] text-ash-gray mt-0.5">
-          {activeDays} active {activeDays === 1 ? "day" : "days"} in {currentYear}
-        </p>
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h2 className="font-signifier text-lg text-ink-black">Spending Intensity</h2>
+          <p className="text-[11px] text-ash-gray mt-0.5">
+            {activeDays} active {activeDays === 1 ? "day" : "days"} &middot; {MONTH_NAMES[month - 1]} {year}
+          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => month === 1 ? (setMonth(12), setYear(year - 1)) : setMonth(month - 1)}
+            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-mist-gray text-ash-gray hover:text-ink-black transition-colors text-xs"
+          >
+            ‹
+          </button>
+          <button
+            onClick={() => month === 12 ? (setMonth(1), setYear(year + 1)) : setMonth(month + 1)}
+            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-mist-gray text-ash-gray hover:text-ink-black transition-colors text-xs"
+          >
+            ›
+          </button>
+        </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center flex-1 min-h-[120px]">
+        <div className="flex items-center justify-center flex-1 min-h-[80px]">
           <div className="w-4 h-4 border-2 border-forest border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <div className="flex-1 flex flex-col justify-between">
-          {/* Month labels */}
-          <div className="flex mb-2 overflow-hidden">
-            {monthPositions.map((m, i) => {
-              const nextWeekIdx = i < monthPositions.length - 1 ? monthPositions[i + 1].weekIdx : weeks.length;
-              const span = nextWeekIdx - m.weekIdx;
-              return (
-                <div
-                  key={i}
-                  className="text-[9px] text-ash-gray leading-none shrink-0"
-                  style={{ width: `${span * 16}px` }}
-                >
-                  {m.label}
-                </div>
-              );
-            })}
+          {/* Day-of-week headers */}
+          <div className="flex gap-[5px] mb-1.5 pl-0">
+            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+              <div key={i} className="w-[14px] text-center text-[9px] text-ash-gray font-medium leading-none">
+                {d}
+              </div>
+            ))}
           </div>
 
           {/* Grid */}
-          <div className="overflow-x-auto">
-            <div className="flex gap-[4px] min-w-fit">
-              {weeks.map((week, weekIdx) => (
-                <div key={weekIdx} className="flex flex-col gap-[4px]">
-                  {week.map((cell, dayIdx) =>
-                    cell ? (
-                      <div
-                        key={dayIdx}
-                        className={`w-[12px] h-[12px] rounded-[2px] cursor-pointer transition-all hover:ring-2 hover:ring-forest/40 hover:scale-110 ${CELL_COLORS[cell.intensity]}`}
-                        title={`${cell.date.toLocaleDateString("en-NG", { month: "short", day: "numeric" })}: ${cell.amount > 0 ? "₦" + cell.amount.toLocaleString() : "No spending"}`}
-                      />
-                    ) : (
-                      <div key={dayIdx} className="w-[12px] h-[12px]" />
-                    )
-                  )}
-                </div>
-              ))}
-            </div>
+          <div className="flex gap-[5px]">
+            {weeks.map((week, weekIdx) => (
+              <div key={weekIdx} className="flex flex-col gap-[5px]">
+                {week.map((cell, dayIdx) =>
+                  cell ? (
+                    <div
+                      key={dayIdx}
+                      className={`w-[14px] h-[14px] rounded-[3px] cursor-pointer transition-all hover:ring-2 hover:ring-forest/40 hover:scale-110 ${CELL_COLORS[cell.intensity]}`}
+                      title={`${cell.date.toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" })}: ${cell.amount > 0 ? "₦" + cell.amount.toLocaleString() : "No spending"}`}
+                    />
+                  ) : (
+                    <div key={dayIdx} className="w-[14px] h-[14px]" />
+                  )
+                )}
+              </div>
+            ))}
           </div>
 
-          {/* Legend */}
-          <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#ececec]">
-            <div className="flex items-center gap-1.5 text-[10px] text-ash-gray">
-              <span>Less</span>
-              {CELL_COLORS.map((color, i) => (
-                <div key={i} className={`w-[12px] h-[12px] rounded-[2px] ${color}`} />
-              ))}
-              <span>More</span>
+          {/* Summary + Legend */}
+          <div className="mt-4 pt-3 border-t border-[#ececec] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-ash-gray">Total spent</span>
+              <span className="text-[12px] font-mono font-medium text-ink-black">₦{totalSpent.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[10px] text-ash-gray">
+                <span>Less</span>
+                {CELL_COLORS.map((color, i) => (
+                  <div key={i} className={`w-[12px] h-[12px] rounded-[2px] ${color}`} />
+                ))}
+                <span>More</span>
+              </div>
             </div>
           </div>
         </div>
