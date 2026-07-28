@@ -15,11 +15,13 @@ import {
   LogOut,
   FolderTree,
   X,
+  FileText,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
+  { name: "Report", href: "/dashboard/report", icon: FileText },
   { name: "Upload", href: "/dashboard/upload", icon: FileSpreadsheet },
   { name: "Banks", href: "/dashboard/banks", icon: Building2 },
   { name: "Budgets", href: "/dashboard/budgets", icon: Wallet },
