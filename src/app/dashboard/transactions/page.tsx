@@ -132,7 +132,7 @@ export default function TransactionsPage() {
         const params = new URLSearchParams({
           userId: user.id,
           page: String(page),
-          limit: "50",
+          limit: "100",
         });
         if (search) params.set("search", search);
         if (filterType) params.set("type", filterType);
