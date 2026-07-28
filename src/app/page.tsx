@@ -36,6 +36,10 @@ const banks = [
   { name: "FCMB", file: "fcmb.svg" },
   { name: "Stanbic IBTC", file: "stanbic.svg" },
   { name: "Fidelity Bank", file: "fidelity.svg" },
+  { name: "OPay", file: "opay.svg" },
+  { name: "Moniepoint", file: "moniepoint.svg" },
+  { name: "Kuda", file: "kuda.svg" },
+  { name: "PalmPay", file: "palmpay.svg" },
 ];
 
 function FeatureCard({ icon: Icon, title, description }: { icon: any; title: string; description: string }) {
@@ -72,7 +76,7 @@ export default function HomePage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative max-w-[1200px] mx-auto px-4 sm:px-8 pt-24 sm:pt-32 pb-28 sm:pb-36 text-center">
+      <section className="relative max-w-[1200px] mx-auto px-4 sm:px-8 pt-24 sm:pt-32 pb-16 sm:pb-20 text-center">
         <div className="absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full bg-lime-vibrant/3 blur-3xl" />
           <div className="absolute top-20 right-1/4 w-[400px] h-[400px] rounded-full bg-forest/3 blur-3xl" />
