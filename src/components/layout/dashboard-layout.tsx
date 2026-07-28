@@ -23,7 +23,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h2 className="font-signifier text-[22px] sm:text-[28px] text-ink-black">Dashboard</h2>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-6">

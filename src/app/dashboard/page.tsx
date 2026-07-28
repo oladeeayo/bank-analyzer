@@ -207,10 +207,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Period Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-signifier text-[24px] sm:text-[28px] text-ink-black">Dashboard</h1>
-          <p className="text-sm text-ash-gray">{data.periodLabel}</p>
-        </div>
+        <p className="text-sm text-ash-gray">{data.periodLabel}</p>
         <div className="flex items-center gap-2 flex-wrap">
           {periodOptions.map(p => (
             <button
