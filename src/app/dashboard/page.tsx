@@ -203,12 +203,12 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Period Filter */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-signifier text-[28px] text-ink-black">Dashboard</h1>
+          <h1 className="font-signifier text-[24px] sm:text-[28px] text-ink-black">Dashboard</h1>
           <p className="text-sm text-ash-gray">{data.periodLabel}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {periodOptions.map(p => (
             <button
               key={p.value}
@@ -226,9 +226,9 @@ export default function DashboardPage() {
       </div>
 
       {period !== "all" && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <select value={year} onChange={(e) => setYear(parseInt(e.target.value))}
-            className="bg-mist-gray border border-[#ececec] text-ink-black rounded-inputs px-4 py-2 text-sm">
+            className="bg-mist-gray border border-[#ececec] text-ink-black rounded-inputs px-3 sm:px-4 py-2 text-sm">
             {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
           {period === "monthly" && (
@@ -253,9 +253,9 @@ export default function DashboardPage() {
       )}
 
       {/* Hero Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Total Balance */}
-        <div className="bg-forest p-6 rounded-cards text-white relative overflow-hidden flex flex-col justify-between h-44 shadow-elevated">
+        <div className="bg-forest p-5 sm:p-6 rounded-cards text-white relative overflow-hidden flex flex-col justify-between h-40 sm:h-44 shadow-elevated">
           <div className="relative z-10 flex justify-between items-start">
             <div>
               <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Current Balance</p>
@@ -277,7 +277,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Money In */}
-        <div className="bg-paper-white border border-[#ececec] p-6 rounded-cards flex flex-col justify-between h-44 shadow-subtle">
+        <div className="bg-paper-white border border-[#ececec] p-5 sm:p-6 rounded-cards flex flex-col justify-between h-40 sm:h-44 shadow-subtle">
           <div>
             <p className="text-ash-gray text-xs mb-1">Total Income</p>
             <h3 className="font-mono text-[28px] font-medium text-forest">{formatCurrency(summary.totalIncome)}</h3>
@@ -289,7 +289,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Money Out */}
-        <div className="bg-paper-white border border-[#ececec] p-6 rounded-cards flex flex-col justify-between h-44 shadow-subtle">
+        <div className="bg-paper-white border border-[#ececec] p-5 sm:p-6 rounded-cards flex flex-col justify-between h-40 sm:h-44 shadow-subtle">
           <div>
             <p className="text-ash-gray text-xs mb-1">Total Expenses</p>
             <h3 className="font-mono text-[28px] font-medium text-error">{formatCurrency(summary.totalExpenses)}</h3>
@@ -301,7 +301,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Savings Rate */}
-        <div className="bg-paper-white border border-[#ececec] p-6 rounded-cards flex flex-col justify-between h-44 shadow-subtle">
+        <div className="bg-paper-white border border-[#ececec] p-5 sm:p-6 rounded-cards flex flex-col justify-between h-40 sm:h-44 shadow-subtle">
           <div>
             <p className="text-ash-gray text-xs mb-1">Savings</p>
             <h3 className="font-mono text-[28px] font-medium text-forest">{formatCurrency(summary.totalIncome - summary.totalExpenses)}</h3>
@@ -319,9 +319,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Middle Section: Cashflow Chart + Category Donut */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Cashflow Chart */}
-        <div className="lg:col-span-2 bg-paper-white border border-[#ececec] p-6 rounded-cards shadow-subtle">
+        <div className="lg:col-span-2 bg-paper-white border border-[#ececec] p-4 sm:p-6 rounded-cards shadow-subtle">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="font-signifier text-xl text-ink-black">Cash Flow</h2>
@@ -362,7 +362,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Category Donut */}
-        <div className="bg-paper-white border border-[#ececec] p-6 rounded-cards shadow-subtle">
+        <div className="bg-paper-white border border-[#ececec] p-4 sm:p-6 rounded-cards shadow-subtle">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-signifier text-xl text-ink-black">Category Split</h2>
@@ -424,7 +424,7 @@ export default function DashboardPage() {
 
       {/* Recurring Transactions */}
       {recurring.length > 0 && (
-        <div className="bg-paper-white border border-[#ececec] p-6 rounded-cards shadow-subtle">
+        <div className="bg-paper-white border border-[#ececec] p-4 sm:p-6 rounded-cards shadow-subtle">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-signifier text-xl text-ink-black">Recurring Transactions</h2>
@@ -457,7 +457,7 @@ export default function DashboardPage() {
 
       {/* Recent Transactions */}
       <div className="bg-paper-white border border-[#ececec] rounded-cards shadow-subtle overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#ececec] flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 border-b border-[#ececec] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="font-signifier text-xl text-ink-black">Recent Activity</h2>
             <p className="text-xs text-ash-gray mt-1">Latest transactions</p>
@@ -467,8 +467,8 @@ export default function DashboardPage() {
           </a>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className="overflow-x-auto hide-scrollbar">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="bg-mist-gray">
                 <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-6 py-3">Merchant</th>

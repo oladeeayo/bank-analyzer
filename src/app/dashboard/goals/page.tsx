@@ -79,7 +79,7 @@ export default function GoalsPage() {
       {showForm && (
         <Card className="bg-white border-gray-100">
           <CardContent className="p-6">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label className="text-gray-700">Goal Name</Label>
                 <Input

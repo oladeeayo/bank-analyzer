@@ -566,11 +566,11 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Transaction Table */}
-        <div className="col-span-12 lg:col-span-8 bg-paper-white border border-[#ececec] rounded-cards overflow-hidden">
+        <div className="lg:col-span-8 bg-paper-white border border-[#ececec] rounded-cards overflow-hidden">
           <div className="overflow-x-auto max-h-[calc(100vh-380px)]">
-            <table className="w-full">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="bg-mist-gray border-b border-[#ececec]">
                   <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-3">
@@ -710,7 +710,7 @@ export default function TransactionsPage() {
         </div>
 
         {/* Edit Sidebar */}
-        <div className="col-span-12 lg:col-span-4 bg-paper-white border border-[#ececec] rounded-cards p-6 flex flex-col gap-4 overflow-y-auto max-h-[calc(100vh-280px)]">
+        <div className="lg:col-span-4 bg-paper-white border border-[#ececec] rounded-cards p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto max-h-[calc(100vh-280px)]">
           <div className="flex items-center justify-between">
             <h3 className="font-signifier text-lg text-ink-black">Edit Transaction</h3>
             <div className="bg-forest p-1 rounded-lg">

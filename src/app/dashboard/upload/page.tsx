@@ -156,7 +156,7 @@ export default function UploadPage() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-paper-white border border-[#ececec] rounded-cards p-6">
             <div className="flex items-center gap-2 mb-4">
@@ -231,8 +231,8 @@ export default function UploadPage() {
             {statements.length === 0 ? (
               <div className="text-center py-8 text-ash-gray text-sm">No uploads yet</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto hide-scrollbar">
+                <table className="w-full text-sm min-w-[500px]">
                   <thead>
                     <tr className="border-b border-[#ececec]">
                       <th className="text-left font-medium text-ash-gray py-3 pr-4">Account</th>

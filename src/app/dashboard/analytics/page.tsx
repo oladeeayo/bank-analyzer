@@ -255,7 +255,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Cashflow Dual-Direction Chart */}
         <div className="lg:col-span-2 bg-paper-white border border-[#ececec] rounded-cards p-6">
           <div className="flex items-center justify-between mb-4">

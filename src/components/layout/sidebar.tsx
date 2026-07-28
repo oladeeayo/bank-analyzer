@@ -14,6 +14,7 @@ import {
   Wallet,
   LogOut,
   FolderTree,
+  X,
 } from "lucide-react";
 
 const navigation = [
@@ -27,20 +28,25 @@ const navigation = [
   { name: "Categories", href: "/dashboard/settings/categories", icon: FolderTree },
 ];
 
-export function Sidebar() {
+export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
 
-  return (
-    <aside className="w-[260px] bg-surface-lowest border-r border-[#ececec] min-h-screen p-6 flex flex-col gap-4 fixed left-0 top-0 z-50">
+  const sidebarContent = (
+    <>
       {/* Logo */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 bg-forest-container rounded-buttons flex items-center justify-center text-white">
-          <span className="font-bold text-lg">C</span>
+      <div className="flex items-center justify-between gap-3 mb-8">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-forest-container rounded-buttons flex items-center justify-center text-white">
+            <span className="font-bold text-lg">C</span>
+          </div>
+          <div>
+            <h1 className="font-signifier text-[22px] text-forest leading-tight">CONYEST</h1>
+            <p className="text-[10px] uppercase tracking-widest text-ash-gray font-medium">Financial Intelligence</p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-signifier text-[22px] text-forest leading-tight">CONYEST</h1>
-          <p className="text-[10px] uppercase tracking-widest text-ash-gray font-medium">Financial Intelligence</p>
-        </div>
+        <button onClick={onClose} className="lg:hidden p-1 text-slate-gray hover:text-forest">
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -53,6 +59,7 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-buttons text-sm font-medium transition-all duration-200",
                 isActive
@@ -60,7 +67,7 @@ export function Sidebar() {
                   : "text-slate-gray hover:text-forest hover:bg-mist-gray"
               )}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className="h-5 w-5 shrink-0" />
               {item.name}
             </Link>
           );
@@ -68,10 +75,10 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom Section */}
-      <div className="mt-auto flex flex-col gap-2">
-        {/* Settings & Logout */}
+      <div className="mt-auto flex flex-col gap-2 pt-4">
         <Link
           href="/dashboard/settings"
+          onClick={onClose}
           className={cn(
             "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
             pathname === "/dashboard/settings"
@@ -79,14 +86,31 @@ export function Sidebar() {
               : "text-slate-gray hover:text-forest hover:bg-mist-gray"
           )}
         >
-          <Settings className="h-5 w-5" />
+          <Settings className="h-5 w-5 shrink-0" />
           Settings
         </Link>
         <button className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest hover:bg-mist-gray transition-colors">
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-5 w-5 shrink-0" />
           Logout
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile overlay */}
+      {open && <div className="sidebar-overlay lg:hidden" onClick={onClose} />}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed lg:static inset-y-0 left-0 z-50 w-[260px] bg-surface-lowest border-r border-[#ececec] min-h-screen p-6 flex flex-col gap-4 transition-transform duration-300 ease-in-out",
+          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   );
 }
