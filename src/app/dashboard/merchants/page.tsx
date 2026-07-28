@@ -25,7 +25,7 @@ export default function MerchantsPage() {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    fetch(`/api/merchants/summary?userId=${user.id}`)
+    fetch(`/api/merchants/summary`)
       .then((res) => res.json())
       .then((data) => {
         setMerchants(data.merchants || []);
