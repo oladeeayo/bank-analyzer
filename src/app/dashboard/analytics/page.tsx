@@ -337,14 +337,16 @@ export default function AnalyticsPage() {
             (() => {
               const allValues = sortedDays.flatMap(d => [dailySpending[d] || 0, dailyCredits[d] || 0]);
               const maxVal = Math.max(...allValues, 1);
+              const displayDays = sortedDays.slice(-31);
+              const showEveryN = displayDays.length > 15 ? Math.ceil(displayDays.length / 15) : 1;
               return (
                 <div>
-                  <div className="relative h-64">
+                  <div className="relative h-72 pb-8">
                     {/* Zero line at exact center */}
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
-                    {/* Income bars: grow UP from center */}
-                    <div className="absolute top-0 left-0 right-0 h-1/2 flex items-end gap-px px-1">
-                      {sortedDays.slice(-31).map(dateStr => {
+                    <div className="absolute top-[36px] left-0 right-0 h-px bg-ink-black/20 z-10" />
+                    {/* Income bars: grow UP from zero line */}
+                    <div className="absolute top-[36px] left-0 right-0 h-[calc(50%-18px)] flex items-end gap-px px-1">
+                      {displayDays.map(dateStr => {
                         const income = dailyCredits[dateStr] || 0;
                         const pct = maxVal > 0 ? (income / maxVal) * 100 : 0;
                         const isSelected = selectedBar?.label === dateStr;
@@ -361,9 +363,9 @@ export default function AnalyticsPage() {
                         );
                       })}
                     </div>
-                    {/* Expense bars: grow DOWN from center */}
-                    <div className="absolute top-1/2 left-0 right-0 h-1/2 flex items-start gap-px px-1">
-                      {sortedDays.slice(-31).map(dateStr => {
+                    {/* Expense bars: grow DOWN from zero line */}
+                    <div className="absolute top-[36px] left-0 right-0 h-[calc(50%-18px)] flex items-start gap-px px-1">
+                      {displayDays.map(dateStr => {
                         const expense = dailySpending[dateStr] || 0;
                         const pct = maxVal > 0 ? (expense / maxVal) * 100 : 0;
                         const isSelected = selectedBar?.label === dateStr;
@@ -382,11 +384,12 @@ export default function AnalyticsPage() {
                     </div>
                     {/* Day labels below */}
                     <div className="absolute bottom-0 left-0 right-0 flex gap-px px-1">
-                      {sortedDays.slice(-31).map(dateStr => {
+                      {displayDays.map((dateStr, i) => {
                         const dayLabel = dateStr.split("-")[2]?.replace(/^0/, "") || dateStr;
+                        const show = i % showEveryN === 0;
                         return (
                           <div key={dateStr} className="flex-1 text-center">
-                            <span className="text-[8px] text-ash-gray font-medium">{dayLabel}</span>
+                            <span className={`text-[10px] font-medium ${show ? "text-ink-black" : "text-transparent"}`}>{dayLabel}</span>
                           </div>
                         );
                       })}
