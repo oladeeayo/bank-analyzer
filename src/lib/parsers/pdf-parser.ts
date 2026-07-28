@@ -74,6 +74,8 @@ const DATE_PATTERN = /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}\s*(AM|PM)/i;
 const SIMPLE_DATE_PATTERN = /\d{2}\/\d{2}\/\d{4}/;
 const AMOUNT_PATTERN = /^[+-]?[\d,]+\.?\d*$/;
 
+const PALMPAY_TIMESTAMP_REGEX = /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}\s+(?:AM|PM)/gi;
+
 function extractTextFromPDF2Json(pdfData: any): string {
   const lines: string[] = [];
   if (pdfData.Pages) {
@@ -143,150 +145,84 @@ function extractAmountAndType(text: string): { amount: number; type: "debit" | "
   return { amount, type };
 }
 
-function parsePalmPayRows(rows: string[][]): ParseResult {
+function parsePalmPayText(fullText: string): ParseResult {
   const transactions: ParsedTransaction[] = [];
   const errors: string[] = [];
 
-  let headerIdx = -1;
-  for (let i = 0; i < Math.min(rows.length, 60); i++) {
-    const joined = rows[i].join(" ").toLowerCase();
-    if (joined.includes("transaction date") && joined.includes("transaction detail")) {
-      headerIdx = i;
-      break;
+  const cleanedText = fullText
+    .replace(/Account Statement/gi, "")
+    .replace(/Total Money In[\s\S]*?Print Time[^\n]*/gi, "")
+    .replace(/Name\s+[^\n]*/gi, "")
+    .replace(/Phone Number\s+[^\n]*/gi, "")
+    .replace(/Account Number\s+[^\n]*/gi, "")
+    .replace(/Statement Period\s+[^\n]*/gi, "")
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/support@\S+/gi, "")
+    .replace(/\d{2}\s+Opebi Rd[^\n]*/gi, "")
+    .replace(/Digital Finance[^\n]*/gi, "")
+    .replace(/018886888#1/gi, "")
+    .replace(/Transaction Date\s+Transaction Detail\s+Money In \(NGN\)\s+Money Out \(NGN\)\s+Transaction ID/gi, "");
+
+  const timestampMatches = [...cleanedText.matchAll(PALMPAY_TIMESTAMP_REGEX)];
+
+  console.log(`[PalmPay] Found ${timestampMatches.length} timestamp matches`);
+
+  for (let i = 0; i < timestampMatches.length; i++) {
+    const dateStr = timestampMatches[i][0];
+    const startIndex = timestampMatches[i].index! + dateStr.length;
+    const endIndex = timestampMatches[i + 1] ? timestampMatches[i + 1].index! : cleanedText.length;
+
+    let block = cleanedText.substring(startIndex, endIndex);
+    block = block.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim();
+
+    if (!block) continue;
+
+    const amountMatch = block.match(/\s([+-]\d+(?:,\d{3})*(?:\.\d+)?)\s+([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)?)\s*$/);
+
+    if (!amountMatch) {
+      const simpleAmountMatch = block.match(/\s([+-]\d+(?:,\d{3})*(?:\.\d+)?)\s*$/);
+      if (simpleAmountMatch) {
+        const rawAmount = simpleAmountMatch[1];
+        const amountVal = Math.abs(parseFloat(rawAmount.replace(/,/g, "")));
+        const type: "debit" | "credit" = rawAmount.startsWith("+") ? "credit" : "debit";
+        const description = block.substring(0, simpleAmountMatch.index).trim();
+
+        if (amountVal > 0 && description) {
+          transactions.push({
+            date: parseDate(dateStr, "MM/DD/YYYY").toISOString(),
+            description,
+            amount: amountVal,
+            type,
+            narration: description,
+          });
+        }
+      }
+      continue;
     }
-  }
 
-  if (headerIdx === -1) {
-    return {
-      transactions: [],
-      errors: ["Could not find PalmPay transaction header row"],
-      metadata: { fileName: "", fileType: "pdf", totalRows: rows.length, parsedRows: 0 },
-    };
-  }
+    const rawAmount = amountMatch[1];
+    const rawTxId = amountMatch[2];
+    const txId = rawTxId.replace(/\s+/g, "");
+    const description = block.substring(0, amountMatch.index).trim();
 
-  console.log(`[PalmPay] Header found at row ${headerIdx}, processing ${rows.length - headerIdx - 1} data rows`);
-  const dataRows = rows.slice(headerIdx + 1);
+    const amountVal = Math.abs(parseFloat(rawAmount.replace(/,/g, "")));
+    const type: "debit" | "credit" = rawAmount.startsWith("+") ? "credit" : "debit";
 
-  let pendingDate: Date | null = null;
-  let pendingDetail = "";
-
-  for (let i = 0; i < dataRows.length; i++) {
-    const row = dataRows[i];
-    if (row.length === 0) continue;
-
-    if (i < 10) {
-      console.log(`[PalmPay] Row ${i}: cells=${row.length} | ${row.map(c => `[${c}]`).join(" | ")}`);
-    }
-
-    const firstCell = row[0];
-    const hasDate = DATE_PATTERN.test(firstCell) || SIMPLE_DATE_PATTERN.test(firstCell);
-
-    if (hasDate) {
-      const date = parseDate(firstCell, "MM/DD/YYYY");
+    if (amountVal > 0 && description) {
+      const date = parseDate(dateStr, "MM/DD/YYYY");
       if (isNaN(date.getTime())) {
-        errors.push(`Row ${headerIdx + i + 2}: Invalid date "${firstCell}"`);
+        errors.push(`Invalid date "${dateStr}"`);
         continue;
       }
 
-      let detail = "";
-      let amount = 0;
-      let type: "debit" | "credit" = "debit";
-      let reference = "";
-
-      const cells = row.slice(1);
-
-      for (let c = 0; c < cells.length; c++) {
-        const cell = cells[c];
-        const amt = extractAmountAndType(cell);
-        if (amt && amount === 0) {
-          amount = amt.amount;
-          type = amt.type;
-        } else if (cell && !amt) {
-          if (!detail) detail = cell;
-          else if (!reference && !AMOUNT_PATTERN.test(cell)) reference = cell;
-        } else if (cell && amt && amount !== 0 && !reference && !AMOUNT_PATTERN.test(cell)) {
-          reference = cell;
-        }
-      }
-
-      if (amount > 0) {
-        if (pendingDetail && detail) {
-          detail = pendingDetail + " " + detail;
-        } else if (pendingDetail && !detail) {
-          detail = pendingDetail;
-        }
-        pendingDetail = "";
-        pendingDate = null;
-
-        if (!detail) detail = "Unknown transaction";
-
-        transactions.push({
-          date: date.toISOString(),
-          description: detail.trim(),
-          amount,
-          type,
-          reference: reference || undefined,
-          narration: detail.trim(),
-        });
-      } else {
-        pendingDate = date;
-        pendingDetail = detail || "";
-      }
-      continue;
-    }
-
-    const text = row.join(" ").trim();
-    if (!text) continue;
-
-    const stripped = text.replace(/\s/g, "");
-
-    let nonDateAmount = 0;
-    let nonDateType: "debit" | "credit" = "debit";
-    let nonDateDetail = "";
-    let nonDateRef = "";
-    for (const cell of row) {
-      const amt = extractAmountAndType(cell);
-      if (amt && nonDateAmount === 0) {
-        nonDateAmount = amt.amount;
-        nonDateType = amt.type;
-      } else if (cell && !amt && !AMOUNT_PATTERN.test(cell)) {
-        if (!nonDateDetail) nonDateDetail = cell;
-        else if (!nonDateRef) nonDateRef = cell;
-      } else if (cell && amt && nonDateAmount !== 0 && !nonDateRef) {
-        nonDateRef = cell;
-      }
-    }
-
-    if (nonDateAmount > 0 && pendingDate) {
-      let detail = nonDateDetail || pendingDetail || "Unknown transaction";
-      if (pendingDetail && nonDateDetail) detail = pendingDetail + " " + nonDateDetail;
-      pendingDetail = "";
-      const usedDate = pendingDate;
-      pendingDate = null;
-
       transactions.push({
-        date: usedDate.toISOString(),
-        description: detail.trim(),
-        amount: nonDateAmount,
-        type: nonDateType,
-        reference: nonDateRef || undefined,
-        narration: detail.trim(),
+        date: date.toISOString(),
+        description,
+        amount: amountVal,
+        type,
+        reference: txId || undefined,
+        narration: description,
       });
-      continue;
-    }
-
-    if (/^\d{4,}$/.test(stripped)) {
-      if (transactions.length > 0) {
-        const prev = transactions[transactions.length - 1];
-        prev.reference = prev.reference ? prev.reference + stripped : stripped;
-      } else {
-        pendingDetail += (pendingDetail ? " " : "") + text;
-      }
-      continue;
-    }
-
-    if (!AMOUNT_PATTERN.test(text)) {
-      pendingDetail += (pendingDetail ? " " : "") + text;
     }
   }
 
@@ -304,7 +240,7 @@ function parsePalmPayRows(rows: string[][]): ParseResult {
     metadata: {
       fileName: "",
       fileType: "pdf",
-      totalRows: rows.length,
+      totalRows: timestampMatches.length,
       parsedRows: transactions.length,
       dateRange: dates.length > 0
         ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() }
@@ -418,21 +354,26 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
           const bankFormat = detectBankFormat(text);
           console.log(`[PDFParser] Detected bank format: ${bankFormat}`);
 
-          const rows = extractTableRows(pdfData);
-          console.log(`[PDFParser] Extracted ${rows.length} table rows`);
-
-          for (let i = 0; i < Math.min(rows.length, 10); i++) {
-            console.log(`[PDFParser] Pre-header row ${i}: ${rows[i].join(" | ")}`);
-          }
-
           let result: ParseResult;
 
-          if (bankFormat === "palmpay-pdf" || isPalmPayFormat(rows)) {
-            console.log(`[PDFParser] Using PalmPay parser`);
-            result = parsePalmPayRows(rows);
+          if (bankFormat === "palmpay-pdf") {
+            console.log(`[PDFParser] Using PalmPay text-block parser`);
+            result = parsePalmPayText(text);
           } else {
-            console.log(`[PDFParser] Using generic parser`);
-            result = parseGenericRows(rows);
+            const rows = extractTableRows(pdfData);
+            console.log(`[PDFParser] Extracted ${rows.length} table rows`);
+
+            for (let i = 0; i < Math.min(rows.length, 10); i++) {
+              console.log(`[PDFParser] Pre-header row ${i}: ${rows[i].join(" | ")}`);
+            }
+
+            if (isPalmPayFormat(rows)) {
+              console.log(`[PDFParser] Using PalmPay text-block parser (fallback)`);
+              result = parsePalmPayText(text);
+            } else {
+              console.log(`[PDFParser] Using generic parser`);
+              result = parseGenericRows(rows);
+            }
           }
 
           result.metadata.fileName = fileName;
