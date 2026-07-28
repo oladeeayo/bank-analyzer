@@ -94,6 +94,35 @@ export default function TransactionsPage() {
   const [similarFilterOp, setSimilarFilterOp] = useState<"all" | "gt" | "lt" | "eq">("all");
   const [similarFilterAmount, setSimilarFilterAmount] = useState("");
 
+  const findSimilarTransactions = useCallback(async (tx: Transaction) => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/transactions/similar?userId=${user.id}&txId=${tx.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSimilarTxs(data.similar || []);
+        setShowSimilar((data.similar?.length || 0) > 0);
+      }
+    } catch (err) {
+      console.error("Failed to find similar transactions:", err);
+    }
+  }, [user]);
+
+  const getFilteredSimilar = useCallback(() => {
+    const active = similarTxs.filter(s => !dismissedIds.has(s.id));
+    return active.filter(s => {
+      if (similarFilterType === "debit" && s.type !== "debit") return false;
+      if (similarFilterType === "credit" && s.type !== "credit") return false;
+      if (similarFilterAmount) {
+        const amt = parseFloat(similarFilterAmount);
+        if (similarFilterOp === "gt" && s.amount <= amt) return false;
+        if (similarFilterOp === "lt" && s.amount >= amt) return false;
+        if (similarFilterOp === "eq" && s.amount !== amt) return false;
+      }
+      return true;
+    });
+  }, [similarTxs, dismissedIds, similarFilterType, similarFilterOp, similarFilterAmount]);
+
   useEffect(() => {
     if (!user) return;
 
@@ -154,20 +183,6 @@ export default function TransactionsPage() {
     loadCategories();
     loadBanks();
   }, [user, search, filterType, filterCategory, filterBank, startDate, endDate, minAmount, maxAmount, page, refreshKey]);
-
-  const findSimilarTransactions = useCallback(async (tx: Transaction) => {
-    if (!user) return;
-    try {
-      const res = await fetch(`/api/transactions/similar?userId=${user.id}&txId=${tx.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setSimilarTxs(data.similar || []);
-        setShowSimilar((data.similar?.length || 0) > 0);
-      }
-    } catch (err) {
-      console.error("Failed to find similar transactions:", err);
-    }
-  }, [user]);
 
   const handleReclassify = async () => {
     if (!user) return;
@@ -385,21 +400,6 @@ export default function TransactionsPage() {
     setSimilarFilterAmount("");
     findSimilarTransactions(tx);
   };
-
-  const getFilteredSimilar = useCallback(() => {
-    const active = similarTxs.filter(s => !dismissedIds.has(s.id));
-    return active.filter(s => {
-      if (similarFilterType === "debit" && s.type !== "debit") return false;
-      if (similarFilterType === "credit" && s.type !== "credit") return false;
-      if (similarFilterAmount) {
-        const amt = parseFloat(similarFilterAmount);
-        if (similarFilterOp === "gt" && s.amount <= amt) return false;
-        if (similarFilterOp === "lt" && s.amount >= amt) return false;
-        if (similarFilterOp === "eq" && s.amount !== amt) return false;
-      }
-      return true;
-    });
-  }, [similarTxs, dismissedIds, similarFilterType, similarFilterOp, similarFilterAmount]);
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
