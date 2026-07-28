@@ -1,5 +1,6 @@
 import { ParsedTransaction } from "@/lib/parsers/types";
 import { extractCounterpartyInfo } from "@/lib/counterparty-matcher";
+import { ExactMerchantExtractor, ExtractedMerchantPayload } from "@/lib/parser/merchant-extractor";
 
 export interface NormalizedTransaction extends ParsedTransaction {
   normalizedDescription: string;
@@ -9,6 +10,11 @@ export interface NormalizedTransaction extends ParsedTransaction {
   counterpartyBank?: string;
   counterpartyAccount?: string;
   isSelfTransfer?: boolean;
+  memo?: string;
+  institution?: string;
+  accountOrPhone?: string;
+  channelTag?: string;
+  merchantExtraction?: ExtractedMerchantPayload;
 }
 
 const NOISE_WORDS = [
@@ -561,22 +567,28 @@ export function normalizeTransactions(
 ): NormalizedTransaction[] {
   return transactions.map(tx => {
     const cleaned = cleanDescription(tx.description);
-    const merchant = extractMerchant(cleaned);
+    const legacyMerchant = extractMerchant(cleaned);
     const merchantResult = guessMerchant(cleaned);
     const merchantGuess = merchantResult?.name;
     const categoryGuess = merchantResult?.category || guessCategory(merchantGuess, cleaned);
 
     const cp = extractCounterpartyInfo(tx.description, userOwnNames);
+    const extraction = ExactMerchantExtractor.process(tx.description);
 
     return {
       ...tx,
-      normalizedDescription: merchant || cleaned,
+      normalizedDescription: extraction.exactMerchantName || legacyMerchant || cleaned,
       merchantGuess,
       categoryGuess,
       counterpartyName: cp.name || undefined,
       counterpartyBank: cp.bank,
       counterpartyAccount: cp.accountNumber || cp.partialAccountNumber,
       isSelfTransfer: cp.isSelfTransfer,
+      memo: extraction.memo || undefined,
+      institution: extraction.institution || undefined,
+      accountOrPhone: extraction.accountOrPhone || undefined,
+      channelTag: extraction.channelTag,
+      merchantExtraction: extraction,
     };
   });
 }

@@ -161,6 +161,10 @@ model Transaction {
   date                  DateTime
   description           String
   normalizedDescription String?
+  memo                  String?
+  institution           String?
+  accountOrPhone        String?
+  channelTag            String?   // POS_AGENT | DIRECT_TRANSFER | UTILITY | SYSTEM_CHARGE | GATEWAY
   merchantId            String?
   merchant              Merchant? @relation(fields: [merchantId], references: [id])
   categoryId            String?
@@ -182,6 +186,8 @@ model Transaction {
   @@index([merchantId])
   @@index([categoryId])
   @@index([type])
+  @@index([channelTag])
+  @@index([institution])
 }
 
 // ─── Staged Transactions (Import Review) ────────────────

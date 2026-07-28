@@ -64,6 +64,10 @@ export async function POST(
             merchantId: classification.merchantId,
             categoryId: classification.categoryId,
             normalizedDescription: norm.normalizedDescription,
+            memo: norm.memo || null,
+            institution: norm.institution || null,
+            accountOrPhone: norm.accountOrPhone || null,
+            channelTag: norm.channelTag || null,
           },
         });
         updatedCount++;
