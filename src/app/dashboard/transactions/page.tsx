@@ -90,6 +90,9 @@ export default function TransactionsPage() {
     markTransfer: false,
   });
   const [reclassifying, setReclassifying] = useState(false);
+  const [similarFilterType, setSimilarFilterType] = useState<"all" | "debit" | "credit">("all");
+  const [similarFilterOp, setSimilarFilterOp] = useState<"all" | "gt" | "lt" | "eq">("all");
+  const [similarFilterAmount, setSimilarFilterAmount] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -239,7 +242,7 @@ export default function TransactionsPage() {
 
       // Apply same changes to non-dismissed similar transactions only
       let updatedSimilar = 0;
-      const activeSimilar = similarTxs.filter(s => !dismissedIds.has(s.id));
+      const activeSimilar = getFilteredSimilar();
       if (activeSimilar.length > 0 && (newMerchant || newCategoryId)) {
         const similarPromises = activeSimilar.map(s =>
           fetch(`/api/transactions/${s.id}`, {
@@ -377,8 +380,26 @@ export default function TransactionsPage() {
     setCategorySearch("");
     setSelectedParentForPicker(null);
     setDismissedIds(new Set());
+    setSimilarFilterType("all");
+    setSimilarFilterOp("all");
+    setSimilarFilterAmount("");
     findSimilarTransactions(tx);
   };
+
+  const getFilteredSimilar = useCallback(() => {
+    const active = similarTxs.filter(s => !dismissedIds.has(s.id));
+    return active.filter(s => {
+      if (similarFilterType === "debit" && s.type !== "debit") return false;
+      if (similarFilterType === "credit" && s.type !== "credit") return false;
+      if (similarFilterAmount) {
+        const amt = parseFloat(similarFilterAmount);
+        if (similarFilterOp === "gt" && s.amount <= amt) return false;
+        if (similarFilterOp === "lt" && s.amount >= amt) return false;
+        if (similarFilterOp === "eq" && s.amount !== amt) return false;
+      }
+      return true;
+    });
+  }, [similarTxs, dismissedIds, similarFilterType, similarFilterOp, similarFilterAmount]);
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -958,11 +979,45 @@ export default function TransactionsPage() {
                   <div className="flex items-center gap-2 mb-3">
                     <Link className="h-4 w-4 text-blue-600" />
                     <p className="text-xs font-semibold text-blue-800">
-                      {similarTxs.filter(s => !dismissedIds.has(s.id)).length} Similar Found
+                      {getFilteredSimilar().length} Similar Found
+                      {getFilteredSimilar().length !== similarTxs.filter(s => !dismissedIds.has(s.id)).length && (
+                        <span className="font-normal text-blue-600"> (filtered from {similarTxs.filter(s => !dismissedIds.has(s.id)).length})</span>
+                      )}
                     </p>
                   </div>
+                  {/* Filter controls */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <select
+                      value={similarFilterType}
+                      onChange={e => setSimilarFilterType(e.target.value as "all" | "debit" | "credit")}
+                      className="text-[10px] px-1.5 py-0.5 border border-blue-200 rounded bg-white text-blue-800"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="debit">Debit Only</option>
+                      <option value="credit">Credit Only</option>
+                    </select>
+                    <select
+                      value={similarFilterOp}
+                      onChange={e => setSimilarFilterOp(e.target.value as "all" | "gt" | "lt" | "eq")}
+                      className="text-[10px] px-1.5 py-0.5 border border-blue-200 rounded bg-white text-blue-800"
+                    >
+                      <option value="all">Any Amount</option>
+                      <option value="gt">{">"} Amount</option>
+                      <option value="lt">{"<"} Amount</option>
+                      <option value="eq">= Amount</option>
+                    </select>
+                    {similarFilterOp !== "all" && (
+                      <input
+                        type="number"
+                        placeholder="Amount"
+                        value={similarFilterAmount}
+                        onChange={e => setSimilarFilterAmount(e.target.value)}
+                        className="text-[10px] px-1.5 py-0.5 border border-blue-200 rounded bg-white text-blue-800 w-20"
+                      />
+                    )}
+                  </div>
                   <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                    {similarTxs.filter(s => !dismissedIds.has(s.id)).map(s => (
+                    {getFilteredSimilar().map(s => (
                       <div key={s.id} className="flex items-center justify-between text-xs p-1.5 rounded hover:bg-blue-100/50">
                         <div className="flex-1 min-w-0">
                           <p className="text-blue-900 truncate">{s.description}</p>
