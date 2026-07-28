@@ -4,6 +4,10 @@ import { parseStatement } from "@/lib/parsers";
 import { normalizeTransactions } from "@/lib/normalizer";
 import { classifyBatch } from "@/lib/classifier";
 import { extractCounterpartyInfo, groupSimilarTransactions } from "@/lib/counterparty-matcher";
+import crypto from "crypto";
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_DATE_RANGE_YEARS = 2;
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +23,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── File size guard ──────────────────────────────────────────────────
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.` },
+        { status: 413 }
+      );
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // ── File hash dedup ──────────────────────────────────────────────────
+    const fileHash = crypto.createHash("sha256").update(buffer).digest("hex");
+    const existingUpload = await db.uploadLog.findUnique({
+      where: { bankId_fileHash: { bankId, fileHash } },
+    });
+    if (existingUpload) {
+      return NextResponse.json(
+        { error: "duplicate", message: "This file has already been uploaded to this bank account." },
+        { status: 409 }
+      );
+    }
+
+    // ── Date range sanity check ──────────────────────────────────────────
+    const now = new Date();
+    const maxPast = new Date(now.getFullYear() - MAX_DATE_RANGE_YEARS, now.getMonth(), 1);
+    const maxFuture = new Date(now.getFullYear() + 1, 11, 31);
+
     // Get user's own account names for self-transfer detection
     const userBanks = await db.bank.findMany({
       where: { userId },
@@ -29,18 +61,35 @@ export async function POST(request: NextRequest) {
       .filter((n): n is string => !!n);
 
     // Parse the file
-    const arrayBuffer = await file.arrayBuffer();
     const result = await parseStatement(arrayBuffer, file.name);
 
     if (result.transactions.length === 0) {
+      await db.uploadLog.create({
+        data: { userId, bankId, fileHash, filename: file.name, fileSize: file.size, status: "failed" },
+      });
       return NextResponse.json(
         { error: "No transactions found", errors: result.errors },
         { status: 400 }
       );
     }
 
+    // Validate date range
     const firstDate = new Date(result.transactions[0].date);
     const lastDate = new Date(result.transactions[result.transactions.length - 1].date);
+
+    if (firstDate < maxPast || lastDate > maxFuture) {
+      await db.uploadLog.create({
+        data: { userId, bankId, fileHash, filename: file.name, fileSize: file.size, status: "failed" },
+      });
+      return NextResponse.json(
+        {
+          error: "invalid_date_range",
+          message: `Statement dates (${firstDate.toLocaleDateString()} - ${lastDate.toLocaleDateString()}) are outside the valid range. Expected within the last ${MAX_DATE_RANGE_YEARS} years.`,
+        },
+        { status: 400 }
+      );
+    }
+
     const month = firstDate.getMonth() + 1;
     const year = firstDate.getFullYear();
 
@@ -55,7 +104,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         transactions: {
-          select: { date: true, amount: true, description: true },
+          select: { date: true, amount: true, description: true, reference: true },
           orderBy: { date: "asc" },
         },
       },
@@ -69,15 +118,19 @@ export async function POST(request: NextRequest) {
     });
 
     if (overlapping.length > 0) {
-      // Check if all transactions already exist
-      const existingDates = new Set(
-        overlapping.flatMap(s => s.transactions.map(t => `${t.date.toISOString().split("T")[0]}_${t.amount}_${t.description.substring(0, 30)}`))
+      const existingKeys = new Set(
+        overlapping.flatMap(s => s.transactions.map(t =>
+          t.reference
+            ? `ref_${t.reference}`
+            : `composite_${t.date.toISOString().split("T")[0]}_${t.amount}_${(t.description || "").substring(0, 50)}`
+        ))
       );
 
       const newTransactions = result.transactions.filter(tx => {
-        const txDate = new Date(tx.date).toISOString().split("T")[0];
-        const key = `${txDate}_${tx.amount}_${tx.description.substring(0, 30)}`;
-        return !existingDates.has(key);
+        const key = tx.reference
+          ? `ref_${tx.reference}`
+          : `composite_${new Date(tx.date).toISOString().split("T")[0]}_${tx.amount}_${(tx.description || "").substring(0, 50)}`;
+        return !existingKeys.has(key);
       });
 
       const totalExisting = overlapping.reduce((sum, s) => sum + s.transactions.length, 0);
@@ -166,7 +219,13 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    await db.transaction.createMany({ data: transactionData });
+    // Use skipDuplicates with composite fallback for null references
+    await db.transaction.createMany({ data: transactionData, skipDuplicates: true });
+
+    // Log successful upload
+    await db.uploadLog.create({
+      data: { userId, bankId, fileHash, filename: file.name, fileSize: file.size, status: "completed" },
+    });
 
     // Calculate summary stats
     const totalCredits = normalized.filter(t => t.type === "credit").reduce((s, t) => s + t.amount, 0);

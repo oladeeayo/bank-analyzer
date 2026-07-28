@@ -65,7 +65,7 @@ export default function HomePage() {
             <span>Financial intelligence for Nigerians</span>
           </div>
         </Reveal>
-        <h1 className="font-signifier text-[40px] sm:text-[56px] md:text-[64px] leading-[1.3] text-ink-black mb-5 reveal delay-1" style={{ letterSpacing: "-0.96px" }}>
+        <h1 className="font-signifier text-[40px] sm:text-[56px] md:text-[64px] leading-[1.3] text-ink-black mb-5 text-balance reveal delay-1" style={{ letterSpacing: "-0.96px" }}>
           Financial intelligence<br />
           <span className="italic">for every naira</span>
         </h1>
@@ -239,9 +239,9 @@ export default function HomePage() {
         <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-ash-gray">© 2026 CONYEST. Financial Intelligence System.</p>
           <div className="flex items-center gap-6">
-            <a href="#" className="text-xs text-ash-gray hover:text-forest transition-colors">Privacy</a>
-            <a href="#" className="text-xs text-ash-gray hover:text-forest transition-colors">Terms</a>
-            <a href="#" className="text-xs text-ash-gray hover:text-forest transition-colors">Support</a>
+            <a href="/privacy" className="text-xs text-ash-gray hover:text-forest transition-colors">Privacy</a>
+            <a href="/terms" className="text-xs text-ash-gray hover:text-forest transition-colors">Terms</a>
+            <a href="/support" className="text-xs text-ash-gray hover:text-forest transition-colors">Support</a>
           </div>
         </div>
       </footer>

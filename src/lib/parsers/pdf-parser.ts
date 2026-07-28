@@ -77,21 +77,29 @@ const AMOUNT_PATTERN = /^[+-]?[\d,]+\.?\d*$/;
 const PALMPAY_TIMESTAMP_REGEX = /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}\s+(?:AM|PM)/gi;
 
 function extractTextFromPDF2Json(pdfData: any): string {
-  const lines: string[] = [];
+  const textItems: Array<{ y: number; x: number; text: string }> = [];
   if (pdfData.Pages) {
     for (const page of pdfData.Pages) {
       if (page.Texts) {
         for (const text of page.Texts) {
           if (text.R) {
             for (const r of text.R) {
-              if (r.T) lines.push(decodeURIComponent(r.T));
+              if (r.T) {
+                textItems.push({
+                  y: Math.round(text.y * 10) / 10,
+                  x: Math.round(text.x * 10) / 10,
+                  text: decodeURIComponent(r.T),
+                });
+              }
             }
           }
         }
       }
     }
   }
-  return lines.join("\n");
+  // Sort by y (top to bottom), then x (left to right) for proper reading order
+  textItems.sort((a, b) => a.y - b.y || a.x - b.x);
+  return textItems.map(t => t.text).join("\n");
 }
 
 function extractTableRows(pdfData: any): string[][] {

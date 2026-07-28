@@ -98,6 +98,7 @@ model Statement {
   year             Int
   filename         String
   fileType         String
+  parserVersion    Int      @default(1)
   status           String   @default("uploaded")
   transactionCount Int      @default(0)
   uploadedAt       DateTime @default(now())
@@ -188,6 +189,24 @@ model Transaction {
   @@index([type])
   @@index([channelTag])
   @@index([institution])
+  @@index([bankId, reference])
+  @@index([bankId, amount, date, description(100)])
+}
+
+// ─── Upload Log (idempotency guard) ─────────────────────
+
+model UploadLog {
+  id        String   @id @default(cuid())
+  userId    String
+  bankId    String
+  fileHash  String
+  filename  String
+  fileSize  Int
+  status    String   @default("completed") // completed | failed | duplicate
+  createdAt DateTime @default(now())
+
+  @@unique([bankId, fileHash])
+  @@index([userId])
 }
 
 // ─── Staged Transactions (Import Review) ────────────────
@@ -235,17 +254,19 @@ model ClassificationRule {
 // ─── Manual Overrides ───────────────────────────────────
 
 model ManualOverride {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  description String
-  merchantId  String?
-  merchant    Merchant? @relation(fields: [merchantId], references: [id])
-  categoryId  String?
-  category    Category? @relation(fields: [categoryId], references: [id])
-  createdAt   DateTime  @default(now())
+  id               String    @id @default(cuid())
+  userId           String
+  user             User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description      String
+  normalizedKey    String?
+  merchantId       String?
+  merchant         Merchant? @relation(fields: [merchantId], references: [id])
+  categoryId       String?
+  category         Category? @relation(fields: [categoryId], references: [id])
+  createdAt        DateTime  @default(now())
 
   @@unique([userId, description])
+  @@index([userId, normalizedKey])
 }
 
 // ─── Recurring Transactions ─────────────────────────────

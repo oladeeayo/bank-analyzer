@@ -44,7 +44,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             <p className="text-[10px] uppercase tracking-widest text-ash-gray font-medium">Financial Intelligence</p>
           </div>
         </div>
-        <button onClick={onClose} className="lg:hidden p-1 text-slate-gray hover:text-forest">
+        <button onClick={onClose} className="lg:hidden p-1 text-slate-gray hover:text-forest" aria-label="Close sidebar">
           <X className="h-5 w-5" />
         </button>
       </div>

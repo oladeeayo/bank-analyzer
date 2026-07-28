@@ -92,7 +92,7 @@ export default function DashboardPage() {
   }, [period, month, year, quarter, user]);
 
   if (userLoading || !user) {
-    return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
+    return <div role="status" aria-live="polite" className="flex items-center justify-center h-64"><div className="flex items-center gap-3"><div className="w-5 h-5 border-2 border-forest border-t-transparent rounded-full animate-spin" /><span className="text-ash-gray">Loading...</span></div></div>;
   }
 
   const fetchDashboard = async () => {
@@ -138,8 +138,11 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-ash-gray">Loading dashboard...</div>
+      <div role="status" aria-live="polite" className="flex items-center justify-center h-64">
+        <div className="flex items-center gap-3">
+          <div className="w-5 h-5 border-2 border-forest border-t-transparent rounded-full animate-spin" />
+          <span className="text-ash-gray">Loading dashboard...</span>
+        </div>
       </div>
     );
   }
@@ -329,11 +332,11 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 bg-[#003527] rounded"></div>
+                <div className="w-3 h-3 bg-forest rounded"></div>
                 <span className="text-ash-gray">Income</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 bg-[#8BC34A] rounded"></div>
+                <div className="w-3 h-3 bg-lime-bright rounded"></div>
                 <span className="text-ash-gray">Expense</span>
               </div>
             </div>
@@ -351,8 +354,8 @@ export default function DashboardPage() {
                     formatter={(value, name) => [formatCurrency(Number(value)), name === "income" ? "Income" : "Expense"]}
                   />
                   <ReferenceLine y={0} stroke="#ececec" />
-                  <Bar dataKey="income" fill="#003527" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expense" fill="#8BC34A" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="income" fill="var(--color-forest)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expense" fill="var(--color-lime-bright)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (

@@ -12,6 +12,7 @@ export interface ClassificationResult {
 
 interface ClassificationCache {
   overrides: Map<string, { merchantId: string | null; categoryId: string | null }>;
+  overridesByKey: Map<string, { merchantId: string | null; categoryId: string | null }>;
   rules: Array<{
     type: string;
     pattern: string;
@@ -73,11 +74,21 @@ const KEYWORD_PATTERNS: Array<{
 
 function matchKeywords(tx: NormalizedTransaction, cache: ClassificationCache): ClassificationResult | null {
   const desc = tx.description;
+  const isCredit = tx.type === "credit";
+
+  // Spending categories: never match these on credits (refunds/reversals would misfire)
+  const SPENDING_CATEGORIES = new Set([
+    "Utilities", "Food & Dining", "Transportation", "Shopping",
+    "Healthcare", "Education", "Housing", "Entertainment",
+    "Banking & Financial", "Government & Taxes", "Insurance",
+  ]);
 
   for (const { patterns, categoryName, confidence } of KEYWORD_PATTERNS) {
+    // Skip spending categories on credit transactions
+    if (isCredit && SPENDING_CATEGORIES.has(categoryName)) continue;
+
     for (const pattern of patterns) {
       if (pattern.test(desc)) {
-        // Look up category in cache
         const key = `system_${categoryName}`;
         const keyLower = `system_${categoryName.toLowerCase()}`;
         const categoryId = cache.categoryMap.get(key) || cache.categoryMap.get(keyLower) || null;
@@ -102,7 +113,7 @@ async function buildClassificationCache(userId: string): Promise<ClassificationC
     // 1. Get manual overrides for this user
     db.manualOverride.findMany({
       where: { userId },
-      select: { description: true, merchantId: true, categoryId: true },
+      select: { description: true, normalizedKey: true, merchantId: true, categoryId: true },
     }),
     // 2. Get classification rules for this user
     db.classificationRule.findMany({
@@ -132,12 +143,20 @@ async function buildClassificationCache(userId: string): Promise<ClassificationC
   ]);
 
   // Build override map (description → {merchantId, categoryId})
+  // Primary: by normalizedKey, Secondary: by raw description (legacy)
   const overrideMap = new Map<string, { merchantId: string | null; categoryId: string | null }>();
+  const overrideMapByKey = new Map<string, { merchantId: string | null; categoryId: string | null }>();
   for (const o of overrides) {
     overrideMap.set(o.description.toLowerCase(), {
       merchantId: o.merchantId,
       categoryId: o.categoryId,
     });
+    if (o.normalizedKey) {
+      overrideMapByKey.set(o.normalizedKey, {
+        merchantId: o.merchantId,
+        categoryId: o.categoryId,
+      });
+    }
   }
 
   // Build merchant map
@@ -176,10 +195,24 @@ async function buildClassificationCache(userId: string): Promise<ClassificationC
     }
   }
 
-  return { overrides: overrideMap, rules, merchants, merchantCategoryMap, categoryMap, othersCategoryId };
+  return { overrides: overrideMap, overridesByKey: overrideMapByKey, rules, merchants, merchantCategoryMap, categoryMap, othersCategoryId };
 }
 
 function matchOverride(tx: NormalizedTransaction, cache: ClassificationCache): ClassificationResult | null {
+  // Try normalized key first (stable merchant name, survives ref ID changes)
+  if (tx.merchantExtraction?.normalizedKey) {
+    const override = cache.overridesByKey.get(tx.merchantExtraction.normalizedKey);
+    if (override) {
+      return {
+        merchantId: override.merchantId,
+        categoryId: override.categoryId,
+        confidence: 0.95,
+        source: "override",
+      };
+    }
+  }
+
+  // Fallback: raw description match (legacy)
   const desc = tx.description.toLowerCase();
   const override = cache.overrides.get(desc);
   if (override) {

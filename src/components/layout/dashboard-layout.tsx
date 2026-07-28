@@ -33,14 +33,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <input
                 type="text"
                 placeholder="Search transactions..."
-                className="bg-mist-gray border-none rounded-buttons pl-10 pr-4 py-2 w-48 lg:w-64 text-sm text-ink-black placeholder:text-smoke-gray focus:outline-none focus:ring-2 focus:ring-lime-vibrant/50 transition-all"
+                className="bg-mist-gray border-none rounded-buttons pl-10 pr-4 py-2 w-48 lg:w-64 text-sm text-ink-black placeholder:text-smoke-gray focus:outline-none focus:ring-2 focus:ring-lime-vibrant/50 transition-[box-shadow,width]"
               />
             </div>
 
             {/* Notifications */}
-            <button className="relative p-2 text-slate-gray hover:text-forest transition-colors">
+            <button className="relative p-2 text-slate-gray hover:text-forest transition-colors" aria-label="Notifications">
               <Bell className="h-5 w-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full" aria-hidden="true"></span>
             </button>
 
             {/* User Profile - simplified on mobile */}

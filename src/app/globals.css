@@ -101,6 +101,7 @@ body {
 
 .font-mono {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 ::-webkit-scrollbar {
@@ -185,7 +186,9 @@ html {
 }
 
 .card-lift {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition-property: transform, box-shadow;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
 }
 
 .card-lift:hover {

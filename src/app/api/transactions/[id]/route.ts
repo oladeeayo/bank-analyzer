@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { extractCounterparty } from "@/lib/classifier/nigerian-context";
+import { ExactMerchantExtractor } from "@/lib/parser/merchant-extractor";
 
 export async function GET(
   request: NextRequest,
@@ -118,13 +119,18 @@ export async function PUT(
 
     // Active Learning: Save manual override + auto-create rule + backfill
     if (finalMerchantId || body.categoryId) {
-      // 1. Save manual override (exact description match)
-      const existingOverride = await db.manualOverride.findUnique({
+      // Compute normalized key for override matching
+      const extraction = ExactMerchantExtractor.process(transaction.description);
+      const normKey = extraction.normalizedKey || null;
+
+      // 1. Save manual override (use normalizedKey as primary match key)
+      const existingOverride = await db.manualOverride.findFirst({
         where: {
-          userId_description: {
-            userId,
-            description: transaction.description,
-          },
+          userId,
+          OR: [
+            { normalizedKey: normKey },
+            { description: transaction.description },
+          ],
         },
       });
 
@@ -134,6 +140,7 @@ export async function PUT(
           data: {
             merchantId: finalMerchantId || existingOverride.merchantId,
             categoryId: body.categoryId || existingOverride.categoryId,
+            normalizedKey: normKey,
           },
         });
       } else {
@@ -141,6 +148,7 @@ export async function PUT(
           data: {
             userId,
             description: transaction.description,
+            normalizedKey: normKey,
             merchantId: finalMerchantId || null,
             categoryId: body.categoryId || null,
           },
