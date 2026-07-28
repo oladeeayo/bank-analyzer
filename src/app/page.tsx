@@ -28,13 +28,14 @@ function Reveal({ children, delay = 0, className = "" }: { children: React.React
 }
 
 const banks = [
-  { name: "GTBank", color: "#d4541e", short: "GT" },
-  { name: "Access Bank", color: "#006e46", short: "AB" },
-  { name: "OPay", color: "#11418b", short: "OP" },
-  { name: "Kuda", color: "#8b1d8b", short: "KU" },
-  { name: "Moniepoint", color: "#0062a0", short: "MP" },
-  { name: "First Bank", color: "#003069", short: "FB" },
-  { name: "UBA", color: "#c8102e", short: "UB" },
+  { name: "GTBank", file: "gtco.svg" },
+  { name: "Access Bank", file: "accesscorp.svg" },
+  { name: "First Bank", file: "firstholdco.svg" },
+  { name: "Zenith Bank", file: "zenithbank.svg" },
+  { name: "UBA", file: "uba.svg" },
+  { name: "FCMB", file: "fcmb.svg" },
+  { name: "Stanbic IBTC", file: "stanbic.svg" },
+  { name: "Fidelity Bank", file: "fidelity.svg" },
 ];
 
 function FeatureCard({ icon: Icon, title, description }: { icon: any; title: string; description: string }) {
@@ -103,21 +104,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Trusted by */}
+      {/* Works with */}
       <section className="pb-20 sm:pb-24">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
           <p className="text-xs text-ash-gray text-center mb-8">Works with all major Nigerian banks</p>
           <Reveal>
-            <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-5">
               {banks.map((bank) => (
-                <div key={bank.name} className="flex items-center gap-2 bg-mist-gray rounded-buttons px-3.5 py-2">
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[8px] font-bold shrink-0"
-                    style={{ backgroundColor: bank.color }}
-                  >
-                    {bank.short}
-                  </div>
-                  <span className="text-sm text-ink-black font-medium">{bank.name}</span>
+                <div key={bank.name} className="grayscale opacity-50 hover:opacity-70 hover:grayscale-0 transition-all duration-300">
+                  <img
+                    src={`/banks/${bank.file}`}
+                    alt={bank.name}
+                    className="h-8 w-auto"
+                  />
                 </div>
               ))}
             </div>
@@ -130,28 +129,28 @@ export default function HomePage() {
         <div className="max-w-[1000px] mx-auto px-4 sm:px-8">
           <Reveal>
             <h2 className="font-signifier text-[36px] sm:text-[44px] text-ink-black text-center mb-4" style={{ letterSpacing: "-0.66px" }}>
-              Everything you need<br />
-              <span className="italic">to understand your money</span>
+              See the full picture<br />
+              <span className="italic">of your financial life</span>
             </h2>
             <p className="text-[15px] text-slate-gray text-center max-w-lg mx-auto mb-16">
-              From multi-bank uploads to AI-powered categorization — CONYEST brings clarity to your finances.
+              Connect every account you have. CONYEST unifies your banks, classifies your spending, and surfaces what matters.
             </p>
           </Reveal>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <FeatureCard
               icon={Building2}
-              title="Multi-Bank Support"
-              description="Add all your banks — GTBank, Access, OPay, Kuda, Moniepoint, and more — and see everything in one place."
+              title="Unify Every Bank"
+              description="Upload statements from any Nigerian bank — GTBank, Access, UBA, Zenith, and more. One dashboard, all your accounts."
             />
             <FeatureCard
               icon={Sparkles}
-              title="AI Classification"
-              description="Every transaction is automatically categorized into meaningful groups. Ask questions about your spending in plain English."
+              title="AI That Understands You"
+              description="Transactions sorted into smart categories automatically. Ask questions like 'How much did I spend on food this month?' in plain English."
             />
             <FeatureCard
               icon={PieChart}
-              title="Deep Analytics"
-              description="Category breakdowns, merchant rankings, recurring charges, and cash flow — insights that actually help."
+              title="Insights That Stick"
+              description="Spending breakdowns, merchant rankings, recurring charges, cash flow trends — built to help you actually save more."
             />
           </div>
         </div>
@@ -162,11 +161,11 @@ export default function HomePage() {
         <div className="max-w-[700px] mx-auto px-4 sm:px-8 text-center">
           <Reveal>
             <h2 className="font-signifier text-[36px] sm:text-[44px] text-paper-white mb-5" style={{ letterSpacing: "-0.66px" }}>
-              Ready to take control<br />
-              <span className="italic">of your finances?</span>
+              Stop wondering where<br />
+              <span className="italic">your money went</span>
             </h2>
             <p className="text-[17px] text-white/70 max-w-lg mx-auto mb-8">
-              Join thousands of Nigerians who use CONYEST to understand and manage their finances.
+              Upload your first statement free. No credit card needed.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/register">
