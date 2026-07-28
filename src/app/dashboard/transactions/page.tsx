@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Wand2, ChevronLeft, ChevronRight, Check, AlertCircle, X, Link, Edit, Plus, Zap } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Check, AlertCircle, X, Link, Edit, Plus, Zap } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
 
@@ -14,6 +14,7 @@ interface Transaction {
   date: string;
   description: string;
   normalizedDescription: string | null;
+  narration: string | null;
   amount: number;
   type: string;
   balance: number | null;
@@ -88,12 +89,6 @@ export default function TransactionsPage() {
     categoryId: "",
     markTransfer: false,
   });
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-  const [aiResults, setAiResults] = useState<Record<string, any>>({});
-  const [aiApproved, setAiApproved] = useState<Set<string>>(new Set());
-  const [showAiReview, setShowAiReview] = useState(false);
-  const [aiApplying, setAiApplying] = useState(false);
   const [reclassifying, setReclassifying] = useState(false);
 
   useEffect(() => {
@@ -170,75 +165,6 @@ export default function TransactionsPage() {
       console.error("Failed to find similar transactions:", err);
     }
   }, [user]);
-
-  const handleAiClassify = async () => {
-    setAiLoading(true);
-    setAiError(null);
-    try {
-      const txData = transactions.map(t => ({
-        id: t.id,
-        description: t.description,
-        amount: t.amount,
-        type: t.type as "credit" | "debit",
-      }));
-
-      const res = await fetch("/api/ai/classify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "classify", transactions: txData }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "AI classification failed");
-      }
-
-      const { results } = await res.json();
-      setAiResults(results);
-      // Auto-approve all with confidence >= 0.7
-      const autoApproved = new Set<string>();
-      for (const [id, r] of Object.entries(results) as any) {
-        if (r.confidence >= 0.7) autoApproved.add(id);
-      }
-      setAiApproved(autoApproved);
-      setShowAiReview(true);
-    } catch (err: any) {
-      setAiError(err.message);
-      setSaveMessage({ type: "error", text: err.message });
-      setTimeout(() => { setSaveMessage(null); setAiError(null); }, 5000);
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const handleApplyAi = async () => {
-    setAiApplying(true);
-    let applied = 0;
-    for (const txId of aiApproved) {
-      const classification = aiResults[txId];
-      if (!classification) continue;
-
-      const parentCat = categories.find(c => c.name.toLowerCase() === classification.category.toLowerCase() && !c.parentId);
-      const subCat = parentCat ? categories.find(c => c.parentId === parentCat.id && c.name.toLowerCase() === classification.subcategory.toLowerCase()) : null;
-
-      await fetch(`/api/transactions/${txId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          categoryId: subCat?.id || null,
-          normalizedDescription: classification.merchant,
-        }),
-      });
-      applied++;
-    }
-    setAiApplying(false);
-    setShowAiReview(false);
-    setAiResults({});
-    setAiApproved(new Set());
-    setSaveMessage({ type: "success", text: `Applied ${applied} AI classifications` });
-    setRefreshKey(k => k + 1);
-    setTimeout(() => setSaveMessage(null), 3000);
-  };
 
   const handleReclassify = async () => {
     if (!user) return;
@@ -542,16 +468,6 @@ export default function TransactionsPage() {
             </select>
           )}
             <Button
-              onClick={handleAiClassify}
-              disabled={aiLoading}
-              variant="outline"
-              size="sm"
-              className="gap-1.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white border-0 hover:from-violet-600 hover:to-purple-600"
-            >
-              <Wand2 className={`h-3.5 w-3.5 ${aiLoading ? "animate-spin" : ""}`} />
-              {aiLoading ? "Classifying..." : "AI Classify"}
-            </Button>
-            <Button
               onClick={handleReclassify}
               disabled={reclassifying}
               variant="outline"
@@ -559,7 +475,7 @@ export default function TransactionsPage() {
               className="gap-1.5"
             >
               <Zap className={`h-3.5 w-3.5 ${reclassifying ? "animate-spin" : ""}`} />
-              {reclassifying ? "Re-classifying..." : "Reclassify"}
+              {reclassifying ? "Classifying..." : "Classify"}
             </Button>
             <Button
               onClick={handleExportCsv}
@@ -686,7 +602,9 @@ export default function TransactionsPage() {
                               <span className="font-semibold text-sm text-ink-black">{tx.normalizedDescription || tx.merchant.displayName}</span>
                             </>
                           ) : (
-                            <span className="italic text-slate-gray text-sm">—</span>
+                            <span className="text-slate-gray text-sm truncate max-w-[200px]" title={tx.narration || tx.normalizedDescription || ""}>
+                              {tx.narration || tx.normalizedDescription || <span className="italic">—</span>}
+                            </span>
                           )}
                         </div>
                       </td>
@@ -775,7 +693,7 @@ export default function TransactionsPage() {
           <div className="flex items-center justify-between">
             <h3 className="font-signifier text-lg text-ink-black">Edit Transaction</h3>
             <div className="bg-forest p-1 rounded-lg">
-              <Wand2 className="h-4 w-4 text-lime-vibrant" />
+              <Zap className="h-4 w-4 text-lime-vibrant" />
             </div>
           </div>
 
@@ -1101,195 +1019,13 @@ export default function TransactionsPage() {
           ) : (
             <div className="flex-1 flex items-center justify-center text-center py-8">
               <div className="text-ash-gray">
-                <Wand2 className="h-8 w-8 mx-auto mb-3 opacity-50" />
+                <Zap className="h-8 w-8 mx-auto mb-3 opacity-50" />
                 <p className="text-sm">Select a transaction to edit</p>
               </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* AI Review Modal */}
-      {showAiReview && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#ececec]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-violet-500 to-purple-500 flex items-center justify-center">
-                  <Wand2 className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-ink-black">AI Classification Review</h2>
-                  <p className="text-xs text-ash-gray">{Object.keys(aiResults).length} transactions analyzed</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-ash-gray">
-                  {aiApproved.size} of {Object.keys(aiResults).length} approved
-                </span>
-                <button onClick={() => setShowAiReview(false)} className="p-1.5 hover:bg-mist-gray rounded-lg">
-                  <X className="h-4 w-4 text-ash-gray" />
-                </button>
-              </div>
-            </div>
-
-            {/* Results Table */}
-            <div className="flex-1 overflow-auto px-6 py-3">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#ececec]">
-                    <th className="text-left py-2 px-2 w-10">
-                      <input
-                        type="checkbox"
-                        className="rounded border-[#ececec]"
-                        checked={aiApproved.size === Object.keys(aiResults).length && Object.keys(aiResults).length > 0}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setAiApproved(new Set(Object.keys(aiResults)));
-                          } else {
-                            setAiApproved(new Set());
-                          }
-                        }}
-                      />
-                    </th>
-                    <th className="text-left py-2 px-2 text-[11px] text-ash-gray uppercase">Description</th>
-                    <th className="text-left py-2 px-2 text-[11px] text-ash-gray uppercase">Merchant</th>
-                    <th className="text-left py-2 px-2 text-[11px] text-ash-gray uppercase">Category</th>
-                    <th className="text-left py-2 px-2 text-[11px] text-ash-gray uppercase">Confidence</th>
-                    <th className="text-left py-2 px-2 text-[11px] text-ash-gray uppercase">Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map(tx => {
-                    const result = aiResults[tx.id];
-                    if (!result) return null;
-                    const isApproved = aiApproved.has(tx.id);
-                    const parentCat = categories.find(c => c.name.toLowerCase() === result.category.toLowerCase() && !c.parentId);
-                    const subCat = parentCat ? categories.find(c => c.parentId === parentCat.id && c.name.toLowerCase() === result.subcategory.toLowerCase()) : null;
-
-                    return (
-                      <tr
-                        key={tx.id}
-                        className={`border-b border-[#ececec] cursor-pointer transition-colors ${
-                          isApproved ? "bg-violet-50/50" : "hover:bg-mist-gray/50"
-                        }`}
-                        onClick={() => {
-                          setAiApproved(prev => {
-                            const next = new Set(prev);
-                            if (next.has(tx.id)) next.delete(tx.id);
-                            else next.add(tx.id);
-                            return next;
-                          });
-                        }}
-                      >
-                        <td className="py-2.5 px-2" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            className="rounded border-[#ececec]"
-                            checked={isApproved}
-                            onChange={() => {
-                              setAiApproved(prev => {
-                                const next = new Set(prev);
-                                if (next.has(tx.id)) next.delete(tx.id);
-                                else next.add(tx.id);
-                                return next;
-                              });
-                            }}
-                          />
-                        </td>
-                        <td className="py-2.5 px-2">
-                          <p className="text-ink-black font-medium truncate max-w-[250px]">{tx.description}</p>
-                          <p className="text-[10px] text-ash-gray">{formatCurrency(tx.amount)} {tx.type}</p>
-                        </td>
-                        <td className="py-2.5 px-2">
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant={isApproved ? "default" : "outline"} className={`text-xs ${isApproved ? "bg-violet-100 text-violet-700 border-violet-200" : ""}`}>
-                              {result.merchant}
-                            </Badge>
-                            <span className="text-[10px] text-ash-gray">({result.merchantType})</span>
-                          </div>
-                        </td>
-                        <td className="py-2.5 px-2">
-                          <div className="flex items-center gap-1">
-                            {parentCat && <span className="text-xs">{parentCat.icon}</span>}
-                            <span className="text-xs text-ink-black">{result.category}</span>
-                            <span className="text-ash-gray text-xs">→</span>
-                            {subCat && <span className="text-xs">{subCat.icon}</span>}
-                            <span className="text-xs text-ink-black">{result.subcategory}</span>
-                          </div>
-                        </td>
-                        <td className="py-2.5 px-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-12 h-1.5 bg-mist-gray rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${
-                                  result.confidence >= 0.8 ? "bg-forest" :
-                                  result.confidence >= 0.6 ? "bg-amber-500" : "bg-error"
-                                }`}
-                                style={{ width: `${result.confidence * 100}%` }}
-                              />
-                            </div>
-                            <span className="text-[10px] text-ash-gray">{Math.round(result.confidence * 100)}%</span>
-                          </div>
-                        </td>
-                        <td className="py-2.5 px-2">
-                          <p className="text-[10px] text-ash-gray max-w-[200px] truncate">{result.reason}</p>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-[#ececec] bg-mist-gray/30">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAiApproved(new Set(Object.keys(aiResults)))}
-                >
-                  Approve All
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAiApproved(new Set())}
-                >
-                  Reject All
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const highConf = new Set<string>();
-                    for (const [id, r] of Object.entries(aiResults) as any) {
-                      if (r.confidence >= 0.7) highConf.add(id);
-                    }
-                    setAiApproved(highConf);
-                  }}
-                >
-                  Approve High Confidence
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" onClick={() => setShowAiReview(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleApplyAi}
-                  disabled={aiApproved.size === 0 || aiApplying}
-                  className="bg-gradient-to-r from-violet-500 to-purple-500 text-white hover:from-violet-600 hover:to-purple-600"
-                >
-                  {aiApplying ? "Applying..." : `Apply ${aiApproved.size} Changes`}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

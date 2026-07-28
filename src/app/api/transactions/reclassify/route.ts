@@ -12,10 +12,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
-    // Get transactions to re-classify
+    // Get transactions to re-classify (only unclassified ones)
     const where = transactionIds && transactionIds.length > 0
       ? { id: { in: transactionIds }, bank: { userId } }
-      : { bank: { userId } };
+      : { bank: { userId }, categoryId: null };
 
     const transactions = await db.transaction.findMany({
       where,
@@ -28,12 +28,13 @@ export async function POST(request: NextRequest) {
         type: true,
         reference: true,
         narration: true,
+        categoryId: true,
       },
       orderBy: { date: "asc" },
     });
 
     if (transactions.length === 0) {
-      return NextResponse.json({ error: "No transactions found" }, { status: 404 });
+      return NextResponse.json({ error: "No unclassified transactions found" }, { status: 404 });
     }
 
     // Convert to NormalizedTransaction format for the classifier
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Run classification
     const classifications = await classifyBatch(normalized, userId);
 
-    // Update transactions with new classifications
+    // Update transactions with new classifications (only unclassified ones)
     let updatedCount = 0;
     for (let idx = 0; idx < transactions.length; idx++) {
       const tx = transactions[idx];
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
       success: true,
       totalTransactions: transactions.length,
       updatedCount,
+      skippedCount: 0,
     });
   } catch (error: any) {
     console.error("Re-classify error:", error?.message || error);

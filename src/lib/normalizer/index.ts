@@ -119,7 +119,7 @@ const MERCHANT_DB: Record<string, { name: string; category: string; keywords: st
   opay_transport: { name: "OPay Transport", category: "Transport", keywords: ["opay transport", "opay ride"] },
   lagbus: { name: "LagBus", category: "Transport", keywords: ["lagbus", "lag bus"] },
   BRT: { name: "BRT", category: "Transport", keywords: ["brt", "brt lagos"] },
-  fuel: { name: "Fuel Station", category: "Fuel", keywords: ["fuel", "petrol", "petrol station", "filling station", "total", "total Nigeria", "mobil", "mobil Nigeria", " NNPC", " NNPC filling", "oando", "oando Nigeria", "atmc", "atmc Nigeria"] },
+  fuel: { name: "Fuel Station", category: "Fuel", keywords: ["petrol station", "filling station", "total Nigeria", "mobil Nigeria", " NNPC filling", "oando Nigeria", "atmc Nigeria", "fuel station", "fuel purchase"] },
 
   // Telecoms
   mtn: { name: "MTN", category: "Bills", keywords: ["mtn", "mtn ng", "mtn nigeria", "mtn airtime", "mtn data"] },
