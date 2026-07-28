@@ -657,7 +657,7 @@ export default function TransactionsPage() {
 
           <div className="p-4 border-t border-[#ececec] flex items-center justify-between bg-mist-gray">
             <span className="text-xs text-ash-gray">
-              Showing {(page - 1) * 50 + 1}-{Math.min(page * 50, total)} of {total}
+              Showing {(page - 1) * 100 + 1}-{Math.min(page * 100, total)} of {total}
             </span>
             <div className="flex items-center gap-1">
               {(() => {
