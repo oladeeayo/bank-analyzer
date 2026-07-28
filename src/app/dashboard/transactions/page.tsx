@@ -661,7 +661,7 @@ export default function TransactionsPage() {
             </span>
             <div className="flex items-center gap-1">
               {(() => {
-                const totalPages = Math.ceil(total / 50);
+                const totalPages = Math.ceil(total / 100);
                 if (totalPages <= 1) return null;
                 const pages: (number | "...")[] = [];
                 if (totalPages <= 7) {
@@ -699,7 +699,7 @@ export default function TransactionsPage() {
                         </Button>
                       )
                     )}
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(p => p + 1)} disabled={page * 50 >= total}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(p => p + 1)} disabled={page * 100 >= total}>
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </>
