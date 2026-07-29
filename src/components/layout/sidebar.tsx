@@ -17,13 +17,13 @@ import {
   FolderIcon,
   XMarkIcon,
   DocumentTextIcon,
-  StoreIcon,
+  ShoppingBagIcon,
 } from "@heroicons/react/24/outline";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
   { name: "Transactions", href: "/dashboard/transactions", icon: ArrowsRightLeftIcon },
-  { name: "Merchants", href: "/dashboard/merchants", icon: StoreIcon },
+  { name: "Merchants", href: "/dashboard/merchants", icon: ShoppingBagIcon },
   { name: "Report", href: "/dashboard/report", icon: DocumentTextIcon },
   { name: "Upload", href: "/dashboard/upload", icon: TableCellsIcon },
   { name: "Banks", href: "/dashboard/banks", icon: BuildingOffice2Icon },
