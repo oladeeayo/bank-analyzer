@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSessionUserId } from "@/lib/session";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ merchantId: string }> }
 ) {
   try {
-    const userId = await getSessionUserId();
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
     const { merchantId } = await params;
@@ -45,7 +46,6 @@ export async function GET(
     const visitCount = transactions.length;
     const avgVisit = visitCount > 0 ? totalSpent / visitCount : 0;
 
-    // Monthly spending for velocity chart
     const monthlyMap = new Map<string, { month: number; year: number; amount: number; count: number }>();
     for (const tx of transactions) {
       const d = new Date(tx.date);
@@ -57,7 +57,6 @@ export async function GET(
     }
     const monthlySpending = Array.from(monthlyMap.values()).sort((a, b) => a.year - b.year || a.month - b.month);
 
-    // Category split
     const categoryMap = new Map<string, { name: string; icon: string; color: string; amount: number; count: number }>();
     for (const tx of transactions) {
       if (!tx.category) continue;
@@ -69,7 +68,6 @@ export async function GET(
     }
     const categorySplit = Array.from(categoryMap.values()).sort((a, b) => b.amount - a.amount);
 
-    // Recent transactions (last 10)
     const recentTransactions = transactions.slice(0, 10).map((tx) => ({
       id: tx.id,
       date: tx.date,
@@ -79,7 +77,6 @@ export async function GET(
       channelTag: tx.channelTag,
     }));
 
-    // Peak spending day
     const dayMap = new Map<number, { day: string; amount: number; count: number }>();
     for (const tx of transactions) {
       const d = new Date(tx.date);
@@ -92,7 +89,6 @@ export async function GET(
     }
     const peakDay = Array.from(dayMap.values()).sort((a, b) => b.amount - a.amount)[0] || null;
 
-    // Visit frequency (days between visits)
     const dates = [...new Set(transactions.map((t) => new Date(t.date).toDateString()))].sort(
       (a, b) => new Date(a).getTime() - new Date(b).getTime()
     );

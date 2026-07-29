@@ -52,7 +52,7 @@ export default function MerchantDetailPage() {
   useEffect(() => {
     if (!user || !merchantId) return;
     setLoading(true);
-    fetch(`/api/merchants/${merchantId}/analytics`)
+    fetch(`/api/merchants/${merchantId}/analytics?userId=${user.id}`)
       .then((res) => res.json())
       .then((d) => {
         setData(d);
