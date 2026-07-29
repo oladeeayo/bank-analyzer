@@ -17,7 +17,6 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      redirectURI: "https://bank-analyzer-six.vercel.app/api/auth/callback/google",
     },
   },
   session: {
