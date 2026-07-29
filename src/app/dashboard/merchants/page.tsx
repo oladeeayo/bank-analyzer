@@ -135,18 +135,18 @@ export default function MerchantsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-paper-white border border-[#ececec] p-4 rounded-cards">
-          <p className="text-[11px] text-ash-gray uppercase tracking-wider">Total Merchants</p>
-          <p className="text-xl font-mono font-medium text-ink-black mt-1">{merchants.length}</p>
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
+          <p className="text-[10px] sm:text-[11px] text-ash-gray uppercase tracking-wider">Total Merchants</p>
+          <p className="text-base sm:text-xl font-mono font-medium text-ink-black mt-1">{merchants.length}</p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] p-4 rounded-cards">
-          <p className="text-[11px] text-ash-gray uppercase tracking-wider">Total Spent</p>
-          <p className="text-xl font-mono font-medium text-ink-black mt-1">{formatCurrency(totalSpent)}</p>
+        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
+          <p className="text-[10px] sm:text-[11px] text-ash-gray uppercase tracking-wider">Total Spent</p>
+          <p className="text-base sm:text-xl font-mono font-medium text-ink-black mt-1">{formatCurrency(totalSpent)}</p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] p-4 rounded-cards">
-          <p className="text-[11px] text-ash-gray uppercase tracking-wider">Avg per Merchant</p>
-          <p className="text-xl font-mono font-medium text-ink-black mt-1">
+        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
+          <p className="text-[10px] sm:text-[11px] text-ash-gray uppercase tracking-wider">Avg per Merchant</p>
+          <p className="text-base sm:text-xl font-mono font-medium text-ink-black mt-1">
             {merchants.length > 0 ? formatCurrency(totalSpent / merchants.length) : "₦0"}
           </p>
         </div>
@@ -203,13 +203,13 @@ export default function MerchantsPage() {
 
       {/* Merchant Detail Overlay */}
       {selectedId && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[5vh] sm:pt-[8vh]">
+        <div className="fixed inset-0 z-50 flex sm:items-start sm:justify-center sm:pt-[5vh]">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
-          <div className="relative bg-paper-white rounded-cards shadow-elevated w-full max-w-4xl max-h-[85vh] overflow-y-auto mx-4">
+          <div className="relative bg-paper-white sm:rounded-cards shadow-elevated w-full sm:max-w-4xl h-full sm:max-h-[88vh] sm:mx-4 overflow-y-auto">
             {/* Close button */}
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 hover:bg-white text-ink-black shadow-subtle transition-all"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 hover:bg-white text-ink-black shadow-subtle transition-all"
             >
               <X className="h-4 w-4" />
             </button>
@@ -244,40 +244,40 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
   const totalCategoryAmount = categorySplit.reduce((s, c) => s + c.amount, 0);
 
   return (
-    <div className="p-5 sm:p-6 space-y-5">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
       {/* Merchant Profile Card */}
-      <div className="bg-forest rounded-cards p-5 sm:p-6 text-white relative overflow-hidden">
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-2xl backdrop-blur-sm">
+      <div className="bg-forest rounded-cards p-4 sm:p-6 text-white relative overflow-hidden">
+        <div className="relative z-10 flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/10 rounded-2xl flex items-center justify-center text-xl sm:text-2xl backdrop-blur-sm shrink-0">
               {merchant.icon}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-signifier text-2xl">{merchant.displayName}</h2>
-                <span className="px-2 py-0.5 bg-lime-vibrant/20 text-lime-vibrant text-[10px] font-semibold rounded-full uppercase tracking-wider">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-signifier text-xl sm:text-2xl truncate">{merchant.displayName}</h2>
+                <span className="px-2 py-0.5 bg-lime-vibrant/20 text-lime-vibrant text-[10px] font-semibold rounded-full uppercase tracking-wider shrink-0">
                   Merchant
                 </span>
               </div>
-              <p className="text-white/60 text-sm flex items-center gap-1 mt-0.5">
-                <MapPin className="h-3 w-3" />
+              <p className="text-white/60 text-xs sm:text-sm flex items-center gap-1 mt-0.5">
+                <MapPin className="h-3 w-3 shrink-0" />
                 {data.uniqueDays} unique visit days
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-6 sm:gap-8">
-            <div className="text-right">
-              <p className="text-white/50 text-[10px] uppercase tracking-wider">Total Spent</p>
-              <p className="font-mono text-2xl font-medium text-lime-vibrant">{formatCurrency(totalSpent)}</p>
+          <div className="grid grid-cols-3 gap-3 sm:gap-6 sm:flex sm:justify-end">
+            <div className="sm:text-right">
+              <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Total Spent</p>
+              <p className="font-mono text-lg sm:text-2xl font-medium text-lime-vibrant">{formatCurrency(totalSpent)}</p>
             </div>
-            <div className="text-right">
-              <p className="text-white/50 text-[10px] uppercase tracking-wider">Visits</p>
-              <p className="font-mono text-2xl font-medium">{visitCount}</p>
+            <div className="sm:text-right">
+              <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Visits</p>
+              <p className="font-mono text-lg sm:text-2xl font-medium">{visitCount}</p>
             </div>
-            <div className="text-right">
-              <p className="text-white/50 text-[10px] uppercase tracking-wider">Avg. Visit</p>
-              <p className="font-mono text-2xl font-medium">{formatCurrency(avgVisit)}</p>
+            <div className="sm:text-right">
+              <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Avg. Visit</p>
+              <p className="font-mono text-lg sm:text-2xl font-medium">{formatCurrency(avgVisit)}</p>
             </div>
           </div>
         </div>
@@ -292,7 +292,7 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
             <h3 className="font-signifier text-lg text-ink-black">Spending Velocity</h3>
             <p className="text-xs text-ash-gray mt-0.5">Historical analysis over {monthlySpending.length} months</p>
           </div>
-          <div className="h-56">
+          <div className="h-44 sm:h-56">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} barCategoryGap="20%" barGap={4}>
@@ -418,11 +418,11 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
 
       {/* Activity History */}
       <div className="bg-paper-white border border-[#ececec] rounded-cards overflow-hidden">
-        <div className="px-4 sm:p-5 pb-3 border-b border-[#ececec]">
+        <div className="px-4 sm:px-5 pb-3 border-b border-[#ececec]">
           <h3 className="font-signifier text-lg text-ink-black">Activity History</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[480px]">
             <thead>
               <tr className="bg-mist-gray">
                 <th className="text-left text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-2.5">Date</th>
@@ -434,16 +434,16 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
             <tbody className="divide-y divide-[#ececec]">
               {recentTransactions.map((tx) => (
                 <tr key={tx.id} className="hover:bg-mist-gray/50 transition-colors">
-                  <td className="px-4 py-3 text-xs text-ash-gray">
+                  <td className="px-4 py-3 text-xs text-ash-gray whitespace-nowrap">
                     {new Date(tx.date).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-gray">
+                  <td className="px-4 py-3 text-xs text-slate-gray whitespace-nowrap">
                     {tx.category?.icon} {tx.category?.name || "—"}
                   </td>
                   <td className="px-4 py-3 text-xs text-ink-black truncate max-w-[200px]">
                     {tx.description}
                   </td>
-                  <td className="px-4 py-3 text-xs font-mono font-medium text-error text-right">
+                  <td className="px-4 py-3 text-xs font-mono font-medium text-error text-right whitespace-nowrap">
                     -{formatCurrency(tx.amount)}
                   </td>
                 </tr>

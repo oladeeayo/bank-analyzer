@@ -5,36 +5,42 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/auth-client";
 import {
-  LayoutDashboard,
-  Building2,
-  FileSpreadsheet,
-  ArrowLeftRight,
-  PieChart,
-  Settings,
-  Target,
-  Wallet,
-  LogOut,
-  FolderTree,
-  X,
-  FileText,
-  Store,
-} from "lucide-react";
+  HomeIcon,
+  BuildingOffice2Icon,
+  TableCellsIcon,
+  ArrowsRightLeftIcon,
+  ChartPieIcon,
+  Cog6ToothIcon,
+  FlagIcon,
+  WalletIcon,
+  ArrowLeftOnRectangleIcon,
+  FolderIcon,
+  XMarkIcon,
+  DocumentTextIcon,
+  StoreIcon,
+} from "@heroicons/react/24/outline";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
-  { name: "Merchants", href: "/dashboard/merchants", icon: Store },
-  { name: "Report", href: "/dashboard/report", icon: FileText },
-  { name: "Upload", href: "/dashboard/upload", icon: FileSpreadsheet },
-  { name: "Banks", href: "/dashboard/banks", icon: Building2 },
-  { name: "Budgets", href: "/dashboard/budgets", icon: Wallet },
-  { name: "Analytics", href: "/dashboard/analytics", icon: PieChart },
-  { name: "Goals", href: "/dashboard/goals", icon: Target },
-  { name: "Categories", href: "/dashboard/settings/categories", icon: FolderTree },
+  { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
+  { name: "Transactions", href: "/dashboard/transactions", icon: ArrowsRightLeftIcon },
+  { name: "Merchants", href: "/dashboard/merchants", icon: StoreIcon },
+  { name: "Report", href: "/dashboard/report", icon: DocumentTextIcon },
+  { name: "Upload", href: "/dashboard/upload", icon: TableCellsIcon },
+  { name: "Banks", href: "/dashboard/banks", icon: BuildingOffice2Icon },
+  { name: "Budgets", href: "/dashboard/budgets", icon: WalletIcon },
+  { name: "Analytics", href: "/dashboard/analytics", icon: ChartPieIcon },
+  { name: "Goals", href: "/dashboard/goals", icon: FlagIcon },
+  { name: "Categories", href: "/dashboard/settings/categories", icon: FolderIcon },
 ];
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/login");
+  };
 
   const sidebarContent = (
     <>
@@ -50,7 +56,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           </div>
         </div>
         <button onClick={onClose} className="lg:hidden p-1 text-slate-gray hover:text-forest" aria-label="Close sidebar">
-          <X className="h-5 w-5" />
+          <XMarkIcon className="h-5 w-5" />
         </button>
       </div>
 
@@ -91,14 +97,14 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               : "text-slate-gray hover:text-forest hover:bg-mist-gray"
           )}
         >
-          <Settings className="h-5 w-5 shrink-0" />
+          <Cog6ToothIcon className="h-5 w-5 shrink-0" />
           Settings
         </Link>
         <button
-          onClick={() => signOut({ fetchOptions: { onSuccess: { redirect: "/login" } } })}
+          onClick={handleSignOut}
           className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest hover:bg-mist-gray transition-all active:scale-[0.97]"
         >
-          <LogOut className="h-5 w-5 shrink-0" />
+          <ArrowLeftOnRectangleIcon className="h-5 w-5 shrink-0" />
           Logout
         </button>
       </div>
