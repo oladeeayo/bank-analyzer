@@ -33,7 +33,9 @@ interface MerchantSummary {
 interface MerchantAnalytics {
   merchant: { id: string; displayName: string; icon: string; color: string };
   totalSpent: number;
+  totalReceived: number;
   visitCount: number;
+  receiveCount: number;
   avgVisit: number;
   monthlySpending: { month: number; year: number; amount: number; count: number }[];
   categorySplit: { name: string; icon: string; color: string; amount: number; count: number }[];
@@ -42,6 +44,7 @@ interface MerchantAnalytics {
     date: string;
     description: string;
     amount: number;
+    type: string;
     category: { name: string; icon: string } | null;
     channelTag: string | null;
   }[];
@@ -287,8 +290,9 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
             {visitCount > 0 && (
               <div className="sm:text-right">
                 <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Avg. Visit</p>
-              <p className="font-mono text-lg sm:text-2xl font-medium">{formatCurrency(avgVisit)}</p>
-            </div>
+                <p className="font-mono text-lg sm:text-2xl font-medium">{formatCurrency(avgVisit)}</p>
+              </div>
+            )}
           </div>
         </div>
         <div className="absolute -right-8 -top-8 w-40 h-40 bg-lime-vibrant/10 rounded-full blur-3xl" />
@@ -453,8 +457,8 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
                   <td className="px-4 py-3 text-xs text-ink-black truncate max-w-[200px]">
                     {tx.description}
                   </td>
-                  <td className="px-4 py-3 text-xs font-mono font-medium text-error text-right whitespace-nowrap">
-                    -{formatCurrency(tx.amount)}
+                  <td className={`px-4 py-3 text-xs font-mono font-medium text-right whitespace-nowrap ${tx.type === "credit" ? "text-forest" : "text-error"}`}>
+                    {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
                   </td>
                 </tr>
               ))}

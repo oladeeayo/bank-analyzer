@@ -76,6 +76,7 @@ export async function GET(
       date: tx.date,
       description: tx.description,
       amount: tx.amount,
+      type: tx.type,
       category: tx.category,
       channelTag: tx.channelTag,
     }));
