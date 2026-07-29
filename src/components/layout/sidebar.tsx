@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { signOut } from "@/lib/auth-client";
 import {
   LayoutDashboard,
   Building2,
@@ -93,7 +94,10 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           <Settings className="h-5 w-5 shrink-0" />
           Settings
         </Link>
-        <button className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest hover:bg-mist-gray transition-all active:scale-[0.97]">
+        <button
+          onClick={() => signOut({ fetchOptions: { onSuccess: { redirect: "/login" } } })}
+          className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest hover:bg-mist-gray transition-all active:scale-[0.97]"
+        >
           <LogOut className="h-5 w-5 shrink-0" />
           Logout
         </button>
