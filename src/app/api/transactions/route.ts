@@ -42,8 +42,12 @@ export async function GET(request: NextRequest) {
         ...(endDate ? { lte: new Date(endDate) } : {}),
       };
     }
-    if (minAmount) where.amount = { ...(where.amount || {}), gte: parseFloat(minAmount) };
-    if (maxAmount) where.amount = { ...(where.amount || {}), lte: parseFloat(maxAmount) };
+    if (minAmount || maxAmount) {
+      const amountFilter: Prisma.FloatFilter = {};
+      if (minAmount) amountFilter.gte = parseFloat(minAmount);
+      if (maxAmount) amountFilter.lte = parseFloat(maxAmount);
+      where.amount = amountFilter;
+    }
     if (search) {
       where.OR = [
         { description: { contains: search, mode: "insensitive" } },
