@@ -41,8 +41,12 @@ export async function GET(
       orderBy: { date: "desc" },
     });
 
-    const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
-    const visitCount = transactions.length;
+    const debits = transactions.filter((t) => t.type === "debit");
+    const credits = transactions.filter((t) => t.type === "credit");
+    const totalSpent = debits.reduce((sum, t) => sum + t.amount, 0);
+    const totalReceived = credits.reduce((sum, t) => sum + t.amount, 0);
+    const visitCount = debits.length;
+    const receiveCount = credits.length;
     const avgVisit = visitCount > 0 ? totalSpent / visitCount : 0;
 
     const monthlyMap = new Map<string, { month: number; year: number; amount: number; count: number }>();
@@ -103,7 +107,9 @@ export async function GET(
     return NextResponse.json({
       merchant,
       totalSpent,
+      totalReceived,
       visitCount,
+      receiveCount,
       avgVisit,
       monthlySpending,
       categorySplit,

@@ -234,7 +234,8 @@ export default function MerchantsPage() {
 }
 
 function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
-  const { merchant, totalSpent, visitCount, avgVisit, monthlySpending, categorySplit, recentTransactions, peakDay, avgDaysBetween } = data;
+  const { merchant, totalSpent, totalReceived, visitCount, receiveCount, avgVisit, monthlySpending, categorySplit, recentTransactions, peakDay, avgDaysBetween } = data;
+  const hasBoth = totalSpent > 0 && totalReceived > 0;
 
   const chartData = monthlySpending.map((m) => ({
     name: MONTH_NAMES[m.month - 1],
@@ -256,7 +257,7 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-signifier text-xl sm:text-2xl truncate">{merchant.displayName}</h2>
                 <span className="px-2 py-0.5 bg-lime-vibrant/20 text-lime-vibrant text-[10px] font-semibold rounded-full uppercase tracking-wider shrink-0">
-                  Merchant
+                  {hasBoth ? "Two-Way" : totalReceived > 0 ? "Received" : "Spent"}
                 </span>
               </div>
               <p className="text-white/60 text-xs sm:text-sm flex items-center gap-1 mt-0.5">
@@ -266,17 +267,26 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 sm:gap-6 sm:flex sm:justify-end">
+          <div className={`grid gap-3 sm:gap-6 sm:flex sm:justify-end ${hasBoth ? "grid-cols-4" : "grid-cols-3"}`}>
+            {totalSpent > 0 && (
+              <div className="sm:text-right">
+                <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Total Spent</p>
+                <p className="font-mono text-lg sm:text-2xl font-medium text-lime-vibrant">{formatCurrency(totalSpent)}</p>
+              </div>
+            )}
+            {totalReceived > 0 && (
+              <div className="sm:text-right">
+                <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Total Received</p>
+                <p className="font-mono text-lg sm:text-2xl font-medium text-white">{formatCurrency(totalReceived)}</p>
+              </div>
+            )}
             <div className="sm:text-right">
-              <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Total Spent</p>
-              <p className="font-mono text-lg sm:text-2xl font-medium text-lime-vibrant">{formatCurrency(totalSpent)}</p>
+              <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">{visitCount > 0 ? "Visits" : "Transactions"}</p>
+              <p className="font-mono text-lg sm:text-2xl font-medium">{visitCount > 0 ? visitCount : receiveCount}</p>
             </div>
-            <div className="sm:text-right">
-              <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Visits</p>
-              <p className="font-mono text-lg sm:text-2xl font-medium">{visitCount}</p>
-            </div>
-            <div className="sm:text-right">
-              <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Avg. Visit</p>
+            {visitCount > 0 && (
+              <div className="sm:text-right">
+                <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Avg. Visit</p>
               <p className="font-mono text-lg sm:text-2xl font-medium">{formatCurrency(avgVisit)}</p>
             </div>
           </div>
