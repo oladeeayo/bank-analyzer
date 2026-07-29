@@ -150,10 +150,10 @@ export default function MerchantDetailPage() {
               <p className="text-xs text-ash-gray mt-1">Historical analysis over {monthlySpending.length} months</p>
             </div>
           </div>
-          <div className="h-64">
+          <div className="h-72">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} barSize={20}>
+                <BarChart data={chartData} barCategoryGap="20%" barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ececec" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#979799", fontSize: 10 }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: "#979799", fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
@@ -161,7 +161,7 @@ export default function MerchantDetailPage() {
                     contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}
                     formatter={(value) => [formatCurrency(Number(value)), "Spent"]}
                   />
-                  <Bar dataKey="amount" fill="var(--color-lime-bright)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="amount" fill="var(--color-lime-bright)" radius={[6, 6, 0, 0]} maxBarSize={60} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -180,14 +180,14 @@ export default function MerchantDetailPage() {
             <>
               <div className="flex justify-center mb-4">
                 <div className="relative">
-                  <ResponsiveContainer width={160} height={160}>
+                  <ResponsiveContainer width={180} height={180}>
                     <PieChart>
                       <Pie
                         data={categorySplit.map((c) => ({ name: c.name, value: c.amount }))}
                         cx="50%"
                         cy="50%"
-                        innerRadius={50}
-                        outerRadius={70}
+                        innerRadius={55}
+                        outerRadius={80}
                         paddingAngle={3}
                         dataKey="value"
                       >
