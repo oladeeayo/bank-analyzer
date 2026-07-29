@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Sidebar } from "./sidebar";
-import { Search, Bell, ChevronDown, Menu } from "lucide-react";
+import { MagnifyingGlassIcon, BellIcon, ChevronDownIcon, Bars3Icon } from "@heroicons/react/24/outline";
 import { useUser } from "@/lib/hooks";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -21,14 +21,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               className="lg:hidden p-2 text-slate-gray hover:text-forest transition-colors -ml-2"
               aria-label="Open sidebar"
             >
-              <Menu className="h-5 w-5" />
+              <Bars3Icon className="h-5 w-5" />
             </button>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-6">
             {/* Search - hidden on very small screens */}
             <div className="hidden sm:block relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-smoke-gray" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-smoke-gray" />
               <input
                 type="text"
                 placeholder="Search transactions..."
@@ -38,7 +38,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
             {/* Notifications */}
             <button className="relative p-2 text-slate-gray hover:text-forest transition-colors" aria-label="Notifications">
-              <Bell className="h-5 w-5" />
+              <BellIcon className="h-5 w-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full" aria-hidden="true"></span>
             </button>
 
@@ -51,7 +51,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-forest-container rounded-full flex items-center justify-center text-white text-sm font-medium">
                 {user?.name?.charAt(0) || user?.email?.charAt(0) || "U"}
               </div>
-              <ChevronDown className="hidden sm:block h-4 w-4 text-ash-gray" />
+              <ChevronDownIcon className="hidden sm:block h-4 w-4 text-ash-gray" />
             </div>
           </div>
         </header>

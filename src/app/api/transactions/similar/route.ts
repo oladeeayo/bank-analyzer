@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { extractCounterpartyInfo, namesMatchForGrouping } from "@/lib/counterparty-matcher";
+import { getSessionUserId } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
     const txId = searchParams.get("txId");
 
-    if (!userId || !txId) {
+    if (!txId) {
       return NextResponse.json(
-        { error: "userId and txId are required" },
+        { error: "txId is required" },
         { status: 400 }
       );
     }

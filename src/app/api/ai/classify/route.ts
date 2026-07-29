@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { batchClassify, findSimilarGroups } from "@/lib/ai";
+import { getSessionUserId } from "@/lib/session";
+import { errorMessage } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json(
         { error: "GEMINI_API_KEY not configured" },
@@ -45,10 +52,10 @@ export async function POST(req: NextRequest) {
       { error: "action must be 'classify', 'similar', or 'both'" },
       { status: 400 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("AI classify error:", error);
     return NextResponse.json(
-      { error: error.message || "AI classification failed" },
+      { error: errorMessage(error) || "AI classification failed" },
       { status: 500 }
     );
   }

@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSessionUserId } from "@/lib/session";
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
-    const rule = await db.classificationRule.findUnique({
-      where: { id },
+    const rule = await db.classificationRule.findFirst({
+      where: { id, userId },
       include: {
         merchant: { select: { id: true, displayName: true } },
         category: { select: { id: true, name: true, icon: true } },
@@ -30,11 +36,16 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { name, type, pattern, merchantId, categoryId, priority, isActive } = body;
 
-    const existing = await db.classificationRule.findUnique({ where: { id } });
+    const existing = await db.classificationRule.findFirst({ where: { id, userId } });
     if (!existing) {
       return NextResponse.json({ error: "Rule not found" }, { status: 404 });
     }
@@ -63,18 +74,22 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
 
-    const existing = await db.classificationRule.findUnique({ where: { id } });
-    if (!existing) {
+    const { count } = await db.classificationRule.deleteMany({ where: { id, userId } });
+    if (count === 0) {
       return NextResponse.json({ error: "Rule not found" }, { status: 404 });
     }
 
-    await db.classificationRule.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (_error) {
     return NextResponse.json({ error: "Failed to delete rule" }, { status: 500 });

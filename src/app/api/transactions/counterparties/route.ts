@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { extractCounterpartyInfo, groupSimilarTransactions } from "@/lib/counterparty-matcher";
+import { getSessionUserId } from "@/lib/session";
 
 interface CounterpartySummary {
   counterpartyName: string;
@@ -17,15 +19,15 @@ interface CounterpartySummary {
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    const bankId = searchParams.get("bankId");
-
+    const userId = await getSessionUserId();
     if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const where: any = { bank: { userId } };
+    const { searchParams } = new URL(request.url);
+    const bankId = searchParams.get("bankId");
+
+    const where: Prisma.TransactionWhereInput = { bank: { userId } };
     if (bankId) where.bankId = bankId;
 
     const transactions = await db.transaction.findMany({

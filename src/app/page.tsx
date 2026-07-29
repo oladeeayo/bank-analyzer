@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, Sparkles, PieChart } from "lucide-react";
+import { ArrowRightIcon, BuildingOffice2Icon, SparklesIcon, ChartPieIcon } from "@heroicons/react/24/outline";
 
 function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -91,7 +91,7 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/register">
             <Button variant="default" size="lg" className="gap-2 w-full sm:w-auto text-base h-11 px-7">
-              Get Started Free <ArrowRight className="h-4 w-4" />
+              Get Started Free <ArrowRightIcon className="h-4 w-4" />
             </Button>
           </Link>
           <Link href="/login">
@@ -136,17 +136,17 @@ export default function HomePage() {
           </Reveal>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <FeatureCard
-              icon={Building2}
+              icon={BuildingOffice2Icon}
               title="Unify Every Bank"
               description="Upload statements from any Nigerian bank — GTBank, Access, UBA, Zenith, and more. One dashboard, all your accounts."
             />
             <FeatureCard
-              icon={Sparkles}
+              icon={SparklesIcon}
               title="AI That Understands You"
               description="Transactions sorted into smart categories automatically. Ask questions like 'How much did I spend on food this month?' in plain English."
             />
             <FeatureCard
-              icon={PieChart}
+              icon={ChartPieIcon}
               title="Insights That Stick"
               description="Spending breakdowns, merchant rankings, recurring charges, cash flow trends — built to help you actually save more."
             />
@@ -168,7 +168,7 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/register">
                 <Button variant="success" size="lg" className="gap-2 w-full sm:w-auto text-base h-11 px-7">
-                  Get Started Free <ArrowRight className="h-4 w-4" />
+                  Get Started Free <ArrowRightIcon className="h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/login">

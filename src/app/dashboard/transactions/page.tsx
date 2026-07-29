@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, ChevronLeft, ChevronRight, Check, AlertCircle, X, Link, Edit, Plus, Zap } from "lucide-react";
+import { CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon, CheckIcon, ExclamationCircleIcon, XMarkIcon, LinkIcon, PencilIcon, PlusIcon, BoltIcon } from "@heroicons/react/24/outline";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
 

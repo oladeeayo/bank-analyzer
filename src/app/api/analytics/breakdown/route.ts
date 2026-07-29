@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSessionUserId } from "@/lib/session";
 
 interface MonthData {
   year: number;
@@ -23,18 +24,18 @@ interface GroupEntry {
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
     const bankId = searchParams.get("bankId");
     const groupBy = searchParams.get("groupBy") || "merchant";
     const period = searchParams.get("period") || "all";
     const year = searchParams.get("year") ? parseInt(searchParams.get("year")!) : new Date().getFullYear();
     const month = searchParams.get("month") ? parseInt(searchParams.get("month")!) : new Date().getMonth() + 1;
     const quarter = searchParams.get("quarter") ? parseInt(searchParams.get("quarter")!) : undefined;
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
 
     if (!["merchant", "category", "subcategory"].includes(groupBy)) {
       return NextResponse.json({ error: "groupBy must be merchant, category, or subcategory" }, { status: 400 });

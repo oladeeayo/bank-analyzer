@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
-  TrendingUp,
-  TrendingDown,
-  ArrowUpRight,
-  ArrowDownRight,
-} from "lucide-react";
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  ArrowUpRightIcon,
+  ArrowDownRightIcon,
+} from "@heroicons/react/24/outline";
 import { useUser } from "@/lib/hooks";
 import {
   BarChart,
@@ -283,7 +283,7 @@ export default function DashboardPage() {
             <h3 className="font-mono text-[28px] font-medium text-forest">{formatCurrency(summary.totalIncome)}</h3>
           </div>
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-3 w-3 text-forest" />
+            <ArrowTrendingUpIcon className="h-3 w-3 text-forest" />
             <span className="text-xs text-ash-gray">{data.periodLabel}</span>
           </div>
         </div>
@@ -295,7 +295,7 @@ export default function DashboardPage() {
             <h3 className="font-mono text-[28px] font-medium text-error">{formatCurrency(summary.totalExpenses)}</h3>
           </div>
           <div className="flex items-center gap-2">
-            <TrendingDown className="h-3 w-3 text-error" />
+            <ArrowTrendingDownIcon className="h-3 w-3 text-error" />
             <span className="text-xs text-ash-gray">{data.periodLabel}</span>
           </div>
         </div>
@@ -485,9 +485,9 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tx.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-error/10 text-error"}`}>
                         {tx.type === "credit" ? (
-                          <ArrowUpRight className="h-4 w-4" />
+                          <ArrowUpRightIcon className="h-4 w-4" />
                         ) : (
-                          <ArrowDownRight className="h-4 w-4" />
+                          <ArrowDownRightIcon className="h-4 w-4" />
                         )}
                       </div>
                       <span className="text-sm font-semibold text-ink-black">

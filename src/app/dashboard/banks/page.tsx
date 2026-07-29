@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Building2, Wallet, Search, X } from "lucide-react";
+import { PlusIcon, BuildingOffice2Icon, WalletIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { BANKS } from "@/lib/constants";
 import { useUser } from "@/lib/hooks";
 import { formatCurrency } from "@/lib/utils";

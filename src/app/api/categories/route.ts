@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSessionUserId } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
     const nested = searchParams.get("nested") === "true";
 
-    const where = userId
-      ? { OR: [{ userId }, { isSystem: true }] }
-      : { isSystem: true };
+    const where = { OR: [{ userId }, { isSystem: true }] };
 
     const categories = await db.category.findMany({
       where,
@@ -60,8 +63,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { userId, name, icon, color, parentId } = body;
+    const { name, icon, color, parentId } = body;
 
     if (!name) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
@@ -69,27 +77,25 @@ export async function POST(request: NextRequest) {
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-    if (userId) {
-      const existing = await db.category.findFirst({
-        where: {
-          name,
-          parentId: parentId || null,
-          OR: [
-            { userId },
-            { isSystem: true },
-          ],
-        },
-      });
+    const existing = await db.category.findFirst({
+      where: {
+        name,
+        parentId: parentId || null,
+        OR: [
+          { userId },
+          { isSystem: true },
+        ],
+      },
+    });
 
-      if (existing) {
-        return NextResponse.json(existing);
-      }
+    if (existing) {
+      return NextResponse.json(existing);
     }
 
     const category = await db.category.create({
       data: {
-        userId: userId || undefined,
-        isSystem: !userId,
+        userId,
+        isSystem: false,
         name,
         slug,
         icon: icon || "📁",

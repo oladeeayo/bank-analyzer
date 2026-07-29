@@ -272,7 +272,7 @@ function parseGenericRows(rows: string[][]): ParseResult {
       let description = "";
       let amount = 0;
       let type: "debit" | "credit" = "debit";
-      let reference = "";
+      const reference = "";
 
       for (const cell of row) {
         if (!dateStr && datePattern.test(cell)) {

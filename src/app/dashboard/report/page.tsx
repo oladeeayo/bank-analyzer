@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useUser } from "@/lib/hooks";
 import { formatCurrency } from "@/lib/utils";
-import { TrendingUp, TrendingDown, AlertCircle, Lightbulb, Target, ArrowRight, Sparkles, RefreshCw } from "lucide-react";
+import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, ExclamationCircleIcon, LightBulbIcon, FlagIcon, ArrowRightIcon, SparklesIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 

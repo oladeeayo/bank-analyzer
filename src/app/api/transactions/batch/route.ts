@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSessionUserId } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, transactionIds, categoryId, merchantId } = body;
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    if (!userId || !transactionIds || !Array.isArray(transactionIds) || transactionIds.length === 0) {
+    const body = await request.json();
+    const { transactionIds, categoryId, merchantId } = body;
+
+    if (!transactionIds || !Array.isArray(transactionIds) || transactionIds.length === 0) {
       return NextResponse.json(
-        { error: "userId and transactionIds array are required" },
+        { error: "transactionIds array is required" },
         { status: 400 }
       );
     }

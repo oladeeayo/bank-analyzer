@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
-import { ArrowLeft, MapPin, TrendingUp, Calendar, PiggyBank, Repeat } from "lucide-react";
+import { ArrowLeftIcon, MapPinIcon, ArrowTrendingUpIcon, CalendarDaysIcon, BanknotesIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import {
   BarChart,
   Bar,

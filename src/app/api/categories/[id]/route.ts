@@ -1,17 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSessionUserId } from "@/lib/session";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { name, icon, color } = body;
 
     if (!name) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
+    }
+
+    // Only allow editing the caller's own (non-system) categories
+    const owned = await db.category.findFirst({
+      where: { id, userId, isSystem: false },
+      select: { id: true },
+    });
+    if (!owned) {
+      return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -21,6 +36,7 @@ export async function PUT(
         name,
         parentId: undefined,
         id: { not: id },
+        OR: [{ userId }, { isSystem: true }],
       },
     });
 
@@ -45,16 +61,19 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const category = await db.category.findUnique({
-      where: { id },
+    const { id } = await params;
+
+    const category = await db.category.findFirst({
+      where: { id, userId },
       include: { _count: { select: { transactions: true, children: true } } },
     });
 

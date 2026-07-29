@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
-import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, X } from "lucide-react";
+import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, ArrowUpRightIcon, ArrowDownRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 interface AnalyticsData {
   period: string;

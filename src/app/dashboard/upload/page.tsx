@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, CheckCircle, AlertCircle, Building2, X, Clock, Trash2 } from "lucide-react";
+import { ArrowUpTrayIcon, DocumentTextIcon, CheckCircleIcon, ExclamationCircleIcon, BuildingOffice2Icon, XMarkIcon, ClockIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { useUser } from "@/lib/hooks";
 
 interface Bank {
@@ -161,7 +161,7 @@ export default function UploadPage() {
           <div className="bg-paper-white border border-[#ececec] rounded-cards p-6">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-lime-vibrant/20 rounded-lg flex items-center justify-center">
-                <Upload className="h-4 w-4 text-forest" />
+                <ArrowUpTrayIcon className="h-4 w-4 text-forest" />
               </div>
               <h2 className="font-semibold text-ink-black">Import New Statement</h2>
             </div>
@@ -186,7 +186,7 @@ export default function UploadPage() {
                 onDrop={handleDrop}
               >
                 <div className="w-16 h-16 bg-lime-vibrant/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Upload className="h-6 w-6 text-forest" />
+                  <ArrowUpTrayIcon className="h-6 w-6 text-forest" />
                 </div>
                 <p className="text-ink-black font-medium mb-2">Drag and drop your statement here</p>
                 <p className="text-sm text-ash-gray mb-4">or</p>
@@ -196,7 +196,7 @@ export default function UploadPage() {
                 </label>
                 {file && (
                   <div className="mt-4 flex items-center justify-center gap-2 text-sm text-ink-black bg-mist-gray px-4 py-2 rounded-inputs w-fit mx-auto">
-                    <FileText className="h-4 w-4 text-forest" />{file.name}
+                    <DocumentTextIcon className="h-4 w-4 text-forest" />{file.name}
                   </div>
                 )}
               </div>

@@ -1,20 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { detectRecurringTransactions } from "@/lib/recurring-detector";
+import { getSessionUserId } from "@/lib/session";
+import { errorMessage } from "@/lib/utils";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
+    const userId = await getSessionUserId();
     if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const patterns = await detectRecurringTransactions(userId);
 
     return NextResponse.json({ patterns });
-  } catch (error: any) {
-    console.error("Recurring detection error:", error?.message || error);
+  } catch (error: unknown) {
+    console.error("Recurring detection error:", errorMessage(error));
     return NextResponse.json(
       { error: "Failed to detect recurring transactions" },
       { status: 500 }

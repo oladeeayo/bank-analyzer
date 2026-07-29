@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSessionUserId } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
     const bankId = searchParams.get("bankId");
     const period = searchParams.get("period") || "monthly";
     const year = searchParams.get("year") ? parseInt(searchParams.get("year")!) : new Date().getFullYear();
     const month = searchParams.get("month") ? parseInt(searchParams.get("month")!) : new Date().getMonth() + 1;
     const quarter = searchParams.get("quarter") ? parseInt(searchParams.get("quarter")!) : undefined;
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
 
     const banks = bankId
       ? [await db.bank.findFirstOrThrow({ where: { id: bankId, userId } })]

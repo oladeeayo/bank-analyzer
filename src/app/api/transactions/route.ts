@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
+import { getSessionUserId } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
     const bankId = searchParams.get("bankId");
     const categoryId = searchParams.get("categoryId");
     const merchantId = searchParams.get("merchantId");
@@ -19,11 +25,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "50");
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    const where: any = { bank: { userId } };
+    const where: Prisma.TransactionWhereInput = { bank: { userId } };
 
     if (bankId) where.bankId = bankId;
     if (categoryId) where.categoryId = categoryId;

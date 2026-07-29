@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSessionUserId } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
     const month = searchParams.get("month");
     const year = searchParams.get("year");
 
-    if (!userId || !month || !year) {
-      return NextResponse.json({ error: "userId, month, and year are required" }, { status: 400 });
+    if (!month || !year) {
+      return NextResponse.json({ error: "month and year are required" }, { status: 400 });
     }
 
     const budgets = await db.budget.findMany({
@@ -31,10 +36,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, categoryId, month, year, limit: budgetLimit } = body;
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    if (!userId || !categoryId || !month || !year || !budgetLimit) {
+    const body = await request.json();
+    const { categoryId, month, year, limit: budgetLimit } = body;
+
+    if (!categoryId || !month || !year || !budgetLimit) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 

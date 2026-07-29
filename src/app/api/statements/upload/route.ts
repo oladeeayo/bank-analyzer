@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { parseStatement } from "@/lib/parsers";
 import { normalizeTransactions } from "@/lib/normalizer";
 import { classifyBatch } from "@/lib/classifier";
-import { extractCounterpartyInfo, groupSimilarTransactions } from "@/lib/counterparty-matcher";
+import { groupSimilarTransactions } from "@/lib/counterparty-matcher";
+import { getSessionUserId } from "@/lib/session";
 import crypto from "crypto";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -11,16 +12,29 @@ const MAX_DATE_RANGE_YEARS = 2;
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const bankId = formData.get("bankId") as string;
-    const userId = formData.get("userId") as string;
 
-    if (!file || !bankId || !userId) {
+    if (!file || !bankId) {
       return NextResponse.json(
-        { error: "file, bankId, and userId are required" },
+        { error: "file and bankId are required" },
         { status: 400 }
       );
+    }
+
+    // Verify the bank belongs to the authenticated user
+    const ownedBank = await db.bank.findFirst({
+      where: { id: bankId, userId },
+      select: { id: true },
+    });
+    if (!ownedBank) {
+      return NextResponse.json({ error: "Bank not found" }, { status: 404 });
     }
 
     // ── File size guard ──────────────────────────────────────────────────

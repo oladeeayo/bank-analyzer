@@ -6,15 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser } from "@/lib/hooks";
 import {
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Pencil,
-  Trash2,
-  X,
-  FolderTree,
-  Lock,
-} from "lucide-react";
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  XMarkIcon,
+  FolderIcon,
+  LockClosedIcon,
+} from "@heroicons/react/24/outline";
 
 interface Category {
   id: string;

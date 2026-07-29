@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSessionUserId } from "@/lib/session";
+import { errorMessage } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
     const bankId = searchParams.get("bankId");
     const type = searchParams.get("type"); // "category" | "merchant"
     const name = searchParams.get("name");
@@ -13,8 +19,8 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get("month") ? parseInt(searchParams.get("month")!) : new Date().getMonth() + 1;
     const quarter = searchParams.get("quarter") ? parseInt(searchParams.get("quarter")!) : undefined;
 
-    if (!userId || !type || !name) {
-      return NextResponse.json({ error: "userId, type, and name are required" }, { status: 400 });
+    if (!type || !name) {
+      return NextResponse.json({ error: "type and name are required" }, { status: 400 });
     }
 
     const banks = bankId
@@ -86,8 +92,8 @@ export async function GET(request: NextRequest) {
       transactions,
       total: transactions.length,
     });
-  } catch (error: any) {
-    console.error("Drilldown error:", error?.message || error);
+  } catch (error: unknown) {
+    console.error("Drilldown error:", errorMessage(error));
     return NextResponse.json({ error: "Failed to fetch drilldown" }, { status: 500 });
   }
 }

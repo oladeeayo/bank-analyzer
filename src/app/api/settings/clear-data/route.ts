@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSessionUserId } from "@/lib/session";
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    const { userId } = await request.json();
+    const userId = await getSessionUserId();
     if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Delete in correct FK order: children before parents

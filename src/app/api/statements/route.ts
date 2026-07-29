@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
+import { getSessionUserId } from "@/lib/session";
+import { errorMessage } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-    const bankId = searchParams.get("bankId");
-
+    const userId = await getSessionUserId();
     if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const where: any = {
+    const { searchParams } = new URL(request.url);
+    const bankId = searchParams.get("bankId");
+
+    const where: Prisma.StatementWhereInput = {
       bank: { userId },
     };
     if (bankId) where.bankId = bankId;
@@ -39,9 +42,9 @@ export async function GET(request: NextRequest) {
         uploadedAt: s.uploadedAt.toISOString(),
       }))
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: "Failed to fetch statements", details: error?.message },
+      { error: "Failed to fetch statements", details: errorMessage(error) },
       { status: 500 }
     );
   }
@@ -49,12 +52,16 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    const userId = searchParams.get("userId");
 
-    if (!id || !userId) {
-      return NextResponse.json({ error: "id and userId are required" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
     const statement = await db.statement.findFirst({
@@ -72,9 +79,9 @@ export async function DELETE(request: NextRequest) {
       success: true,
       deleted: { id, transactionCount: statement._count.transactions },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: "Failed to delete statement", details: error?.message },
+      { error: "Failed to delete statement", details: errorMessage(error) },
       { status: 500 }
     );
   }

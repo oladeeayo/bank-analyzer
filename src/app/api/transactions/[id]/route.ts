@@ -2,15 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { extractCounterparty } from "@/lib/classifier/nigerian-context";
 import { ExactMerchantExtractor } from "@/lib/parser/merchant-extractor";
+import { getSessionUserId } from "@/lib/session";
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
-    const transaction = await db.transaction.findUnique({
-      where: { id },
+    const transaction = await db.transaction.findFirst({
+      where: { id, bank: { userId } },
       include: {
         bank: true,
         merchant: true,
@@ -24,7 +30,7 @@ export async function GET(
     }
 
     return NextResponse.json(transaction);
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: "Failed to fetch transaction" }, { status: 500 });
   }
 }
@@ -44,19 +50,22 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
 
-    const currentTx = await db.transaction.findUnique({
-      where: { id },
+    const currentTx = await db.transaction.findFirst({
+      where: { id, bank: { userId } },
       include: { bank: { select: { userId: true } } },
     });
 
     if (!currentTx) {
       return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
     }
-
-    const userId = currentTx.bank.userId;
 
     // Extract counterparty from the description
     const extracted = extractCounterparty(body.normalizedDescription || currentTx.description);
@@ -227,14 +236,26 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
-    await db.transaction.delete({ where: { id } });
+    const { count } = await db.transaction.deleteMany({
+      where: { id, bank: { userId } },
+    });
+
+    if (count === 0) {
+      return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+    }
+
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: "Failed to delete transaction" }, { status: 500 });
   }
 }

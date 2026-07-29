@@ -9,18 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useUser } from "@/lib/hooks";
 import {
-  Plus,
-  Pencil,
-  Trash2,
-  X,
-  ArrowUp,
-  ArrowDown,
-  ToggleLeft,
-  ToggleRight,
-  Zap,
-  Search,
-  ChevronLeft,
-} from "lucide-react";
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  XMarkIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  BoltIcon,
+  MagnifyingGlassIcon,
+  ChevronLeftIcon,
+} from "@heroicons/react/24/outline";
 import Link from "next/link";
 
 interface ClassificationRule {

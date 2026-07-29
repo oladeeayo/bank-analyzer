@@ -76,7 +76,7 @@ export function extractCounterparty(description: string): {
     const parts = raw.split("|").map((p) => p.trim());
 
     // Extract counterparty from first part (strip prefix)
-    let namePart = parts[0]
+    const namePart = parts[0]
       .replace(/^(Transfer\s+(to|from)|Send\s+to|Received?\s+from|Payment\s+to|Funded\s+by)\s+/i, "")
       .replace(/\s+/g, " ")
       .trim();

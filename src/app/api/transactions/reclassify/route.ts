@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { classifyBatch } from "@/lib/classifier";
 import { NormalizedTransaction } from "@/lib/normalizer";
+import { getSessionUserId } from "@/lib/session";
+import { errorMessage } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, transactionIds } = body;
-
+    const userId = await getSessionUserId();
     if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const body = await request.json();
+    const { transactionIds } = body;
 
     // Get transactions to re-classify (only unclassified ones)
     const where = transactionIds && transactionIds.length > 0
@@ -82,10 +85,10 @@ export async function POST(request: NextRequest) {
       updatedCount,
       skippedCount: 0,
     });
-  } catch (error: any) {
-    console.error("Re-classify error:", error?.message || error);
+  } catch (error: unknown) {
+    console.error("Re-classify error:", errorMessage(error));
     return NextResponse.json(
-      { error: "Failed to re-classify transactions", details: error?.message },
+      { error: "Failed to re-classify transactions", details: errorMessage(error) },
       { status: 500 }
     );
   }

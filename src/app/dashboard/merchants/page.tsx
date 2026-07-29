@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
-import { Search, ArrowUpRight, X, MapPin, TrendingUp, Calendar, PiggyBank, Repeat, Loader2 } from "lucide-react";
+import { MagnifyingGlassIcon, ArrowUpRightIcon, XMarkIcon, MapPinIcon, ArrowTrendingUpIcon, CalendarDaysIcon, BanknotesIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import {
   BarChart,
   Bar,

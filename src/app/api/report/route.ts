@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { generateReport, type ReportData } from "@/lib/ai/report";
+import { getSessionUserId } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
+  const userId = await getSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId");
   const period = searchParams.get("period") || "monthly";
   const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
   const month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1));
   const quarter = parseInt(searchParams.get("quarter") || String(Math.ceil((new Date().getMonth() + 1) / 3)));
-
-  if (!userId) {
-    return NextResponse.json({ error: "userId is required" }, { status: 400 });
-  }
 
   try {
     const dateFilter: { gte: Date; lte: Date } = { gte: new Date(0), lte: new Date() };
