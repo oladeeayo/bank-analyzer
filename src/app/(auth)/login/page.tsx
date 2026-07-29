@@ -121,7 +121,8 @@ export default function LoginPage() {
                 callbackURL: "/dashboard",
               });
               if (error) {
-                setError(error.message || "Google sign-in failed");
+                console.error("Google sign-in error:", error);
+                setError(error.message || JSON.stringify(error) || "Google sign-in failed");
               }
             }}
           >
