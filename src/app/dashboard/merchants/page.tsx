@@ -26,12 +26,19 @@ export default function MerchantsPage() {
     if (!user) return;
     setLoading(true);
     fetch(`/api/merchants/summary?userId=${user.id}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
+        console.log("Merchant summary:", data);
         setMerchants(data.merchants || []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        console.error("Failed to fetch merchants:", err);
+        setLoading(false);
+      });
   }, [user]);
 
   if (userLoading || !user) {

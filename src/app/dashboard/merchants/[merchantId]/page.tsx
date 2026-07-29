@@ -55,10 +55,14 @@ export default function MerchantDetailPage() {
     fetch(`/api/merchants/${merchantId}/analytics?userId=${user.id}`)
       .then((res) => res.json())
       .then((d) => {
+        console.log("Merchant analytics:", d);
         setData(d);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        console.error("Failed to fetch merchant analytics:", err);
+        setLoading(false);
+      });
   }, [user, merchantId]);
 
   if (userLoading || !user || loading) {
