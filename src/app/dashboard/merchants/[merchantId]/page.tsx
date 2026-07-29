@@ -55,8 +55,12 @@ export default function MerchantDetailPage() {
     fetch(`/api/merchants/${merchantId}/analytics?userId=${user.id}`)
       .then((res) => res.json())
       .then((d) => {
-        console.log("Merchant analytics:", d);
-        setData(d);
+        if (d.error) {
+          console.error("API error:", d.error);
+          setData(null);
+        } else {
+          setData(d);
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -76,7 +80,8 @@ export default function MerchantDetailPage() {
   if (!data) {
     return (
       <div className="text-center py-16">
-        <p className="text-ash-gray mb-4">Merchant not found</p>
+        <p className="text-ash-gray mb-2">Merchant not found or failed to load.</p>
+        <p className="text-xs text-ash-gray mb-4">Check the browser console (F12) for details.</p>
         <Link href="/dashboard/merchants" className="text-sm text-forest font-semibold hover:underline">
           ← Back to merchants
         </Link>
