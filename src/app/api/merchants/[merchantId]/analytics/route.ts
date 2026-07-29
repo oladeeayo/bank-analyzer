@@ -34,7 +34,6 @@ export async function GET(
       where: {
         bankId: { in: bankIds },
         merchantId,
-        type: "debit",
       },
       include: {
         category: { select: { name: true, icon: true, color: true } },
@@ -42,8 +41,8 @@ export async function GET(
       orderBy: { date: "desc" },
     });
 
-    const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
-    const visitCount = transactions.length;
+    const totalSpent = transactions.filter((t) => t.type === "debit").reduce((sum, t) => sum + t.amount, 0);
+    const visitCount = transactions.filter((t) => t.type === "debit").length;
     const avgVisit = visitCount > 0 ? totalSpent / visitCount : 0;
 
     const monthlyMap = new Map<string, { month: number; year: number; amount: number; count: number }>();
