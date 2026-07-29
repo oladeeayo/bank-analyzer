@@ -41,8 +41,8 @@ export async function GET(
       orderBy: { date: "desc" },
     });
 
-    const totalSpent = transactions.filter((t) => t.type === "debit").reduce((sum, t) => sum + t.amount, 0);
-    const visitCount = transactions.filter((t) => t.type === "debit").length;
+    const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
+    const visitCount = transactions.length;
     const avgVisit = visitCount > 0 ? totalSpent / visitCount : 0;
 
     const monthlyMap = new Map<string, { month: number; year: number; amount: number; count: number }>();
