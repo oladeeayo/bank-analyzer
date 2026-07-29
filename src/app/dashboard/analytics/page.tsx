@@ -233,7 +233,7 @@ export default function AnalyticsPage() {
         <div className="bg-lime-vibrant/10 border border-lime-vibrant/30 rounded-cards p-5">
           <p className="text-[10px] uppercase tracking-wider text-forest/60 font-medium">Net Cash Flow</p>
           <div className="flex items-center gap-2 mt-1">
-            {summary.netCashFlow >= 0 ? <TrendingUp className="h-5 w-5 text-forest" /> : <TrendingDown className="h-5 w-5 text-error" />}
+            {summary.netCashFlow >= 0 ? <ArrowTrendingUpIcon className="h-5 w-5 text-forest" /> : <ArrowTrendingDownIcon className="h-5 w-5 text-error" />}
             <span className={`text-2xl font-mono font-medium ${summary.netCashFlow >= 0 ? "text-forest" : "text-error"}`}>{formatCurrency(summary.netCashFlow)}</span>
           </div>
           <p className="text-[10px] text-ash-gray mt-1">{data.periodLabel}</p>
@@ -320,11 +320,11 @@ export default function AnalyticsPage() {
                     <div className="mt-8 flex items-center gap-4 p-3 bg-mist-gray rounded-lg">
                       <span className="text-sm font-medium text-ink-black">{selectedBar.label}</span>
                       <div className="flex items-center gap-1.5">
-                        <ArrowUpRight className="h-3.5 w-3.5 text-[#003527]" />
+                        <ArrowUpRightIcon className="h-3.5 w-3.5 text-[#003527]" />
                         <span className="text-sm font-mono text-[#003527]">{formatCurrency(selectedBar.income)}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <ArrowDownRight className="h-3.5 w-3.5 text-[#8BC34A]" />
+                        <ArrowDownRightIcon className="h-3.5 w-3.5 text-[#8BC34A]" />
                         <span className="text-sm font-mono text-[#8BC34A]">{formatCurrency(selectedBar.expense)}</span>
                       </div>
                       <div className="ml-auto text-sm font-mono font-medium text-ink-black">Net: {formatCurrency(selectedBar.net)}</div>
@@ -399,11 +399,11 @@ export default function AnalyticsPage() {
                     <div className="mt-6 flex items-center gap-4 p-3 bg-mist-gray rounded-lg">
                       <span className="text-sm font-medium text-ink-black">{selectedBar.label}</span>
                       <div className="flex items-center gap-1.5">
-                        <ArrowUpRight className="h-3.5 w-3.5 text-[#003527]" />
+                        <ArrowUpRightIcon className="h-3.5 w-3.5 text-[#003527]" />
                         <span className="text-sm font-mono text-[#003527]">{formatCurrency(selectedBar.income)}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <ArrowDownRight className="h-3.5 w-3.5 text-[#8BC34A]" />
+                        <ArrowDownRightIcon className="h-3.5 w-3.5 text-[#8BC34A]" />
                         <span className="text-sm font-mono text-[#8BC34A]">{formatCurrency(selectedBar.expense)}</span>
                       </div>
                       <div className="ml-auto text-sm font-mono font-medium text-ink-black">Net: {formatCurrency(selectedBar.net)}</div>
@@ -484,7 +484,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <button onClick={() => { setDrilldown(null); setDrilldownData(null); }} className="text-ash-gray hover:text-ink-black">
-              <X className="h-5 w-5" />
+              <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
           {drilldownData ? (

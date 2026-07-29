@@ -124,7 +124,7 @@ export default function MerchantsPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ash-gray" />
+        <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ash-gray" />
         <input
           type="text"
           value={search}
@@ -184,7 +184,7 @@ export default function MerchantsPage() {
                     <p className="text-[11px] text-ash-gray">{m.transactionCount} transactions</p>
                   </div>
                 </div>
-                <ArrowUpRight className="h-4 w-4 text-ash-gray group-hover:text-forest transition-colors" />
+                <ArrowUpRightIcon className="h-4 w-4 text-ash-gray group-hover:text-forest transition-colors" />
               </div>
               <div className="flex items-end justify-between">
                 <div>
@@ -211,12 +211,12 @@ export default function MerchantsPage() {
               onClick={closeModal}
               className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 hover:bg-white text-ink-black shadow-subtle transition-all"
             >
-              <X className="h-4 w-4" />
+              <XMarkIcon className="h-4 w-4" />
             </button>
 
             {analyticsLoading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-6 w-6 text-forest animate-spin" />
+                <ArrowPathIcon className="h-6 w-6 text-forest animate-spin" />
               </div>
             ) : !analytics ? (
               <div className="flex flex-col items-center justify-center h-64 text-ash-gray">
@@ -260,7 +260,7 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
                 </span>
               </div>
               <p className="text-white/60 text-xs sm:text-sm flex items-center gap-1 mt-0.5">
-                <MapPin className="h-3 w-3 shrink-0" />
+                <MapPinIcon className="h-3 w-3 shrink-0" />
                 {data.uniqueDays} unique visit days
               </p>
             </div>
@@ -372,7 +372,7 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-paper-white border border-[#ececec] p-4 rounded-cards">
           <div className="w-8 h-8 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
-            <TrendingUp className="h-3.5 w-3.5 text-forest" />
+            <ArrowTrendingUpIcon className="h-3.5 w-3.5 text-forest" />
           </div>
           <h4 className="text-xs font-semibold text-ink-black mb-0.5">Top Category</h4>
           <p className="text-[11px] text-slate-gray leading-relaxed">
@@ -383,7 +383,7 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
         </div>
         <div className="bg-paper-white border border-[#ececec] p-4 rounded-cards">
           <div className="w-8 h-8 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
-            <Calendar className="h-3.5 w-3.5 text-forest" />
+            <CalendarDaysIcon className="h-3.5 w-3.5 text-forest" />
           </div>
           <h4 className="text-xs font-semibold text-ink-black mb-0.5">Peak Day</h4>
           <p className="text-[11px] text-slate-gray leading-relaxed">
@@ -394,7 +394,7 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
         </div>
         <div className="bg-paper-white border border-[#ececec] p-4 rounded-cards">
           <div className="w-8 h-8 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
-            <PiggyBank className="h-3.5 w-3.5 text-forest" />
+            <BanknotesIcon className="h-3.5 w-3.5 text-forest" />
           </div>
           <h4 className="text-xs font-semibold text-ink-black mb-0.5">Saving Tip</h4>
           <p className="text-[11px] text-slate-gray leading-relaxed">
@@ -405,7 +405,7 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
         </div>
         <div className="bg-paper-white border border-[#ececec] p-4 rounded-cards">
           <div className="w-8 h-8 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
-            <Repeat className="h-3.5 w-3.5 text-forest" />
+            <ArrowPathIcon className="h-3.5 w-3.5 text-forest" />
           </div>
           <h4 className="text-xs font-semibold text-ink-black mb-0.5">Frequency</h4>
           <p className="text-[11px] text-slate-gray leading-relaxed">

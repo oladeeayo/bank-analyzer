@@ -102,7 +102,7 @@ export default function MerchantDetailPage() {
     <div className="space-y-6">
       {/* Back link */}
       <Link href="/dashboard/merchants" className="inline-flex items-center gap-1.5 text-sm text-ash-gray hover:text-forest transition-colors">
-        <ArrowLeft className="h-3.5 w-3.5" />
+        <ArrowLeftIcon className="h-3.5 w-3.5" />
         All Merchants
       </Link>
 
@@ -121,7 +121,7 @@ export default function MerchantDetailPage() {
                 </span>
               </div>
               <p className="text-white/60 text-sm flex items-center gap-1 mt-0.5">
-                <MapPin className="h-3 w-3" />
+                <MapPinIcon className="h-3 w-3" />
                 {data.uniqueDays} unique visit days
               </p>
             </div>
@@ -235,7 +235,7 @@ export default function MerchantDetailPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-paper-white border border-[#ececec] p-5 rounded-cards">
           <div className="w-9 h-9 bg-forest/5 rounded-xl flex items-center justify-center mb-3">
-            <TrendingUp className="h-4 w-4 text-forest" />
+            <ArrowTrendingUpIcon className="h-4 w-4 text-forest" />
           </div>
           <h3 className="text-sm font-semibold text-ink-black mb-1">Top Category</h3>
           <p className="text-xs text-slate-gray leading-relaxed">
@@ -246,7 +246,7 @@ export default function MerchantDetailPage() {
         </div>
         <div className="bg-paper-white border border-[#ececec] p-5 rounded-cards">
           <div className="w-9 h-9 bg-forest/5 rounded-xl flex items-center justify-center mb-3">
-            <Calendar className="h-4 w-4 text-forest" />
+            <CalendarDaysIcon className="h-4 w-4 text-forest" />
           </div>
           <h3 className="text-sm font-semibold text-ink-black mb-1">Peak Spending Day</h3>
           <p className="text-xs text-slate-gray leading-relaxed">
@@ -257,7 +257,7 @@ export default function MerchantDetailPage() {
         </div>
         <div className="bg-paper-white border border-[#ececec] p-5 rounded-cards">
           <div className="w-9 h-9 bg-forest/5 rounded-xl flex items-center justify-center mb-3">
-            <PiggyBank className="h-4 w-4 text-forest" />
+            <BanknotesIcon className="h-4 w-4 text-forest" />
           </div>
           <h3 className="text-sm font-semibold text-ink-black mb-1">Saving Opportunity</h3>
           <p className="text-xs text-slate-gray leading-relaxed">
@@ -268,7 +268,7 @@ export default function MerchantDetailPage() {
         </div>
         <div className="bg-paper-white border border-[#ececec] p-5 rounded-cards">
           <div className="w-9 h-9 bg-forest/5 rounded-xl flex items-center justify-center mb-3">
-            <Repeat className="h-4 w-4 text-forest" />
+            <ArrowPathIcon className="h-4 w-4 text-forest" />
           </div>
           <h3 className="text-sm font-semibold text-ink-black mb-1">Visit Frequency</h3>
           <p className="text-xs text-slate-gray leading-relaxed">

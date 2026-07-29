@@ -134,7 +134,7 @@ export default function ReportPage() {
             </select>
           )}
           <Button onClick={generateReport} disabled={generating} size="sm" className="gap-1.5 ml-auto sm:ml-0">
-            <RefreshCw className={`h-3.5 w-3.5 ${generating ? "animate-spin" : ""}`} />
+            <ArrowPathIcon className={`h-3.5 w-3.5 ${generating ? "animate-spin" : ""}`} />
             {generating ? "Generating..." : "Generate Report"}
           </Button>
         </div>
@@ -228,7 +228,7 @@ export default function ReportPage() {
             <>
               <div className="bg-forest/5 border border-forest/10 rounded-cards p-6 sm:p-8">
                 <div className="flex items-center gap-2 mb-5">
-                  <Sparkles className="h-5 w-5 text-lime-vibrant" />
+                  <SparklesIcon className="h-5 w-5 text-lime-vibrant" />
                   <h2 className="font-signifier text-lg text-forest">AI Analysis</h2>
                 </div>
                 <p className="text-sm text-ink-black leading-relaxed mb-6">{aiReport.overview}</p>
@@ -236,7 +236,7 @@ export default function ReportPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <TrendingUp className="h-4 w-4 text-forest" />
+                      <ArrowTrendingUpIcon className="h-4 w-4 text-forest" />
                       <h3 className="text-sm font-semibold text-forest">Strengths</h3>
                     </div>
                     <ul className="space-y-2">
@@ -250,7 +250,7 @@ export default function ReportPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <AlertCircle className="h-4 w-4 text-pending" />
+                      <ExclamationCircleIcon className="h-4 w-4 text-pending" />
                       <h3 className="text-sm font-semibold text-pending">Concerns</h3>
                     </div>
                     <ul className="space-y-2">
@@ -270,7 +270,7 @@ export default function ReportPage() {
 
                 <div className="mb-6">
                   <div className="flex items-center gap-2 mb-3">
-                    <Lightbulb className="h-4 w-4 text-lime" />
+                    <LightBulbIcon className="h-4 w-4 text-lime" />
                     <h3 className="text-sm font-semibold text-lime">Recommendations</h3>
                   </div>
                   <ul className="space-y-2">
@@ -287,7 +287,7 @@ export default function ReportPage() {
                   {aiReport.savingsOpportunities.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <Target className="h-4 w-4 text-forest" />
+                        <FlagIcon className="h-4 w-4 text-forest" />
                         <h3 className="text-sm font-semibold text-forest">Savings Opportunities</h3>
                       </div>
                       <ul className="space-y-2">
@@ -303,7 +303,7 @@ export default function ReportPage() {
                   {aiReport.nextSteps.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <ArrowRight className="h-4 w-4 text-forest" />
+                        <ArrowRightIcon className="h-4 w-4 text-forest" />
                         <h3 className="text-sm font-semibold text-forest">Next Steps</h3>
                       </div>
                       <ul className="space-y-2">

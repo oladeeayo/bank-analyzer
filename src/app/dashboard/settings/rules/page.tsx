@@ -299,7 +299,7 @@ function RulesPage() {
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
         <Link href="/dashboard/settings" className="text-ash-gray hover:text-ink-black">
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeftIcon className="h-5 w-5" />
         </Link>
         <div className="flex-1">
           <h1 className="font-signifier text-[28px] text-ink-black">Classification Rules</h1>
@@ -313,7 +313,7 @@ function RulesPage() {
           variant="outline"
           className="border-[#ececec] rounded-xl"
         >
-          <Zap className="h-4 w-4 mr-2" />
+          <BoltIcon className="h-4 w-4 mr-2" />
           {reclassifying ? "Re-classifying..." : "Re-classify All"}
         </Button>
       </div>
@@ -326,7 +326,7 @@ function RulesPage() {
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ash-gray" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ash-gray" />
           <Input
             placeholder="Search rules..."
             value={searchQuery}
@@ -338,7 +338,7 @@ function RulesPage() {
           onClick={() => { resetForm(); setShowForm(true); }}
           className="bg-forest text-white hover:bg-forest/90 rounded-xl"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <PlusIcon className="h-4 w-4 mr-2" />
           New Rule
         </Button>
       </div>
@@ -351,7 +351,7 @@ function RulesPage() {
                 {editingRule ? "Edit Rule" : "New Rule"}
               </h3>
               <Button variant="ghost" size="sm" onClick={resetForm}>
-                <X className="h-4 w-4" />
+                <XMarkIcon className="h-4 w-4" />
               </Button>
             </div>
 
@@ -410,7 +410,7 @@ function RulesPage() {
                     size="sm"
                     onClick={() => { setFormCategoryId(""); setSelectedParentCat(null); }}
                   >
-                    <X className="h-3 w-3" />
+                    <XMarkIcon className="h-3 w-3" />
                   </Button>
                 </div>
               ) : (
@@ -423,7 +423,7 @@ function RulesPage() {
                         onClick={() => setSelectedParentCat(null)}
                         className="text-xs mb-2"
                       >
-                        <ChevronLeft className="h-3 w-3 mr-1" /> Back to parents
+                        <ChevronLeftIcon className="h-3 w-3 mr-1" /> Back to parents
                       </Button>
                       <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto border border-[#ececec] rounded-lg p-2">
                         {allCategories
@@ -499,7 +499,7 @@ function RulesPage() {
           <div className="text-center py-8 text-ash-gray">Loading rules...</div>
         ) : sortedRules.length === 0 ? (
           <div className="text-center py-12 text-ash-gray">
-            <Zap className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <BoltIcon className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p className="text-lg font-medium text-ink-black">No classification rules yet</p>
             <p className="text-sm mt-1">
               Create rules to automatically classify transactions. For example: &quot;All transactions containing &apos;netflix&apos; = Entertainment &gt; Streaming&quot;.
@@ -517,7 +517,7 @@ function RulesPage() {
                     onClick={() => handleMovePriority(rule, "up")}
                     disabled={idx === 0}
                   >
-                    <ArrowUp className="h-3 w-3" />
+                    <ArrowUpIcon className="h-3 w-3" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -526,7 +526,7 @@ function RulesPage() {
                     onClick={() => handleMovePriority(rule, "down")}
                     disabled={idx === sortedRules.length - 1}
                   >
-                    <ArrowDown className="h-3 w-3" />
+                    <ArrowDownIcon className="h-3 w-3" />
                   </Button>
                 </div>
 
@@ -557,9 +557,9 @@ function RulesPage() {
                     title={rule.isActive ? "Deactivate" : "Activate"}
                   >
                     {rule.isActive ? (
-                      <ToggleRight className="h-5 w-5 text-forest" />
+                      <BoltIcon className="h-5 w-5 text-forest" />
                     ) : (
-                      <ToggleLeft className="h-5 w-5 text-ash-gray" />
+                      <span className="h-5 w-5 text-ash-gray flex items-center justify-center"><BoltIcon className="h-5 w-5" /></span>
                     )}
                   </Button>
                   <Button
@@ -567,7 +567,7 @@ function RulesPage() {
                     size="sm"
                     onClick={() => startEdit(rule)}
                   >
-                    <Pencil className="h-4 w-4" />
+                    <PencilIcon className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -575,7 +575,7 @@ function RulesPage() {
                     onClick={() => handleDelete(rule.id)}
                     className="text-error hover:text-error"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <TrashIcon className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>
@@ -619,7 +619,7 @@ function BuiltInPatterns() {
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-2 w-full text-left"
         >
-          <Zap className="h-4 w-4 text-forest" />
+          <BoltIcon className="h-4 w-4 text-forest" />
           <span className="font-medium text-ink-black text-sm">Built-in Keyword Patterns</span>
           <span className="text-xs text-ash-gray ml-auto">{expanded ? "Click to collapse" : "Click to view"}</span>
         </button>
@@ -631,7 +631,7 @@ function BuiltInPatterns() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {BUILTIN_PATTERNS.map((p, i) => (
                 <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-mist-gray/50 text-xs">
-                  <Zap className="h-3 w-3 text-forest mt-0.5 shrink-0" />
+                  <BoltIcon className="h-3 w-3 text-forest mt-0.5 shrink-0" />
                   <div>
                     <span className="font-medium text-ink-black">{p.categoryName}</span>
                     <span className="text-ash-gray ml-1">({Math.round(p.confidence * 100)}%)</span>

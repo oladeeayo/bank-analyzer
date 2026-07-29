@@ -138,7 +138,7 @@ export default function BanksPage() {
           <p className="text-sm text-ash-gray">Manage your linked Nigerian bank accounts</p>
         </div>
         <Button onClick={openModal} className="gap-2">
-          <Plus className="h-4 w-4" />
+          <PlusIcon className="h-4 w-4" />
           Add New Bank
         </Button>
       </div>
@@ -148,7 +148,7 @@ export default function BanksPage() {
         <div className="text-center py-16 text-ash-gray">Loading banks...</div>
       ) : banks.length === 0 ? (
         <div className="bg-paper-white border border-[#ececec] rounded-cards py-16 text-center">
-          <Building2 className="h-12 w-12 text-ash-gray/50 mx-auto mb-4" />
+          <BuildingOffice2Icon className="h-12 w-12 text-ash-gray/50 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-ink-black mb-2">No banks added yet</h3>
           <p className="text-ash-gray mb-4">Add your first bank to start tracking transactions</p>
           <Button onClick={openModal}>Add Your First Bank</Button>
@@ -175,7 +175,7 @@ export default function BanksPage() {
                     </p>
                   </div>
                   <div className={`p-2 rounded-lg ${idx === 0 ? "bg-white/20 backdrop-blur-md" : "bg-mist-gray"}`}>
-                    <Building2 className={`h-5 w-5 ${idx === 0 ? "text-lime-vibrant" : "text-forest"}`} />
+                    <BuildingOffice2Icon className={`h-5 w-5 ${idx === 0 ? "text-lime-vibrant" : "text-forest"}`} />
                   </div>
                 </div>
 
@@ -221,7 +221,7 @@ export default function BanksPage() {
                 <p className="text-sm text-ash-gray">Select your bank from the list of Nigerian providers</p>
               </div>
               <button onClick={closeModal} className="p-2 hover:bg-paper-white rounded-full transition-colors">
-                <X className="h-5 w-5 text-slate-gray" />
+                <XMarkIcon className="h-5 w-5 text-slate-gray" />
               </button>
             </div>
 
@@ -230,7 +230,7 @@ export default function BanksPage() {
                 {/* Search */}
                 <div className="p-6 pb-0">
                   <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ash-gray" />
+                    <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ash-gray" />
                     <input
                       type="text"
                       placeholder="Search for your bank..."

@@ -72,7 +72,7 @@ export default function GoalsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Savings Goals</h1>
         <Button onClick={() => setShowForm(!showForm)} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
-          <Plus className="h-4 w-4 mr-2" /> New Goal
+          <PlusIcon className="h-4 w-4 mr-2" /> New Goal
         </Button>
       </div>
 
@@ -121,7 +121,7 @@ export default function GoalsPage() {
       ) : goals.length === 0 ? (
         <Card className="bg-white border-gray-100">
           <CardContent className="py-16 text-center">
-            <Target className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <FlagIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 mb-4">No savings goals yet</p>
             <p className="text-sm text-gray-400">Create a goal to start tracking your progress</p>
           </CardContent>

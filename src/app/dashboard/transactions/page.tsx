@@ -433,7 +433,7 @@ export default function TransactionsPage() {
             </svg>
             {search && (
               <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-mist-gray rounded">
-                <X className="h-3 w-3 text-ash-gray" />
+                <XMarkIcon className="h-3 w-3 text-ash-gray" />
               </button>
             )}
           </div>
@@ -495,7 +495,7 @@ export default function TransactionsPage() {
               size="sm"
               className="gap-1.5"
             >
-              <Zap className={`h-3.5 w-3.5 ${reclassifying ? "animate-spin" : ""}`} />
+              <BoltIcon className={`h-3.5 w-3.5 ${reclassifying ? "animate-spin" : ""}`} />
               {reclassifying ? "Classifying..." : "Classify"}
             </Button>
             <Button
@@ -511,7 +511,7 @@ export default function TransactionsPage() {
         {/* Row 2: Date Range + Amount Range */}
         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[#ececec]">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <Calendar className="h-4 w-4 text-slate-gray shrink-0" />
+            <CalendarDaysIcon className="h-4 w-4 text-slate-gray shrink-0" />
             <span className="text-xs text-ash-gray">Date:</span>
             <Input
               type="date"
@@ -560,7 +560,7 @@ export default function TransactionsPage() {
               }}
               className="text-xs text-ash-gray hover:text-ink-black flex items-center gap-1"
             >
-              <X className="h-3 w-3" /> Clear filters
+              <XMarkIcon className="h-3 w-3" /> Clear filters
             </button>
           )}
         </div>
@@ -678,7 +678,7 @@ export default function TransactionsPage() {
                 return (
                   <>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeftIcon className="h-4 w-4" />
                     </Button>
                     {pages.map((p, i) =>
                       p === "..." ? (
@@ -700,7 +700,7 @@ export default function TransactionsPage() {
                       )
                     )}
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(p => p + 1)} disabled={page * 100 >= total}>
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRightIcon className="h-4 w-4" />
                     </Button>
                   </>
                 );
@@ -714,7 +714,7 @@ export default function TransactionsPage() {
           <div className="flex items-center justify-between">
             <h3 className="font-signifier text-lg text-ink-black">Edit Transaction</h3>
             <div className="bg-forest p-1 rounded-lg">
-              <Zap className="h-4 w-4 text-lime-vibrant" />
+              <BoltIcon className="h-4 w-4 text-lime-vibrant" />
             </div>
           </div>
 
@@ -724,7 +724,7 @@ export default function TransactionsPage() {
                 <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${
                   saveMessage.type === "success" ? "bg-lime-vibrant/20 text-forest" : "bg-error/10 text-error"
                 }`}>
-                  {saveMessage.type === "success" ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                  {saveMessage.type === "success" ? <CheckIcon className="h-4 w-4" /> : <ExclamationCircleIcon className="h-4 w-4" />}
                   {saveMessage.text}
                 </div>
               )}
@@ -756,17 +756,17 @@ export default function TransactionsPage() {
                       className="bg-paper-white border-[#ececec] rounded-lg text-sm"
                     />
                     <Button size="sm" onClick={() => { setRuleForm({ ...ruleForm, normalizedMerchant: merchantName }); setEditingMerchant(false); }}>
-                      <Check className="h-4 w-4" />
+                      <CheckIcon className="h-4 w-4" />
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => setEditingMerchant(false)}>
-                      <X className="h-4 w-4" />
+                      <XMarkIcon className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-ink-black flex-1">{merchantName || "—"}</span>
                     <Button size="sm" variant="ghost" onClick={() => setEditingMerchant(true)}>
-                      <Edit className="h-3 w-3" />
+                      <PencilIcon className="h-3 w-3" />
                     </Button>
                   </div>
                 )}
@@ -797,7 +797,7 @@ export default function TransactionsPage() {
                       }}
                       className="p-0.5 hover:bg-lime-vibrant/20 rounded"
                     >
-                      <X className="h-3 w-3 text-ash-gray" />
+                      <XMarkIcon className="h-3 w-3 text-ash-gray" />
                     </button>
                   </div>
                 )}
@@ -818,7 +818,7 @@ export default function TransactionsPage() {
                       onClick={() => setCategorySearch("")}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-mist-gray rounded"
                     >
-                      <X className="h-3 w-3 text-ash-gray" />
+                      <XMarkIcon className="h-3 w-3 text-ash-gray" />
                     </button>
                   )}
                 </div>
@@ -901,7 +901,7 @@ export default function TransactionsPage() {
                                 <span>{child.icon}</span>
                                 <span className="flex-1">{child.name}</span>
                                 {grandchildren.some(gc => gc.parentId === child.id) && (
-                                  <ChevronRight className="h-3 w-3 text-ash-gray" />
+                                  <ChevronRightIcon className="h-3 w-3 text-ash-gray" />
                                 )}
                               </button>
                               {grandchildren.filter(gc => gc.parentId === child.id).map(gc => (
@@ -942,7 +942,7 @@ export default function TransactionsPage() {
                             <span className="text-lg">{parent.icon}</span>
                             <span className="flex-1 font-medium">{parent.name}</span>
                             <span className="text-[10px] text-ash-gray">{childCount} sub</span>
-                            <ChevronRight className="h-3 w-3 text-ash-gray" />
+                            <ChevronRightIcon className="h-3 w-3 text-ash-gray" />
                           </button>
                         );
                       });
@@ -954,7 +954,7 @@ export default function TransactionsPage() {
                       onClick={() => window.location.href = "/dashboard/settings/categories"}
                       className="w-full px-3 py-2 text-left text-xs text-forest hover:bg-lime-vibrant/10 flex items-center gap-2 border-t border-[#ececec] font-medium"
                     >
-                      <Plus className="h-3 w-3" /> Create new category
+                      <PlusIcon className="h-3 w-3" /> Create new category
                     </button>
                   )}
                 </div>
@@ -977,7 +977,7 @@ export default function TransactionsPage() {
               {showSimilar && similarTxs.filter(s => !dismissedIds.has(s.id)).length > 0 && (
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-center gap-2 mb-3">
-                    <Link className="h-4 w-4 text-blue-600" />
+                    <LinkIcon className="h-4 w-4 text-blue-600" />
                     <p className="text-xs font-semibold text-blue-800">
                       {getFilteredSimilar().length} Similar Found
                       {getFilteredSimilar().length !== similarTxs.filter(s => !dismissedIds.has(s.id)).length && (
@@ -1032,7 +1032,7 @@ export default function TransactionsPage() {
                             className="p-0.5 hover:bg-blue-200 rounded text-blue-400 hover:text-blue-700"
                             title="Remove"
                           >
-                            <X className="h-3 w-3" />
+                            <XMarkIcon className="h-3 w-3" />
                           </button>
                         </div>
                       </div>
@@ -1058,7 +1058,7 @@ export default function TransactionsPage() {
                     );
                   }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <PlusIcon className="h-4 w-4 mr-2" />
                   Create Rule from This
                 </Button>
                 {undoStack.length > 0 && (
@@ -1074,7 +1074,7 @@ export default function TransactionsPage() {
           ) : (
             <div className="flex-1 flex items-center justify-center text-center py-8">
               <div className="text-ash-gray">
-                <Zap className="h-8 w-8 mx-auto mb-3 opacity-50" />
+                <BoltIcon className="h-8 w-8 mx-auto mb-3 opacity-50" />
                 <p className="text-sm">Select a transaction to edit</p>
               </div>
             </div>

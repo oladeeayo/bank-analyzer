@@ -37,11 +37,11 @@ interface UploadResult {
 const MONTH_NAMES = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const statusConfig: Record<string, { label: string; icon: any; className: string }> = {
-  completed: { label: "Uploaded", icon: CheckCircle, className: "bg-lime-vibrant/20 text-forest border-lime-vibrant/30" },
-  uploaded: { label: "Uploaded", icon: CheckCircle, className: "bg-lime-vibrant/20 text-forest border-lime-vibrant/30" },
-  processing: { label: "Processing", icon: Clock, className: "bg-golden-light/40 text-amber-700 border-golden-light" },
-  failed: { label: "Failed", icon: X, className: "bg-peach-light/40 text-red-600 border-peach-light" },
-  error: { label: "Failed", icon: X, className: "bg-peach-light/40 text-red-600 border-peach-light" },
+  completed: { label: "Uploaded", icon: CheckCircleIcon, className: "bg-lime-vibrant/20 text-forest border-lime-vibrant/30" },
+  uploaded: { label: "Uploaded", icon: CheckCircleIcon, className: "bg-lime-vibrant/20 text-forest border-lime-vibrant/30" },
+  processing: { label: "Processing", icon: ClockIcon, className: "bg-golden-light/40 text-amber-700 border-golden-light" },
+  failed: { label: "Failed", icon: XMarkIcon, className: "bg-peach-light/40 text-red-600 border-peach-light" },
+  error: { label: "Failed", icon: XMarkIcon, className: "bg-peach-light/40 text-red-600 border-peach-light" },
 };
 
 export default function UploadPage() {
@@ -208,13 +208,13 @@ export default function UploadPage() {
               </div>
               {error && (
                 <div className="bg-peach-light/40 border border-peach-light text-red-600 px-4 py-3 rounded-inputs text-sm flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />{error}
+                  <ExclamationCircleIcon className="h-4 w-4" />{error}
                 </div>
               )}
               {result && (
                 <div className="bg-lime-vibrant/10 border border-lime-vibrant/30 text-forest px-4 py-3 rounded-inputs text-sm">
                   <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle className="h-4 w-4" /><span className="font-medium">Upload successful!</span>
+                    <CheckCircleIcon className="h-4 w-4" /><span className="font-medium">Upload successful!</span>
                   </div>
                   <div>{result.transactionCount} transactions imported</div>
                   {result.errorCount > 0 && <div className="text-amber-700 mt-1">{result.errorCount} rows had errors during parsing</div>}
@@ -250,7 +250,7 @@ export default function UploadPage() {
                         <tr key={stmt.id} className="border-b border-[#ececec] last:border-0 hover:bg-mist-gray/50 transition-colors">
                           <td className="py-3 pr-4">
                             <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-mist-gray rounded-lg flex items-center justify-center"><Building2 className="h-4 w-4 text-forest" /></div>
+                              <div className="w-8 h-8 bg-mist-gray rounded-lg flex items-center justify-center"><BuildingOffice2Icon className="h-4 w-4 text-forest" /></div>
                               <span className="font-medium text-ink-black">{stmt.bankName}</span>
                             </div>
                           </td>
@@ -266,7 +266,7 @@ export default function UploadPage() {
                               className="text-ash-gray hover:text-red-600 transition-colors p-1"
                               title="Delete statement"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <TrashIcon className="h-4 w-4" />
                             </button>
                           </td>
                         </tr>
@@ -308,7 +308,7 @@ export default function UploadPage() {
         <div className="fixed inset-0 bg-forest/40 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-paper-white w-full max-w-md rounded-cards overflow-hidden shadow-elevated p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-peach-light/40 rounded-full flex items-center justify-center"><AlertCircle className="h-5 w-5 text-red-600" /></div>
+              <div className="w-10 h-10 bg-peach-light/40 rounded-full flex items-center justify-center"><ExclamationCircleIcon className="h-5 w-5 text-red-600" /></div>
               <div>
                 <h3 className="font-semibold text-ink-black">Duplicate Statement Detected</h3>
                 <p className="text-sm text-ash-gray">{duplicateInfo?.message || "A statement for this month already exists."}</p>

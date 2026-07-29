@@ -206,7 +206,7 @@ export default function CategoriesPage() {
             className="w-5 h-5 flex items-center justify-center text-ash-gray hover:text-ink-black"
           >
             {hasChildren ? (
-              isExpanded ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />
+              isExpanded ? <ChevronLeftIcon className="h-3.5 w-3.5" /> : <ChevronRightIcon className="h-3.5 w-3.5" />
             ) : (
               <span className="w-3.5" />
             )}
@@ -221,7 +221,7 @@ export default function CategoriesPage() {
           {/* System badge */}
           {cat.isSystem && (
             <span className="flex items-center gap-1 text-[10px] text-ash-gray bg-mist-gray px-2 py-0.5 rounded-full">
-              <Lock className="h-2.5 w-2.5" /> System
+              <LockClosedIcon className="h-2.5 w-2.5" /> System
             </span>
           )}
 
@@ -239,7 +239,7 @@ export default function CategoriesPage() {
               className="p-1 hover:bg-mist-gray rounded text-ash-gray hover:text-forest"
               title="Add subcategory"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <PlusIcon className="h-3.5 w-3.5" />
             </button>
             {!cat.isSystem && (
               <>
@@ -248,14 +248,14 @@ export default function CategoriesPage() {
                   className="p-1 hover:bg-mist-gray rounded text-ash-gray hover:text-forest"
                   title="Edit"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <PencilIcon className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={() => handleDelete(cat)}
                   className="p-1 hover:bg-mist-gray rounded text-ash-gray hover:text-error"
                   title="Delete"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <TrashIcon className="h-3.5 w-3.5" />
                 </button>
               </>
             )}
@@ -294,7 +294,7 @@ export default function CategoriesPage() {
           }}
           className="bg-forest text-lime-vibrant hover:bg-forest/90 rounded-xl"
         >
-          <Plus className="h-4 w-4 mr-2" /> New Category
+          <PlusIcon className="h-4 w-4 mr-2" /> New Category
         </Button>
       </div>
 
@@ -306,7 +306,7 @@ export default function CategoriesPage() {
               {editingCategory ? "Edit Category" : parentId ? "New Subcategory" : "New Category"}
             </h3>
             <button onClick={resetForm} className="p-1 hover:bg-mist-gray rounded text-ash-gray">
-              <X className="h-4 w-4" />
+              <XMarkIcon className="h-4 w-4" />
             </button>
           </div>
 
@@ -389,7 +389,7 @@ export default function CategoriesPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-ash-gray">
-            <FolderTree className="h-12 w-12 mb-3 opacity-50" />
+            <FolderIcon className="h-12 w-12 mb-3 opacity-50" />
             <p className="text-sm">No categories yet</p>
             <p className="text-xs mt-1">Create your first category to get started</p>
           </div>

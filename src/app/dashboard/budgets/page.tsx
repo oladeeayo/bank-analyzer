@@ -71,7 +71,7 @@ export default function BudgetsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Budgets</h1>
         <Button onClick={() => setShowForm(!showForm)} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
-          <Plus className="h-4 w-4 mr-2" /> Set Budget
+          <PlusIcon className="h-4 w-4 mr-2" /> Set Budget
         </Button>
       </div>
 
