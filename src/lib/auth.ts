@@ -8,7 +8,7 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
   secret: process.env.BETTER_AUTH_SECRET!,
-  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://bank-analyzer.vercel.app",
+  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://bank-analyzer-six.vercel.app",
   trustHost: true,
   emailAndPassword: {
     enabled: true,
@@ -17,7 +17,7 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      redirectURI: "https://bank-analyzer.vercel.app/api/auth/callback/google",
+      redirectURI: "https://bank-analyzer-six.vercel.app/api/auth/callback/google",
     },
   },
   session: {
