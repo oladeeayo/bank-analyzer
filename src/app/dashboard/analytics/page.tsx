@@ -429,6 +429,73 @@ export default function AnalyticsPage() {
           ) : (
             <div className="flex items-center justify-center h-48 text-ash-gray text-sm">No data for this period</div>
           )}
+
+          {/* Transaction Intensity Heatmap — inside cashflow card */}
+          {data.intensity && data.intensity.length > 0 && (() => {
+            const maxCount = Math.max(...data.intensity.map(i => i.count));
+            const intensityMap = new Map<string, number>();
+            data.intensity.forEach(i => intensityMap.set(`${i.day}-${i.hour}`, i.count));
+            const getOpacity = (count: number) => {
+              if (count === 0) return 0;
+              return 0.15 + (count / maxCount) * 0.85;
+            };
+            return (
+              <div className="mt-5 pt-5 border-t border-[#ececec]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-ink-black">Transaction Intensity</h3>
+                    <p className="text-[10px] text-ash-gray">{data.transactionCount} txns across {DAYS.length} days</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[8px] text-ash-gray">Less</span>
+                    {[0, 0.2, 0.4, 0.6, 0.85].map((o) => (
+                      <div key={o} className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: o === 0 ? "#f0f0f0" : `rgba(0,53,39,${o})` }} />
+                    ))}
+                    <span className="text-[8px] text-ash-gray">More</span>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[420px]">
+                    {/* Hour labels */}
+                    <div className="flex mb-0.5 ml-9">
+                      {HOURS.map((h) => (
+                        <div key={h} className="flex-1 text-center">
+                          {h % 3 === 0 ? (
+                            <span className="text-[8px] text-ash-gray">{h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h-12}p`}</span>
+                          ) : (
+                            <span className="text-[8px] text-transparent">.</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Grid */}
+                    {DAYS.map((day) => (
+                      <div key={day} className="flex items-center gap-px mb-px">
+                        <span className="w-9 text-[9px] text-ash-gray text-right pr-1.5 shrink-0">{day}</span>
+                        {HOURS.map((hour) => {
+                          const count = intensityMap.get(`${day}-${hour}`) || 0;
+                          const opacity = getOpacity(count);
+                          return (
+                            <div
+                              key={hour}
+                              className="flex-1 aspect-square rounded-[2px] relative group cursor-pointer transition-transform hover:scale-125 hover:z-10"
+                              style={{
+                                backgroundColor: count === 0 ? "#f0f0f0" : `rgba(0,53,39,${opacity})`,
+                              }}
+                            >
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-ink-black text-white text-[9px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                                {day} {hour}:00 — {count} txn{count !== 1 ? "s" : ""}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Category Donut */}
@@ -482,62 +549,6 @@ export default function AnalyticsPage() {
           )}
         </div>
       </div>
-
-      {/* Transaction Intensity Heatmap */}
-      {data.intensity && data.intensity.length > 0 && (() => {
-        const maxCount = Math.max(...data.intensity.map(i => i.count));
-        const getIntensityColor = (count: number) => {
-          if (count === 0) return "bg-mist-gray";
-          const ratio = count / maxCount;
-          if (ratio < 0.25) return "bg-[#E8F5E9]";
-          if (ratio < 0.5) return "bg-[#C5E1A5]";
-          if (ratio < 0.75) return "bg-[#8BC34A]";
-          return "bg-[#003527]";
-        };
-        const intensityMap = new Map<string, number>();
-        data.intensity.forEach(i => intensityMap.set(`${i.day}-${i.hour}`, i.count));
-        return (
-          <div className="bg-paper-white border border-[#ececec] rounded-cards p-4 sm:p-6">
-            <h2 className="font-semibold text-ink-black mb-1">Transaction Intensity</h2>
-            <p className="text-[11px] text-ash-gray mb-4">{data.transactionCount} total transactions across {DAYS.length} days</p>
-            <div className="overflow-x-auto">
-              <div className="min-w-[480px]">
-                <div className="flex items-center gap-1 mb-1 ml-10">
-                  {HOURS.filter(h => h % 3 === 0).map(h => (
-                    <div key={h} className="flex-1 text-center">
-                      <span className="text-[9px] text-ash-gray">{h}</span>
-                    </div>
-                  ))}
-                </div>
-                {DAYS.map(day => (
-                  <div key={day} className="flex items-center gap-1 mb-0.5">
-                    <span className="w-9 text-[10px] text-ash-gray text-right pr-1 shrink-0">{day}</span>
-                    {HOURS.map(hour => {
-                      const count = intensityMap.get(`${day}-${hour}`) || 0;
-                      return (
-                        <div
-                          key={hour}
-                          className={`flex-1 aspect-square rounded-[3px] ${getIntensityColor(count)} transition-colors`}
-                          title={`${day} ${hour}:00 — ${count} transactions`}
-                        />
-                      );
-                    })}
-                  </div>
-                ))}
-                <div className="flex items-center justify-end gap-1.5 mt-3">
-                  <span className="text-[9px] text-ash-gray">Less</span>
-                  <div className="w-3 h-3 rounded-[2px] bg-mist-gray" />
-                  <div className="w-3 h-3 rounded-[2px] bg-[#E8F5E9]" />
-                  <div className="w-3 h-3 rounded-[2px] bg-[#C5E1A5]" />
-                  <div className="w-3 h-3 rounded-[2px] bg-[#8BC34A]" />
-                  <div className="w-3 h-3 rounded-[2px] bg-[#003527]" />
-                  <span className="text-[9px] text-ash-gray">More</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Insights Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
