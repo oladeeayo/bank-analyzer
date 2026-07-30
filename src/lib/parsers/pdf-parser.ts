@@ -202,17 +202,40 @@ function parseSterlingRows(rows: string[][]): ParseResult {
       if (!dateStr) continue;
 
       // Sterling: Trans Date | Narration | Value Date | Debit | Credit | Balance
-      // Narration contains: "000001260104124716383254325115 | OneBank Transfer from..."
-      const narrationRaw = row.length > 1 ? row[1] : "";
+      // Narration may span multiple cells due to PDF extraction splitting on pipes
+      // Find the date cell index and value date cell index, join everything between as narration
+      let dateCellIdx = -1;
+      let valueDateIdx = -1;
+      for (let j = 0; j < row.length; j++) {
+        if (datePattern.test(row[j])) {
+          if (dateCellIdx === -1) dateCellIdx = j;
+          else if (valueDateIdx === -1) { valueDateIdx = j; break; }
+        }
+      }
+
+      let narrationRaw = "";
+      if (dateCellIdx >= 0 && valueDateIdx > dateCellIdx) {
+        // Join all cells between first date and second date as narration
+        narrationRaw = row.slice(dateCellIdx + 1, valueDateIdx).join(" | ");
+      } else if (row.length > 1) {
+        narrationRaw = row.slice(1).join(" | ");
+      }
+
       let description = "";
       if (narrationRaw.includes("|")) {
         const parts = narrationRaw.split("|");
-        description = parts.slice(1).join("|").trim();
+        description = parts.join(" ").trim();
       } else {
         description = narrationRaw;
       }
       description = cleanNarration(description);
       if (!description) continue;
+
+      // Debug: log narration extraction for first 5 rows
+      if (i - headerIdx <= 5) {
+        console.log(`[Sterling] Raw narration: ${narrationRaw.substring(0, 100)}`);
+        console.log(`[Sterling] Cleaned: ${description}`);
+      }
 
       let debit = 0, credit = 0;
       for (let j = 0; j < row.length; j++) {
