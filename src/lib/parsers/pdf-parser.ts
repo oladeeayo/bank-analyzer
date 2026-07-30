@@ -86,10 +86,31 @@ function parseSterlingRows(rows: string[][]): ParseResult {
   const errors: string[] = [];
   const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}[\/\-]\w{3,9}[\/\-]\d{2,4})/;
 
+  // Find the header row (contains "Trans Date" or "Narration")
+  let headerIdx = -1;
   for (let i = 0; i < rows.length; i++) {
+    const combined = rows[i].join(" ").toLowerCase();
+    if (combined.includes("trans date") || combined.includes("narration")) {
+      headerIdx = i;
+      break;
+    }
+  }
+  if (headerIdx === -1) {
+    console.log("[Sterling] No header row found, using row 0 as header");
+    headerIdx = 0;
+  }
+  const headerRow = rows[headerIdx];
+  console.log(`[Sterling] Header row ${headerIdx}: ${headerRow.join(" | ")}`);
+
+  for (let i = headerIdx + 1; i < rows.length; i++) {
     try {
       const row = rows[i];
       if (row.length < 5) continue;
+
+      // Debug: log first 5 transaction rows
+      if (i - headerIdx <= 5) {
+        console.log(`[Sterling] Row ${i}: ${row.join(" | ")}`);
+      }
 
       let dateStr = "";
       for (const cell of row) {
@@ -113,7 +134,7 @@ function parseSterlingRows(rows: string[][]): ParseResult {
       let debit = 0, credit = 0;
       for (let j = 0; j < row.length; j++) {
         const cell = row[j].trim();
-        const header = (rows[0]?.[j] || "").toLowerCase();
+        const header = (headerRow[j] || "").toLowerCase();
         const cleaned = cell.replace(/[^0-9.]/g, "");
         const val = parseFloat(cleaned);
         if (isNaN(val) || val === 0) continue;
