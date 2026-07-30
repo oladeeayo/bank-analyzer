@@ -328,3 +328,72 @@ export async function validateRecurringPatterns(
 
   return allResults;
 }
+
+const NARRATION_EXTRACTION_PROMPT = `You are an expert Nigerian bank transaction analyzer. Extract the clean merchant name, counterparty name, or business entity from raw bank narration text.
+
+RULES:
+1. Remove all reference numbers (15+ digits), terminal IDs, location codes (LANG, NG, LA), and transaction prefixes
+2. Extract the actual person or business name from the narration
+3. For transfers: extract the recipient/sender name
+4. For POS/WEB purchases: extract the merchant name
+5. For bank charges: return the charge type (e.g., "Stamp Duty", "SMS Charge", "VAT")
+6. For airtime/data: return the telecom provider (MTN, Airtel, Glo)
+7. Keep it short - max 40 characters
+8. Return ONLY the clean name, no explanations
+
+EXAMPLES:
+- "TRANSFER BETWEEN CUSTOMERS 110006221228234130022175621301||220928203625puid0 0305637msport.comMSPORT0022175621301||Paystack" → "MSport"
+- "FUNDS TRANSFER -005228 -030156-T Adedamola Enterpr 005228 2TGTATUS LANG" → "Adedamola Enterprise"
+- "NIBSS Instant Payment Outward 000013221229025446000669016025 via GTWORLD TO OLADIPOU, OLADAYO" → "Oladipupo Oladayo"
+- "NIP TELCO CHARGE 000013221229025446000669016025 NIP TRANSFER COMMISSION" → "NIP Transfer Commission"
+- "VALUE ADDED TAX 000013221229025446000669016025 VAT ON NIP TRANSFER" → "VAT"
+- "Airtime Purchase GTWORLD-101CT0000000004077709239-2348136167673-AIRTIME" → "MTN Airtime"
+- "FUNDS TRANSFER -002921 -001590-T A1 communication 002921 2TGTEG56 LANG" → "A1 Communication"
+- "OneBank Transfer from OLADAYO ISAAC OLADIPOPO to OLADAYO ISAAC OLADIPOPO" → "Oladayp Isaac Oladipupo"
+- "FGN STAMP DUTY/S51944181 ON 25-JAN-26 FOR ACCOUNT" → "CBN Stamp Duty"
+- "POS/WEB PURCHASE TRANSACTION -008955- -191394-PAYCOM NIGERIA LIMITED LA LANG" → "Paycom Nigeria"
+
+Respond with ONLY the clean merchant/person name, nothing else.`;
+
+export async function extractMerchantFromNarration(
+  rawNarrations: Array<{ index: string; rawText: string }>
+): Promise<Record<string, string>> {
+  const BATCH_SIZE = 15;
+  const results: Record<string, string> = {};
+
+  for (let i = 0; i < rawNarrations.length; i += BATCH_SIZE) {
+    const batch = rawNarrations.slice(i, i + BATCH_SIZE);
+    const data = JSON.stringify(batch, null, 2);
+
+    try {
+      const response = await callGemini(NARRATION_EXTRACTION_PROMPT, data);
+      const lines = response.split('\n').filter(l => l.trim());
+
+      for (const line of lines) {
+        const match = line.match(/^"?(\d+)"?\s*[:\->]+\s*(.+)/);
+        if (match) {
+          const idx = match[1];
+          const cleanName = match[2].replace(/^["']|["']$/g, '').trim();
+          if (cleanName && cleanName.length > 1) {
+            results[idx] = cleanName;
+          }
+        }
+      }
+
+      if (Object.keys(results).length === 0) {
+        const parsed = parseJSON(response);
+        if (typeof parsed === 'object') {
+          for (const [key, val] of Object.entries(parsed)) {
+            if (typeof val === 'string' && val.length > 1) {
+              results[key] = val;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[AI] Narration extraction failed for batch:', err);
+    }
+  }
+
+  return results;
+}

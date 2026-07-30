@@ -5,6 +5,7 @@ import { normalizeTransactions } from "@/lib/normalizer";
 import { classifyBatch } from "@/lib/classifier";
 import { groupSimilarTransactions } from "@/lib/counterparty-matcher";
 import { getSessionUserId } from "@/lib/session";
+import { extractMerchantFromNarration } from "@/lib/ai";
 import crypto from "crypto";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -221,6 +222,35 @@ export async function POST(request: NextRequest) {
         },
         { status: 409 }
       );
+    }
+
+    // ── AI Narration Extraction ─────────────────────────────────────────
+    const GENERIC_DESCRIPTIONS = [
+      'TRANSFER BETWEEN CUSTOMERS', 'E-CHANNELS', 'E- CHANNELS', 'COMMISSION',
+      'Ref:C', 'REF:P', 'REF:C', 'OneBank Transfer', 'ACCOUNT',
+    ];
+    const needsAI = result.transactions.filter(tx => {
+      const desc = (tx.description || '').toUpperCase().trim();
+      return desc.length < 5
+        || GENERIC_DESCRIPTIONS.some(g => desc.includes(g))
+        || /^REF[:\s]/i.test(desc)
+        || desc === desc.toUpperCase() && desc.length < 20;
+    });
+
+    if (needsAI.length > 0) {
+      console.log(`[Upload] AI extraction for ${needsAI.length} generic descriptions`);
+      const rawNarrations = needsAI.map((tx, idx) => ({
+        index: String(idx),
+        rawText: tx.narration || tx.description || '',
+      }));
+      const aiResults = await extractMerchantFromNarration(rawNarrations);
+      for (const tx of needsAI) {
+        const idx = needsAI.indexOf(tx);
+        const cleanName = aiResults[String(idx)];
+        if (cleanName && cleanName.length > 2) {
+          tx.description = cleanName;
+        }
+      }
     }
 
     // ── Normalize, classify, group ───────────────────────────────────────
