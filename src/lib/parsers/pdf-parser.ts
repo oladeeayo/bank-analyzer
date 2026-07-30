@@ -5,8 +5,8 @@ import { detectBankNameFromFormat, extractAccountNumber, extractAccountName } fr
 
 function detectBankFormat(text: string): BankFormat {
   const lower = text.toLowerCase();
-  if (lower.includes("palmpay") || lower.includes("palm pay")) return "palmpay-pdf";
   if (lower.includes("gtbank") || lower.includes("gtb") || lower.includes("gtco") || lower.includes("guaranty trust")) return "gtbank-pdf";
+  if (lower.includes("sterling") || lower.includes("onebank")) return "sterling-pdf";
   if (lower.includes("access bank")) return "access-pdf";
   if (lower.includes("uba")) return "uba-pdf";
   if (lower.includes("opay") || lower.includes("owealth") || lower.includes("paycom")) return "opay-pdf";
@@ -14,7 +14,7 @@ function detectBankFormat(text: string): BankFormat {
   if (lower.includes("moniepoint")) return "moniepoint-pdf";
   if (lower.includes("first bank") || lower.includes("firstbank")) return "firstbank-pdf";
   if (lower.includes("zenith") || lower.includes("zenithbank")) return "zenith-pdf";
-  if (lower.includes("sterling") || lower.includes("onebank")) return "sterling-pdf";
+  if (lower.includes("palmpay") || lower.includes("palm pay")) return "palmpay-pdf";
   if (lower.includes("wema") || lower.includes("alat")) return "generic-pdf";
   if (lower.includes("fidelity")) return "generic-pdf";
   if (lower.includes("fcmb")) return "generic-pdf";
