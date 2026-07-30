@@ -9,6 +9,41 @@ export interface ExtractedMerchantPayload {
   channelTag: 'POS_AGENT' | 'DIRECT_TRANSFER' | 'UTILITY' | 'SYSTEM_CHARGE' | 'GATEWAY';
 }
 
+const BRAND_KEYWORDS: { pattern: RegExp; brand: string }[] = [
+  { pattern: /sporty/i, brand: 'SportyBet' },
+  { pattern: /1xbet/i, brand: '1xBet' },
+  { pattern: /msport/i, brand: 'MSport' },
+  { pattern: /opay/i, brand: 'OPay' },
+  { pattern: /palmpay/i, brand: 'PalmPay' },
+  { pattern: /paystack/i, brand: 'Paystack' },
+  { pattern: /flutterwave|rave/i, brand: 'Flutterwave' },
+  { pattern: /interswitch|quickteller/i, brand: 'Interswitch' },
+  { pattern: /kuda/i, brand: 'Kuda Bank' },
+  { pattern: /mtn/i, brand: 'MTN' },
+  { pattern: /airtel/i, brand: 'Airtel' },
+  { pattern: /glo/i, brand: 'Glo' },
+  { pattern: /stamp duty/i, brand: 'CBN Stamp Duty' },
+  { pattern: /vat|value added tax/i, brand: 'VAT' },
+  { pattern: /sms charge/i, brand: 'SMS Service' },
+  { pattern: /gtworld|gtb/i, brand: 'GTBank' },
+  { pattern: /onebank|sterling/i, brand: 'Sterling Bank' },
+  { pattern: /moniepoint/i, brand: 'Moniepoint' },
+  { pattern: /access bank/i, brand: 'Access Bank' },
+  { pattern: /zenith/i, brand: 'Zenith Bank' },
+  { pattern: /uba/i, brand: 'UBA' },
+  { pattern: /first bank|firstbank/i, brand: 'First Bank' },
+  { pattern: /wema|alat/i, brand: 'Wema Bank' },
+  { pattern: /fidelity/i, brand: 'Fidelity Bank' },
+  { pattern: /fcmb/i, brand: 'FCMB' },
+];
+
+const LEGAL_SUFFIXES = [
+  'LTD', 'LIMITED', 'PLC', 'INC', 'VENTURES', 'VENTURE', 'ENTERPRISE',
+  'ENTERPRISES', 'SERVICES', 'GLOBAL', 'STORES', 'STORE', 'PHARMACY',
+  'SUPERMARKET', 'BAKERY', 'KITCHEN', 'RESTAURANT', 'LOGISTICS', 'NIGERIA',
+  'INTERNATIONAL', 'CONSULTING', 'SOLUTIONS', 'TECHNOLOGIES', 'HOLDINGS',
+];
+
 export class ExactMerchantExtractor {
   private static PREFIX_REGEX = /^(received from|send to|transfer (to|from)|paid to|payment to|third-party merchant order\s*\|\s*)/i;
   private static GATEWAY_PREFIX_REGEX = /^(gfs\/|gfs|pos transfer\s*-\s*|pos transfer\s*|pos\s*-\s*)/i;
@@ -25,7 +60,17 @@ export class ExactMerchantExtractor {
 
     const raw = rawDescription.trim();
 
-    // ── Stage 1: Utility & System Transaction Interception ──────────────────
+    // Stage 1: Brand keyword matching
+    for (const item of BRAND_KEYWORDS) {
+      if (item.pattern.test(raw)) {
+        // For bank charges, return the brand directly
+        if (/charge|fee|vat|stamp|sms/i.test(raw)) {
+          return this.buildPayload(raw, item.brand, item.brand, null, true, null, 'SYSTEM_CHARGE');
+        }
+      }
+    }
+
+    // Stage 2: Utility & System Transaction Interception
     if (/mobile data|buy data bundle/i.test(raw)) {
       const parts = raw.split('|').map(p => p.trim());
       const telco = parts[2] ? parts[2].toUpperCase() : 'DATA SERVICE';
@@ -71,7 +116,19 @@ export class ExactMerchantExtractor {
       return this.buildPayload(raw, 'Interbank Transfer Credit', null, null, true, null, 'DIRECT_TRANSFER');
     }
 
-    // ── Stage 2: Structure Delimitation ─────────────────────────────────────
+    // Stage 3: Entity extraction by grammar patterns
+    const entityByGrammar = this.extractByGrammar(raw);
+    if (entityByGrammar) {
+      return this.buildPayload(raw, entityByGrammar, null, null, false, null, 'DIRECT_TRANSFER');
+    }
+
+    // Stage 4: Entity extraction by legal suffixes
+    const entityBySuffix = this.extractByEntityAnchors(raw);
+    if (entityBySuffix) {
+      return this.buildPayload(raw, entityBySuffix, null, null, false, null, 'DIRECT_TRANSFER');
+    }
+
+    // Stage 5: Structure Delimitation
     let candidateName = '';
     let institution: string | null = null;
     let accountOrPhone: string | null = null;
@@ -103,23 +160,19 @@ export class ExactMerchantExtractor {
       channelTag = 'POS_AGENT';
     }
 
-    // ── Stage 3: Prefix Cleaning ────────────────────────────────────────────
+    // Stage 6: Prefix Cleaning
     candidateName = candidateName.replace(this.PREFIX_REGEX, '').trim();
     candidateName = candidateName.replace(this.GATEWAY_PREFIX_REGEX, '').trim();
 
-    // ── Stage 4: Outlet, Branch & Terminal Suffix Cleaning ──────────────────
+    // Stage 7: Outlet, Branch & Terminal Suffix Cleaning
     if (candidateName.includes(' - ')) {
       const subParts = candidateName.split(' - ').map(p => p.trim());
-      if (/(limited|ltd|inc|ventures|services|enterprises|stores|supermart)/i.test(subParts[0])) {
-        candidateName = subParts[0];
-      } else {
-        candidateName = subParts[0];
-      }
+      candidateName = subParts[0];
     }
 
     candidateName = candidateName.replace(/\s*\([\s\S]*?\)$/, '').trim();
 
-    // ── Stage 5: Formatting & Title-Casing ──────────────────────────────────
+    // Stage 8: Formatting & Title-Casing
     const exactMerchantName = this.toTitleCase(candidateName);
 
     return this.buildPayload(
@@ -131,6 +184,37 @@ export class ExactMerchantExtractor {
       memo,
       channelTag,
     );
+  }
+
+  private static extractByGrammar(narration: string): string | null {
+    const patterns = [
+      /(?:POS\/WEB|WEB PURCHASE|PURCHASE TRANSACTION)[^\-]*\-[^\-]*\-([A-Za-z0-9_\s\&]+?)(?:\s+LANG|\s+NG|\s+LA|$)/i,
+      /\b(?:TO|TRF TO|TRANSFER TO)\s+([A-Za-z0-9_\s.\-&]+?)(?:\s+VIA|\s+REF|\s+FROM|\/|\d{10}|$)/i,
+      /\b(?:FROM|TRF FROM)\s+([A-Za-z0-9_\s.\-&]+?)(?:\s+TO|\s+REF|\/|\d{10}|$)/i,
+      /(?:MERCHANT PAYMENTS|SETTLEMENT ACCT)[^\n]*\bto\s+([A-Za-z0-9\s._\-&]+?)(?=\s+REF|\s+COMMISSION|$)/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = narration.match(pattern);
+      if (match && match[1].trim().length > 2) {
+        return match[1].trim();
+      }
+    }
+    return null;
+  }
+
+  private static extractByEntityAnchors(narration: string): string | null {
+    const words = narration.split(/\s+/);
+    for (let i = 0; i < words.length; i++) {
+      const cleanWord = words[i].replace(/[^A-Za-z]/g, '').toUpperCase();
+      if (LEGAL_SUFFIXES.includes(cleanWord)) {
+        const start = Math.max(0, i - 2);
+        const entity = words.slice(start, i + 1).join(' ');
+        const cleaned = entity.replace(/^[\-\/|]+|[\-\/|]+$/g, '').trim();
+        if (cleaned.length > 3) return cleaned;
+      }
+    }
+    return null;
   }
 
   private static buildPayload(

@@ -21,78 +21,79 @@ function detectBankFormat(text: string): BankFormat {
   return "generic-pdf";
 }
 
-function cleanNarration(text: string): string {
-  let cleaned = text.replace(/\d{15,}/g, "").replace(/\|/g, " ").replace(/\s+/g, " ").trim();
-  cleaned = cleaned.replace(/REF:\s*\d+/gi, "").replace(/REF\s*\d+/gi, "");
-  cleaned = cleaned.replace(/\|\|/g, " ").replace(/\|/g, " ").trim();
+const BRANCH_BLACKLIST = ['ILESA', 'E-CHANNELS', 'HEAD OFFICE', 'MAIN BRANCH', 'LAGOS', 'ABUJA', 'PORT HARCOURT', 'ORE', 'IBADAN'];
 
-  // Sterling: "OneBank Transfer from X to Y"
+function cleanNarration(text: string): string {
+  let cleaned = text.replace(/\n/g, ' ').replace(/\r/g, '');
+  cleaned = cleaned.replace(/\d{15,}/g, '');
+  cleaned = cleaned.replace(/REF:\s*\d+/gi, '').replace(/REF\s*\d+/gi, '');
+  cleaned = cleaned.replace(/\|+/g, ' ').replace(/\s+/g, ' ').trim();
+  cleaned = cleaned.replace(/^[\s|:\-\']+/g, '').trim();
+
   const oneBankMatch = cleaned.match(/OneBank Transfer from\s+(.+?)\s+to\s+(.+)/i);
   if (oneBankMatch) {
     const recipient = oneBankMatch[2].trim();
-    if (recipient.length > 3 && recipient.length < 60) return recipient;
+    if (recipient.length > 3 && recipient.length < 80) return recipient;
   }
 
-  // GTBank: "TRANSFER BETWEEN CUSTOMERS REF|MOB/NAME/UTO/...|..."
-  const gtTransferMatch = cleaned.match(/TRANSFER BETWEEN CUSTOMERS\s+.+?\|MOB\/(.+?)\//i);
-  if (gtTransferMatch) {
-    const name = gtTransferMatch[1].trim();
-    if (name.length > 3 && name.length < 60) return name;
+  const gt737Match = cleaned.match(/737\s+MERCHANT PAYMENTS\s+.+?from\s+(.+?)\s+to\s+(.+)/i);
+  if (gt737Match) {
+    const merchant = gt737Match[2].trim();
+    if (merchant.length > 3 && merchant.length < 80) return merchant;
   }
 
-  // GTBank: "TRANSFER BETWEEN CUSTOMERS REF|USSD-NIP/To NAME..."
-  const gtUssdMatch = cleaned.match(/TRANSFER BETWEEN CUSTOMERS\s+.+?\|USSD-NIP\/(?:To|FROM)\s+(.+)/i);
+  const gtMobMatch = cleaned.match(/TRANSFER BETWEEN CUSTOMERS\s+.+?\|?MOB\/(.+?)\//i);
+  if (gtMobMatch) {
+    const name = gtMobMatch[1].trim();
+    if (name.length > 3 && name.length < 80) return name;
+  }
+
+  const gtUssdMatch = cleaned.match(/TRANSFER BETWEEN CUSTOMERS\s+.+?\|?USSD-NIP\/(?:To|FROM)\s+(.+)/i);
   if (gtUssdMatch) {
     const name = gtUssdMatch[1].trim();
-    if (name.length > 3 && name.length < 60) return name;
+    if (name.length > 3 && name.length < 80) return name;
   }
 
-  // GTBank: "TRANSFER BETWEEN CUSTOMERS" - extract name after last pipe or slash
-  const gtGenericTransfer = cleaned.match(/TRANSFER BETWEEN CUSTOMERS\s+.+?[\|\/](.+?)[\|\/]/i);
-  if (gtGenericTransfer) {
-    const name = gtGenericTransfer[1].trim();
-    if (name.length > 3 && name.length < 60 && !/^\d+$/.test(name)) return name;
+  const gtPipeTransfer = cleaned.match(/TRANSFER BETWEEN CUSTOMERS\s+.+?\|\s*(.+?)(?:\s+REF|\s*$)/i);
+  if (gtPipeTransfer) {
+    const name = gtPipeTransfer[1].trim();
+    if (name.length > 3 && name.length < 80 && !/^\d+$/.test(name)) return name;
   }
 
-  // GTBank: "CASH WITHDRAWAL FROM OTHER ATM -XXX-LOCATION MERCHANT"
-  const gtAtmMatch = cleaned.match(/CASH WITHDRAWAL FROM OTHER ATM\s+.+?-(.+?)(?:\s+TD|\s*$)/i);
-  if (gtAtmMatch) {
-    const location = gtAtmMatch[1].trim();
-    if (location.length > 3 && location.length < 60) return location;
+  const atmMatch = cleaned.match(/CASH WITHDRAWAL FROM OTHER ATM\s+.+?-(.+?)(?:\s+TD|\s+NG|\s*$)/i);
+  if (atmMatch) {
+    const location = atmMatch[1].trim();
+    if (location.length > 3 && location.length < 80) return location;
   }
 
-  // GTBank: "POS/WEB PURCHASE TRANSACTION -XXX-MERCHANT NAME"
-  const gtPosMatch = cleaned.match(/POS\/WEB PURCHASE TRANSACTION\s+.+?-(.+?)(?:\s+LANG|\s*$)/i);
-  if (gtPosMatch) {
-    const merchant = gtPosMatch[1].trim();
-    if (merchant.length > 3 && merchant.length < 60) return merchant;
+  const posMatch = cleaned.match(/POS\/WEB PURCHASE TRANSACTION\s+.+?-(.+?)(?:\s+LANG|\s+NG|\s+LA|\s*$)/i);
+  if (posMatch) {
+    const merchant = posMatch[1].trim();
+    if (merchant.length > 3 && merchant.length < 80) return merchant;
   }
 
-  // Sterling: "CASH WITHDRAWAL FROM OTHER ATM -XXX-LOCATION MERCHANT"
-  const stlAtmMatch = cleaned.match(/CASH WITHDRAWAL FROM OTHER ATM\s+.+?-(.+?)(?:\s+TD|\s*$)/i);
-  if (stlAtmMatch) {
-    const location = stlAtmMatch[1].trim();
-    if (location.length > 3 && location.length < 60) return location;
-  }
-
-  // Sterling: "POS/WEB PURCHASE TRANSACTION -XXX-MERCHANT NAME"
-  const stlPosMatch = cleaned.match(/POS\/WEB PURCHASE TRANSACTION\s+.+?-(.+?)(?:\s+LANG|\s*$)/i);
-  if (stlPosMatch) {
-    const merchant = stlPosMatch[1].trim();
-    if (merchant.length > 3 && merchant.length < 60) return merchant;
-  }
-
-  // Airtime purchase
   const airtimeMatch = cleaned.match(/AIRTIME PURCHASE\s+(.+?)(?:\s*$)/i);
   if (airtimeMatch) {
     const merchant = airtimeMatch[1].trim();
-    if (merchant.length > 3 && merchant.length < 60) return merchant;
+    if (merchant.length > 3 && merchant.length < 80) return merchant;
   }
 
-  // Fallback: strip common prefixes
-  cleaned = cleaned.replace(/^(TRANSFER BETWEEN CUSTOMERS|CASH WITHDRAWAL|POS\/WEB PURCHASE TRANSACTION|AIRTIME PURCHASE|BILL PAYMENT|SALARY PAYMENT|INFLOWS|OUTFLOWS)\s*/i, "");
+  const billMatch = cleaned.match(/(?:BILL|UTILITY) PAYMENT\s+(.+?)(?:\s*$)/i);
+  if (billMatch) {
+    const merchant = billMatch[1].trim();
+    if (merchant.length > 3 && merchant.length < 80) return merchant;
+  }
+
+  cleaned = cleaned.replace(/^(TRANSFER BETWEEN CUSTOMERS|CASH WITHDRAWAL|POS\/WEB PURCHASE TRANSACTION|AIRTIME PURCHASE|BILL PAYMENT|SALARY PAYMENT|INFLOWS|OUTFLOWS|737 MERCHANT PAYMENTS)\s*/i, "");
   cleaned = cleaned.replace(/^(OneBank Transfer|Transfer|TRF)\s+(from|FROM)\s+.+?\s+(to|TO)\s+/i, "");
   cleaned = cleaned.replace(/^[\s\-]+|[\s\-]+$/g, "");
+
+  for (const branch of BRANCH_BLACKLIST) {
+    const regex = new RegExp(`\\b${branch}\\b`, 'gi');
+    cleaned = cleaned.replace(regex, '');
+  }
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
   if (cleaned.length > 60) cleaned = cleaned.substring(0, 60).trim();
   return cleaned || text.substring(0, 60).trim();
 }
