@@ -579,10 +579,10 @@ export default function AnalyticsPage() {
       {/* Insights Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {insights.map((insight, i) => (
-          <div key={i} className="bg-paper-white border border-[#ececec] rounded-cards p-3">
-            <p className="text-[9px] uppercase tracking-wider text-ash-gray font-medium">{insight.title}</p>
-            <p className={`text-sm font-mono font-medium mt-0.5 ${insight.color}`}>{insight.value}</p>
-            <p className="text-[9px] text-ash-gray mt-0.5">{insight.detail}</p>
+          <div key={i} className="bg-paper-white border border-[#ececec] rounded-cards p-4">
+            <p className="text-[10px] uppercase tracking-wider text-ash-gray font-medium">{insight.title}</p>
+            <p className={`text-lg sm:text-xl font-mono font-medium mt-1 ${insight.color}`}>{insight.value}</p>
+            <p className="text-[10px] text-ash-gray mt-1">{insight.detail}</p>
           </div>
         ))}
       </div>
