@@ -26,23 +26,44 @@ function cleanNarration(text: string): string {
   cleaned = cleaned.replace(/REF:\s*\d+/gi, "").replace(/REF\s*\d+/gi, "");
   cleaned = cleaned.replace(/\|\|/g, " ").replace(/\|/g, " ").trim();
 
-  // Extract counterparty name from transfer patterns
-  const transferPatterns = [
-    /(?:OneBank Transfer|Transfer|TRF)\s+(?:from|FROM)\s+[\w\s]+\s+(?:to|TO)\s+(.+)/i,
-    /(?:Transfer between customers|TRANSFER BETWEEN CUSTOMERS)\s+[\w\s]+\s+(?:to|TO)\s+(.+)/i,
-  ];
-  for (const pattern of transferPatterns) {
-    const match = cleaned.match(pattern);
-    if (match && match[1]) {
-      let name = match[1].trim();
-      name = name.replace(/\s+Ref:?\s*$/i, "").replace(/\s+REF:?\s*$/i, "").trim();
-      if (name.length > 3 && name.length < 60) return name;
-    }
+  // Extract counterparty name from "OneBank Transfer from X to Y"
+  const oneBankMatch = cleaned.match(/OneBank Transfer from\s+(.+?)\s+to\s+(.+)/i);
+  if (oneBankMatch) {
+    const recipient = oneBankMatch[2].trim();
+    if (recipient.length > 3 && recipient.length < 60) return recipient;
   }
 
+  // Extract from "TRANSFER BETWEEN CUSTOMERS X/Y/Z to RECIPIENT"
+  const transferMatch = cleaned.match(/TRANSFER BETWEEN CUSTOMERS\s+.+?\/(.+?)\s+to\s+(.+)/i);
+  if (transferMatch) {
+    const recipient = transferMatch[2].trim();
+    if (recipient.length > 3 && recipient.length < 60) return recipient;
+  }
+
+  // Extract from "CASH WITHDRAWAL FROM OTHER ATM -XXX-LOCATION MERCHANT"
+  const atmMatch = cleaned.match(/CASH WITHDRAWAL FROM OTHER ATM\s+.+?-(.+?)(?:\s+TD|\s*$)/i);
+  if (atmMatch) {
+    const location = atmMatch[1].trim();
+    if (location.length > 3 && location.length < 60) return location;
+  }
+
+  // Extract from "POS/WEB PURCHASE TRANSACTION -XXX-MERCHANT NAME"
+  const posMatch = cleaned.match(/POS\/WEB PURCHASE TRANSACTION\s+.+?-(.+?)(?:\s+LANG|\s*$)/i);
+  if (posMatch) {
+    const merchant = posMatch[1].trim();
+    if (merchant.length > 3 && merchant.length < 60) return merchant;
+  }
+
+  // Extract from "AIRTIME PURCHASE GTWORLD-XXX-MERCHANT"
+  const airtimeMatch = cleaned.match(/AIRTIME PURCHASE\s+(.+?)(?:\s*$)/i);
+  if (airtimeMatch) {
+    const merchant = airtimeMatch[1].trim();
+    if (merchant.length > 3 && merchant.length < 60) return merchant;
+  }
+
+  // Fallback: strip common prefixes and return cleaned text
   cleaned = cleaned.replace(/^(TRANSFER BETWEEN CUSTOMERS|CASH WITHDRAWAL|POS\/WEB PURCHASE TRANSACTION|AIRTIME PURCHASE|BILL PAYMENT|SALARY PAYMENT|INFLOWS|OUTFLOWS)\s*/i, "");
-  cleaned = cleaned.replace(/^(OneBank Transfer|Transfer|TRF)\s+(from|FROM)\s+/i, "");
-  cleaned = cleaned.replace(/\s+(to|TO)\s+[\w\s]+$/i, "");
+  cleaned = cleaned.replace(/^(OneBank Transfer|Transfer|TRF)\s+(from|FROM)\s+.+?\s+(to|TO)\s+/i, "");
   cleaned = cleaned.replace(/^[\s\-]+|[\s\-]+$/g, "");
   if (cleaned.length > 60) cleaned = cleaned.substring(0, 60).trim();
   return cleaned || text.substring(0, 60).trim();
