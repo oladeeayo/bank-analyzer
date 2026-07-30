@@ -58,7 +58,6 @@ export async function GET(request: NextRequest) {
           category: { select: { name: true, icon: true } },
         },
         orderBy: { date: "desc" },
-        take: 50,
       });
     } else {
       transactions = await db.transaction.findMany({
@@ -79,7 +78,6 @@ export async function GET(request: NextRequest) {
           category: { select: { name: true, icon: true } },
         },
         orderBy: { date: "desc" },
-        take: 50,
       });
     }
 

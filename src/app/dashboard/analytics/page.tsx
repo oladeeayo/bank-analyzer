@@ -26,6 +26,7 @@ interface AnalyticsData {
   dailyCredits: Record<string, number>;
   weeklySpending: Record<number, number>;
   monthlyChart: { month: number; year: number; credits: number; debits: number; net: number }[];
+  intensity: { day: string; hour: number; count: number }[];
   transactionCount: number;
   daysInPeriod: number;
 }
@@ -34,6 +35,9 @@ const DONUT_COLORS = ["#003527", "#416900", "#8BC34A", "#C5E1A5", "#DCF5B0", "#A
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const availableYears = [2023, 2024, 2025, 2026, 2027];
+
+const HOURS = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 interface Bank {
   id: string;
@@ -55,6 +59,10 @@ export default function AnalyticsPage() {
   const [drilldown, setDrilldown] = useState<{ type: "category" | "merchant"; name: string; icon: string } | null>(null);
   const [drilldownData, setDrilldownData] = useState<{ totalCredits: number; totalDebits: number; transactions: any[] } | null>(null);
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
+  const [showAllCats, setShowAllCats] = useState(false);
+  const [showAllMerchants, setShowAllMerchants] = useState(false);
+  const [showAllBreakdown, setShowAllBreakdown] = useState(false);
+  const [showDrilldownTxns, setShowDrilldownTxns] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -148,6 +156,12 @@ export default function AnalyticsPage() {
     });
   };
 
+  const VISIBLE_CATS = 6;
+  const hiddenCount = donutSegments.length - VISIBLE_CATS;
+  const VISIBLE_MERCHANTS = 6;
+  const hiddenMerchantCount = merchantRanking.length - VISIBLE_MERCHANTS;
+  const VISIBLE_BREAKDOWN = 8;
+
   const maxMonthly = monthlyChart.length > 0 ? Math.max(...monthlyChart.map(m => Math.max(m.credits, m.debits))) : 0;
 
   const insights = [
@@ -230,34 +244,34 @@ export default function AnalyticsPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-lime-vibrant/10 border border-lime-vibrant/30 rounded-cards p-5">
+        <div className="bg-lime-vibrant/10 border border-lime-vibrant/30 rounded-cards p-3 sm:p-5">
           <p className="text-[10px] uppercase tracking-wider text-forest/60 font-medium">Net Cash Flow</p>
           <div className="flex items-center gap-2 mt-1">
             {summary.netCashFlow >= 0 ? <ArrowTrendingUpIcon className="h-5 w-5 text-forest" /> : <ArrowTrendingDownIcon className="h-5 w-5 text-error" />}
-            <span className={`text-2xl font-mono font-medium ${summary.netCashFlow >= 0 ? "text-forest" : "text-error"}`}>{formatCurrency(summary.netCashFlow)}</span>
+            <span className={`text-lg sm:text-2xl font-mono font-medium ${summary.netCashFlow >= 0 ? "text-forest" : "text-error"}`}>{formatCurrency(summary.netCashFlow)}</span>
           </div>
           <p className="text-[10px] text-ash-gray mt-1">{data.periodLabel}</p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] rounded-cards p-5">
+        <div className="bg-paper-white border border-[#ececec] rounded-cards p-3 sm:p-5">
           <p className="text-[10px] uppercase tracking-wider text-ash-gray font-medium">Total Income</p>
-          <p className="text-2xl font-mono font-medium text-forest mt-1">{formatCurrency(summary.totalIncome)}</p>
+          <p className="text-lg sm:text-2xl font-mono font-medium text-forest mt-1">{formatCurrency(summary.totalIncome)}</p>
           <p className="text-[10px] text-ash-gray mt-1">{data.periodLabel}</p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] rounded-cards p-5">
+        <div className="bg-paper-white border border-[#ececec] rounded-cards p-3 sm:p-5">
           <p className="text-[10px] uppercase tracking-wider text-ash-gray font-medium">Total Expenses</p>
-          <p className="text-2xl font-mono font-medium text-error mt-1">{formatCurrency(summary.totalExpenses)}</p>
+          <p className="text-lg sm:text-2xl font-mono font-medium text-error mt-1">{formatCurrency(summary.totalExpenses)}</p>
           <p className="text-[10px] text-ash-gray mt-1">{data.periodLabel}</p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] rounded-cards p-5">
+        <div className="bg-paper-white border border-[#ececec] rounded-cards p-3 sm:p-5">
           <p className="text-[10px] uppercase tracking-wider text-ash-gray font-medium">Avg Daily Spend</p>
-          <p className="text-2xl font-mono font-medium text-ink-black mt-1">{formatCurrency(summary.averageDailySpend)}</p>
+          <p className="text-lg sm:text-2xl font-mono font-medium text-ink-black mt-1">{formatCurrency(summary.averageDailySpend)}</p>
           <p className="text-[10px] text-ash-gray mt-1">per day</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Cashflow Dual-Direction Chart */}
-        <div className="lg:col-span-2 bg-paper-white border border-[#ececec] rounded-cards p-6">
+        <div className="lg:col-span-2 bg-paper-white border border-[#ececec] rounded-cards p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-ink-black">
               {period === "monthly" ? "Daily Cashflow" : "Cashflow"}
@@ -418,13 +432,13 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Category Donut */}
-        <div className="bg-paper-white border border-[#ececec] rounded-cards p-6">
+        <div className="bg-paper-white border border-[#ececec] rounded-cards p-4 sm:p-6">
           <h2 className="font-semibold text-ink-black mb-4">Spending by Category</h2>
           {totalForDonut > 0 ? (
             <>
               <div className="relative w-48 h-48 mx-auto mb-4">
                 <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                  {donutSegments.map((seg, i) => (
+                  {(showAllCats ? donutSegments : donutSegments.slice(0, VISIBLE_CATS)).map((seg, i) => (
                     <circle key={i} cx="18" cy="18" r="15.915" fill="transparent" stroke={seg.color} strokeWidth="3.5"
                       strokeDasharray={`${seg.percent} ${100 - seg.percent}`} strokeDashoffset={`${-seg.start}`}
                       className="transition-all duration-500 hover:opacity-80" />
@@ -436,7 +450,7 @@ export default function AnalyticsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                {donutSegments.map((seg, i) => (
+                {(showAllCats ? donutSegments : donutSegments.slice(0, VISIBLE_CATS)).map((seg, i) => (
                   <button
                     key={i}
                     onClick={() => fetchDrilldown("category", seg.name, seg.icon)}
@@ -453,6 +467,14 @@ export default function AnalyticsPage() {
                     <span className="font-mono text-ash-gray">{seg.percent.toFixed(0)}%</span>
                   </button>
                 ))}
+                {hiddenCount > 0 && (
+                  <button
+                    onClick={() => setShowAllCats(!showAllCats)}
+                    className="w-full text-center text-xs text-forest hover:underline py-1"
+                  >
+                    {showAllCats ? "Show less" : `+${hiddenCount} more`}
+                  </button>
+                )}
               </div>
             </>
           ) : (
@@ -461,10 +483,66 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Transaction Intensity Heatmap */}
+      {data.intensity && data.intensity.length > 0 && (() => {
+        const maxCount = Math.max(...data.intensity.map(i => i.count));
+        const getIntensityColor = (count: number) => {
+          if (count === 0) return "bg-mist-gray";
+          const ratio = count / maxCount;
+          if (ratio < 0.25) return "bg-[#E8F5E9]";
+          if (ratio < 0.5) return "bg-[#C5E1A5]";
+          if (ratio < 0.75) return "bg-[#8BC34A]";
+          return "bg-[#003527]";
+        };
+        const intensityMap = new Map<string, number>();
+        data.intensity.forEach(i => intensityMap.set(`${i.day}-${i.hour}`, i.count));
+        return (
+          <div className="bg-paper-white border border-[#ececec] rounded-cards p-4 sm:p-6">
+            <h2 className="font-semibold text-ink-black mb-1">Transaction Intensity</h2>
+            <p className="text-[11px] text-ash-gray mb-4">{data.transactionCount} total transactions across {DAYS.length} days</p>
+            <div className="overflow-x-auto">
+              <div className="min-w-[480px]">
+                <div className="flex items-center gap-1 mb-1 ml-10">
+                  {HOURS.filter(h => h % 3 === 0).map(h => (
+                    <div key={h} className="flex-1 text-center">
+                      <span className="text-[9px] text-ash-gray">{h}</span>
+                    </div>
+                  ))}
+                </div>
+                {DAYS.map(day => (
+                  <div key={day} className="flex items-center gap-1 mb-0.5">
+                    <span className="w-9 text-[10px] text-ash-gray text-right pr-1 shrink-0">{day}</span>
+                    {HOURS.map(hour => {
+                      const count = intensityMap.get(`${day}-${hour}`) || 0;
+                      return (
+                        <div
+                          key={hour}
+                          className={`flex-1 aspect-square rounded-[3px] ${getIntensityColor(count)} transition-colors`}
+                          title={`${day} ${hour}:00 — ${count} transactions`}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+                <div className="flex items-center justify-end gap-1.5 mt-3">
+                  <span className="text-[9px] text-ash-gray">Less</span>
+                  <div className="w-3 h-3 rounded-[2px] bg-mist-gray" />
+                  <div className="w-3 h-3 rounded-[2px] bg-[#E8F5E9]" />
+                  <div className="w-3 h-3 rounded-[2px] bg-[#C5E1A5]" />
+                  <div className="w-3 h-3 rounded-[2px] bg-[#8BC34A]" />
+                  <div className="w-3 h-3 rounded-[2px] bg-[#003527]" />
+                  <span className="text-[9px] text-ash-gray">More</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Insights Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {insights.map((insight, i) => (
-          <div key={i} className="bg-paper-white border border-[#ececec] rounded-cards p-5">
+          <div key={i} className="bg-paper-white border border-[#ececec] rounded-cards p-3 sm:p-5">
             <p className="text-[10px] uppercase tracking-wider text-ash-gray font-medium">{insight.title}</p>
             <p className={`text-lg font-mono font-medium mt-1 ${insight.color}`}>{insight.value}</p>
             <p className="text-[10px] text-ash-gray mt-1">{insight.detail}</p>
@@ -474,7 +552,7 @@ export default function AnalyticsPage() {
 
       {/* Drilldown Panel */}
       {drilldown && (
-        <div className="bg-paper-white border border-[#ececec] rounded-cards p-6">
+        <div className="bg-paper-white border border-[#ececec] rounded-cards p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
 <div className="flex flex-wrap items-center gap-3">
               <span className="text-2xl">{drilldown.icon}</span>
@@ -489,43 +567,43 @@ export default function AnalyticsPage() {
           </div>
           {drilldownData ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 bg-lime-vibrant/10 rounded-lg">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                <div className="p-2 sm:p-4 bg-lime-vibrant/10 rounded-lg">
                   <p className="text-[10px] uppercase text-forest/60">Inflow (Credit)</p>
-                  <p className="text-xl font-mono font-medium text-forest">{formatCurrency(drilldownData.totalCredits)}</p>
+                  <p className="text-base sm:text-xl font-mono font-medium text-forest">{formatCurrency(drilldownData.totalCredits)}</p>
                 </div>
-                <div className="p-4 bg-[#8BC34A]/10 rounded-lg">
+                <div className="p-2 sm:p-4 bg-[#8BC34A]/10 rounded-lg">
                   <p className="text-[10px] uppercase text-[#4a7c0f]/60">Outflow (Debit)</p>
-                  <p className="text-xl font-mono font-medium text-[#4a7c0f]">{formatCurrency(drilldownData.totalDebits)}</p>
+                  <p className="text-base sm:text-xl font-mono font-medium text-[#4a7c0f]">{formatCurrency(drilldownData.totalDebits)}</p>
                 </div>
-                <div className="p-4 bg-mist-gray rounded-lg">
+                <div className="p-2 sm:p-4 bg-mist-gray rounded-lg">
                   <p className="text-[10px] uppercase text-ash-gray">Net</p>
-                  <p className={`text-xl font-mono font-medium ${drilldownData.totalCredits - drilldownData.totalDebits >= 0 ? "text-forest" : "text-error"}`}>
+                  <p className={`text-base sm:text-xl font-mono font-medium ${drilldownData.totalCredits - drilldownData.totalDebits >= 0 ? "text-forest" : "text-error"}`}>
                     {formatCurrency(drilldownData.totalCredits - drilldownData.totalDebits)}
                   </p>
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm min-w-[400px]">
                   <thead>
                     <tr className="border-b border-[#ececec]">
-                      <th className="text-left text-[10px] text-ash-gray uppercase py-2">Date</th>
-                      <th className="text-left text-[10px] text-ash-gray uppercase py-2">Description</th>
-                      <th className="text-left text-[10px] text-ash-gray uppercase py-2">Type</th>
-                      <th className="text-right text-[10px] text-ash-gray uppercase py-2">Amount</th>
+                      <th className="text-left text-[10px] text-ash-gray uppercase py-2 px-1 sm:px-2">Date</th>
+                      <th className="text-left text-[10px] text-ash-gray uppercase py-2 px-1 sm:px-2">Description</th>
+                      <th className="text-left text-[10px] text-ash-gray uppercase py-2 px-1 sm:px-2">Type</th>
+                      <th className="text-right text-[10px] text-ash-gray uppercase py-2 px-1 sm:px-2">Amount</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#ececec]">
-                    {drilldownData.transactions.map((tx: any) => (
+                    {(showDrilldownTxns ? drilldownData.transactions : drilldownData.transactions.slice(0, 20)).map((tx: any) => (
                       <tr key={tx.id}>
-                        <td className="py-2 text-ash-gray">{formatDate(tx.date)}</td>
-                        <td className="py-2 text-ink-black truncate max-w-[200px]">{tx.normalizedDescription || tx.description}</td>
-                        <td className="py-2">
+                        <td className="py-1.5 sm:py-2 text-ash-gray text-xs sm:text-sm">{formatDate(tx.date)}</td>
+                        <td className="py-1.5 sm:py-2 text-ink-black truncate max-w-[200px] text-xs sm:text-sm">{tx.normalizedDescription || tx.description}</td>
+                        <td className="py-1.5 sm:py-2">
                           <span className={`text-[10px] px-2 py-0.5 rounded ${tx.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-[#8BC34A]/20 text-[#4a7c0f]"}`}>
                             {tx.type.toUpperCase()}
                           </span>
                         </td>
-                        <td className={`py-2 text-right font-mono ${tx.type === "credit" ? "text-forest" : "text-[#4a7c0f]"}`}>
+                        <td className={`py-1.5 sm:py-2 text-right font-mono text-xs sm:text-sm ${tx.type === "credit" ? "text-forest" : "text-[#4a7c0f]"}`}>
                           {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
                         </td>
                       </tr>
@@ -533,6 +611,14 @@ export default function AnalyticsPage() {
                   </tbody>
                 </table>
               </div>
+              {drilldownData.transactions.length > 20 && (
+                <button
+                  onClick={() => setShowDrilldownTxns(!showDrilldownTxns)}
+                  className="w-full text-center text-xs text-forest hover:underline py-1"
+                >
+                  {showDrilldownTxns ? "Show less" : `+${drilldownData.transactions.length - 20} more transactions`}
+                </button>
+              )}
             </div>
           ) : (
             <div className="text-center py-8 text-ash-gray text-sm">Loading details...</div>
@@ -540,13 +626,13 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
         {/* Merchant Ranking */}
-        <div className="bg-paper-white border border-[#ececec] rounded-cards p-6">
+        <div className="bg-paper-white border border-[#ececec] rounded-cards p-4 sm:p-6">
           <h2 className="font-semibold text-ink-black mb-4">Top Merchants</h2>
           {merchantRanking.length > 0 ? (
             <div className="space-y-3">
-              {merchantRanking.slice(0, 8).map((m, idx) => {
+              {(showAllMerchants ? merchantRanking : merchantRanking.slice(0, VISIBLE_MERCHANTS)).map((m, idx) => {
                 const pct = summary.totalExpenses > 0 ? (m.amount / summary.totalExpenses) * 100 : 0;
                 return (
                   <button
@@ -572,6 +658,14 @@ export default function AnalyticsPage() {
                   </button>
                 );
               })}
+              {hiddenMerchantCount > 0 && (
+                <button
+                  onClick={() => setShowAllMerchants(!showAllMerchants)}
+                  className="w-full text-center text-xs text-forest hover:underline py-1"
+                >
+                  {showAllMerchants ? "Show less" : `+${hiddenMerchantCount} more`}
+                </button>
+              )}
             </div>
           ) : (
             <div className="text-center py-8 text-ash-gray text-sm">No merchant data</div>
@@ -579,7 +673,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Category Breakdown */}
-        <div className="bg-paper-white border border-[#ececec] rounded-cards p-6">
+        <div className="bg-paper-white border border-[#ececec] rounded-cards p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-ink-black">Category Breakdown</h2>
             {hiddenCategories.size > 0 && (
@@ -593,7 +687,7 @@ export default function AnalyticsPage() {
           </div>
           {categoryBreakdown.length > 0 ? (
             <div className="space-y-1">
-              {categoryBreakdown.map((cat, idx) => {
+              {(showAllBreakdown ? categoryBreakdown : categoryBreakdown.slice(0, VISIBLE_BREAKDOWN)).map((cat, idx) => {
                 const isHidden = hiddenCategories.has(cat.name);
                 const pct = summary.totalExpenses > 0 ? (cat.amount / summary.totalExpenses) * 100 : 0;
                 return (
@@ -633,6 +727,14 @@ export default function AnalyticsPage() {
                   </div>
                 );
               })}
+              {categoryBreakdown.length > VISIBLE_BREAKDOWN && (
+                <button
+                  onClick={() => setShowAllBreakdown(!showAllBreakdown)}
+                  className="w-full text-center text-xs text-forest hover:underline py-1"
+                >
+                  {showAllBreakdown ? "Show less" : `+${categoryBreakdown.length - VISIBLE_BREAKDOWN} more`}
+                </button>
+              )}
             </div>
           ) : (
             <div className="text-center py-8 text-ash-gray text-sm">No category data</div>
