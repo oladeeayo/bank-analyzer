@@ -45,6 +45,7 @@ export type BankFormat =
   | "firstbank-pdf"
   | "zenith-csv"
   | "zenith-pdf"
+  | "sterling-pdf"
   | "generic-csv"
   | "generic-excel"
   | "generic-pdf";

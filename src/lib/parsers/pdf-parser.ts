@@ -14,11 +14,130 @@ function detectBankFormat(text: string): BankFormat {
   if (lower.includes("moniepoint")) return "moniepoint-pdf";
   if (lower.includes("first bank") || lower.includes("firstbank")) return "firstbank-pdf";
   if (lower.includes("zenith") || lower.includes("zenithbank")) return "zenith-pdf";
-  if (lower.includes("sterling") || lower.includes("onebank")) return "generic-pdf";
+  if (lower.includes("sterling") || lower.includes("onebank")) return "sterling-pdf";
   if (lower.includes("wema") || lower.includes("alat")) return "generic-pdf";
   if (lower.includes("fidelity")) return "generic-pdf";
   if (lower.includes("fcmb")) return "generic-pdf";
   return "generic-pdf";
+}
+
+function cleanNarration(text: string): string {
+  let cleaned = text.replace(/\d{15,}/g, "").replace(/\|/g, " ").replace(/\s+/g, " ").trim();
+  cleaned = cleaned.replace(/^(TRANSFER BETWEEN CUSTOMERS|CASH WITHDRAWAL|POS\/WEB PURCHASE TRANSACTION|AIRTIME PURCHASE|BILL PAYMENT|SALARY PAYMENT|INFLOWS|OUTFLOWS)\s*/i, "");
+  cleaned = cleaned.replace(/REF:\s*\d+/gi, "").replace(/REF\s*\d+/gi, "");
+  cleaned = cleaned.replace(/\|\|/g, " ").replace(/\|/g, " ").trim();
+  cleaned = cleaned.replace(/^[\s\-]+|[\s\-]+$/g, "");
+  if (cleaned.length > 80) cleaned = cleaned.substring(0, 80).trim();
+  return cleaned || text.substring(0, 80).trim();
+}
+
+function parseGTBankRows(rows: string[][]): ParseResult {
+  const transactions: ParsedTransaction[] = [];
+  const errors: string[] = [];
+  const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}[\/\-]\w{3,9}[\/\-]\d{2,4})/;
+
+  for (let i = 0; i < rows.length; i++) {
+    try {
+      const row = rows[i];
+      if (row.length < 6) continue;
+
+      let dateStr = "";
+      for (const cell of row) {
+        if (datePattern.test(cell)) { const m = cell.match(datePattern); if (m) { dateStr = m[1]; break; } }
+      }
+      if (!dateStr) continue;
+
+      const remarks = row[row.length - 1] || "";
+      const description = cleanNarration(remarks);
+      if (!description) continue;
+
+      let debit = 0, credit = 0;
+      for (let j = 0; j < row.length; j++) {
+        const cell = row[j].trim();
+        const header = (rows[0]?.[j] || "").toLowerCase();
+        const cleaned = cell.replace(/[^0-9.]/g, "");
+        const val = parseFloat(cleaned);
+        if (isNaN(val) || val === 0) continue;
+        if (header.includes("debit")) debit = val;
+        else if (header.includes("credit")) credit = val;
+      }
+
+      const amount = debit > 0 ? debit : credit;
+      const type: "debit" | "credit" = debit > 0 ? "debit" : "credit";
+      if (amount === 0) continue;
+
+      const date = parseDate(dateStr);
+      if (isNaN(date.getTime())) continue;
+
+      transactions.push({ date: date.toISOString(), description, amount, type, narration: description });
+    } catch (err) { errors.push(`Row ${i + 1}: ${err}`); }
+  }
+
+  const dates = transactions.map(t => new Date(t.date).getTime()).sort((a, b) => a - b);
+  return {
+    transactions, errors,
+    metadata: { fileName: "", fileType: "pdf", totalRows: rows.length, parsedRows: transactions.length,
+      dateRange: dates.length > 0 ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() } : undefined },
+  };
+}
+
+function parseSterlingRows(rows: string[][]): ParseResult {
+  const transactions: ParsedTransaction[] = [];
+  const errors: string[] = [];
+  const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}[\/\-]\w{3,9}[\/\-]\d{2,4})/;
+
+  for (let i = 0; i < rows.length; i++) {
+    try {
+      const row = rows[i];
+      if (row.length < 5) continue;
+
+      let dateStr = "";
+      for (const cell of row) {
+        if (datePattern.test(cell)) { const m = cell.match(datePattern); if (m) { dateStr = m[1]; break; } }
+      }
+      if (!dateStr) continue;
+
+      // Sterling: Trans Date | Narration | Value Date | Debit | Credit | Balance
+      // Narration contains: "000001260104124716383254325115 | OneBank Transfer from..."
+      const narrationRaw = row.length > 1 ? row[1] : "";
+      let description = "";
+      if (narrationRaw.includes("|")) {
+        const parts = narrationRaw.split("|");
+        description = parts.slice(1).join("|").trim();
+      } else {
+        description = narrationRaw;
+      }
+      description = cleanNarration(description);
+      if (!description) continue;
+
+      let debit = 0, credit = 0;
+      for (let j = 0; j < row.length; j++) {
+        const cell = row[j].trim();
+        const header = (rows[0]?.[j] || "").toLowerCase();
+        const cleaned = cell.replace(/[^0-9.]/g, "");
+        const val = parseFloat(cleaned);
+        if (isNaN(val) || val === 0) continue;
+        if (header.includes("debit")) debit = val;
+        else if (header.includes("credit")) credit = val;
+      }
+
+      const amount = debit > 0 ? debit : credit;
+      const type: "debit" | "credit" = debit > 0 ? "debit" : "credit";
+      if (amount === 0) continue;
+
+      const date = parseDate(dateStr);
+      if (isNaN(date.getTime())) continue;
+
+      transactions.push({ date: date.toISOString(), description, amount, type, narration: description });
+    } catch (err) { errors.push(`Row ${i + 1}: ${err}`); }
+  }
+
+  const dates = transactions.map(t => new Date(t.date).getTime()).sort((a, b) => a - b);
+  return {
+    transactions, errors,
+    metadata: { fileName: "", fileType: "pdf", totalRows: rows.length, parsedRows: transactions.length,
+      dateRange: dates.length > 0 ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() } : undefined },
+  };
 }
 
 function parseDate(dateStr: string, dateFormat?: "MM/DD/YYYY" | "DD/MM/YYYY"): Date {
@@ -494,6 +613,12 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
             if (isPalmPayFormat(rows)) {
               console.log(`[PDFParser] Using PalmPay text-block parser (fallback)`);
               result = parsePalmPayText(text);
+            } else if (bankFormat === "gtbank-pdf") {
+              console.log(`[PDFParser] Using GTBank parser`);
+              result = parseGTBankRows(rows);
+            } else if (bankFormat === "sterling-pdf") {
+              console.log(`[PDFParser] Using Sterling parser`);
+              result = parseSterlingRows(rows);
             } else {
               console.log(`[PDFParser] Using generic parser`);
               result = parseGenericRows(rows);
