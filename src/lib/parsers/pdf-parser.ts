@@ -8,7 +8,7 @@ function detectBankFormat(text: string): BankFormat {
   if (lower.includes("gtbank") || lower.includes("gtb") || lower.includes("gtco") || lower.includes("guaranty trust")) return "gtbank-pdf";
   if (lower.includes("sterling") || lower.includes("onebank")) return "sterling-pdf";
   if (lower.includes("access bank")) return "access-pdf";
-  if (lower.includes("uba")) return "uba-pdf";
+  if (lower.includes("uba") || lower.includes("united bank for africa")) return "uba-pdf";
   if (lower.includes("opay") || lower.includes("owealth") || lower.includes("paycom")) return "opay-pdf";
   if (lower.includes("kuda") || lower.includes("kuda microfinance")) return "kuda-pdf";
   if (lower.includes("moniepoint")) return "moniepoint-pdf";
@@ -84,6 +84,32 @@ function cleanNarration(text: string): string {
     if (merchant.length > 3 && merchant.length < 80) return merchant;
   }
 
+  // UBA: "TNF-MIRACLE/Paid with Paga www.mypaga.com..."
+  const tnfMatch = cleaned.match(/TNF-(.+?)\/Paid with\s+(.+?)(?:\s+www\.|\s*$)/i);
+  if (tnfMatch) {
+    const merchant = tnfMatch[2].trim();
+    if (merchant.length > 3 && merchant.length < 80) return merchant;
+  }
+
+  // UBA: "MOB/UTU/OLADIPOPO OLA/3508457..." - extract name after MOB/UTU/
+  const ubaMobMatch = cleaned.match(/MOB\/UTU\/(.+?)(?:\s+OLA\/|\s*$)/i);
+  if (ubaMobMatch) {
+    const name = ubaMobMatch[1].trim();
+    if (name.length > 3 && name.length < 80) return name;
+  }
+
+  // UBA: "FGN STAMP DUTY..." - return as bank charge
+  const fgnMatch = cleaned.match(/FGN STAMP DUTY/i);
+  if (fgnMatch) {
+    return 'CBN Stamp Duty';
+  }
+
+  // UBA: "WHT ON Interest..." or "Interest Paid..."
+  const interestMatch = cleaned.match(/(?:WHT ON Interest|Interest Paid)\s+(.+?)(?:\s*$)/i);
+  if (interestMatch) {
+    return 'Interest Payment';
+  }
+
   cleaned = cleaned.replace(/^(TRANSFER BETWEEN CUSTOMERS|CASH WITHDRAWAL|POS\/WEB PURCHASE TRANSACTION|AIRTIME PURCHASE|BILL PAYMENT|SALARY PAYMENT|INFLOWS|OUTFLOWS|737 MERCHANT PAYMENTS)\s*/i, "");
   cleaned = cleaned.replace(/^(OneBank Transfer|Transfer|TRF)\s+(from|FROM)\s+.+?\s+(to|TO)\s+/i, "");
   cleaned = cleaned.replace(/^[\s\-]+|[\s\-]+$/g, "");
@@ -96,6 +122,100 @@ function cleanNarration(text: string): string {
 
   if (cleaned.length > 60) cleaned = cleaned.substring(0, 60).trim();
   return cleaned || text.substring(0, 60).trim();
+}
+
+const UBA_BLACKLIST = ['OPENING BALANCE', 'CLOSING BALANCE', 'Africa\'s global bank', 'United Bank for Africa', 'OLADIPUPO', 'OLADAYO', 'ACCOUNT STATEMENT'];
+
+function parseUBARows(rows: string[][]): ParseResult {
+  const transactions: ParsedTransaction[] = [];
+  const errors: string[] = [];
+  const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}[\/\-]\w{3,9}[\/\-]\d{2,4})/;
+
+  let headerIdx = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const combined = rows[i].join(" ").toLowerCase();
+    if (combined.includes("trans date") || combined.includes("narration")) {
+      headerIdx = i;
+      break;
+    }
+  }
+  if (headerIdx === -1) headerIdx = 0;
+  const headerRow = rows[headerIdx];
+  console.log(`[UBA] Header row ${headerIdx}: ${headerRow.join(" | ")}`);
+
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    try {
+      const row = rows[i];
+      if (row.length < 5) continue;
+
+      let dateStr = "";
+      for (const cell of row) {
+        if (datePattern.test(cell)) { const m = cell.match(datePattern); if (m) { dateStr = m[1]; break; } }
+      }
+      if (!dateStr) continue;
+
+      const combinedRow = row.join(" ").toUpperCase();
+      const isBlacklisted = UBA_BLACKLIST.some(term => combinedRow.includes(term.toUpperCase()));
+      if (isBlacklisted) continue;
+
+      // UBA: TRANS DATE | VALUE DATE | NARRATION | CHQ. NO | DEBIT | CREDIT | BALANCE
+      // Narration spans multiple cells, find it between dates and numeric columns
+      let narrationRaw = "";
+      let dateCount = 0;
+      let narrationStart = -1;
+      let narrationEnd = -1;
+      for (let j = 0; j < row.length; j++) {
+        if (datePattern.test(row[j])) {
+          dateCount++;
+          if (dateCount === 1) narrationStart = j + 1;
+          if (dateCount === 2) { narrationEnd = j; break; }
+        }
+      }
+      if (narrationStart >= 0 && narrationEnd > narrationStart) {
+        narrationRaw = row.slice(narrationStart, narrationEnd).join(" ");
+      } else if (row.length > 2) {
+        narrationRaw = row[2] || row[1] || "";
+      }
+
+      let description = cleanNarration(narrationRaw);
+      if (!description) continue;
+
+      // Skip if description is just a number or too short
+      if (description.length < 3 || /^\d+[\.,]?\d*$/.test(description)) continue;
+
+      let debit = 0, credit = 0;
+      for (let j = 0; j < row.length; j++) {
+        const cell = row[j].trim();
+        const header = (headerRow[j] || "").toLowerCase();
+        const cleaned = cell.replace(/[^0-9.]/g, "");
+        const val = parseFloat(cleaned);
+        if (isNaN(val) || val === 0) continue;
+        if (header.includes("debit")) debit = val;
+        else if (header.includes("credit")) credit = val;
+      }
+
+      const amount = debit > 0 ? debit : credit;
+      const type: "debit" | "credit" = debit > 0 ? "debit" : "credit";
+      if (amount === 0) continue;
+
+      const date = parseDate(dateStr);
+      if (isNaN(date.getTime())) continue;
+
+      if (i - headerIdx <= 5) {
+        console.log(`[UBA] Raw narration: ${narrationRaw.substring(0, 100)}`);
+        console.log(`[UBA] Cleaned: ${description}`);
+      }
+
+      transactions.push({ date: date.toISOString(), description, amount, type, narration: description });
+    } catch (err) { errors.push(`Row ${i + 1}: ${err}`); }
+  }
+
+  const dates = transactions.map(t => new Date(t.date).getTime()).sort((a, b) => a - b);
+  return {
+    transactions, errors,
+    metadata: { fileName: "", fileType: "pdf", totalRows: rows.length, parsedRows: transactions.length,
+      dateRange: dates.length > 0 ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() } : undefined },
+  };
 }
 
 function parseGTBankRows(rows: string[][]): ParseResult {
@@ -740,6 +860,9 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
             if (isPalmPayFormat(rows)) {
               console.log(`[PDFParser] Using PalmPay text-block parser (fallback)`);
               result = parsePalmPayText(text);
+            } else if (bankFormat === "uba-pdf") {
+              console.log(`[PDFParser] Using UBA parser`);
+              result = parseUBARows(rows);
             } else if (bankFormat === "gtbank-pdf") {
               console.log(`[PDFParser] Using GTBank parser`);
               result = parseGTBankRows(rows);
