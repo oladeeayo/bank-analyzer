@@ -256,39 +256,87 @@ function parseGTBankRows(rows: string[][]): ParseResult {
   }
   console.log(`[GTBank] Column map:`, colMap);
 
-  // Debug: log first 5 rows after header
-  for (let i = headerIdx + 1; i < Math.min(headerIdx + 6, rows.length); i++) {
-    console.log(`[GTBank] Row ${i} (${rows[i].length} cells): ${rows[i].join(" | ")}`);
+  // Step 1: Aggregate multi-line rows into single transaction blocks
+  const aggregatedRows: string[][] = [];
+  let currentBlock: string[] = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (row.length <= 2 && currentBlock.length > 0) {
+      // Continuation row - merge into current block
+      currentBlock.push(...row);
+    } else if (row.length >= 5) {
+      // Data row - save previous block and start new one
+      if (currentBlock.length > 0) aggregatedRows.push(currentBlock);
+      currentBlock = [...row];
+    } else if (row.length >= 1 && row[0] && datePattern.test(row[0])) {
+      // Date-only row - save previous block and start new one
+      if (currentBlock.length > 0) aggregatedRows.push(currentBlock);
+      currentBlock = [...row];
+    } else {
+      // Short row without prior block - skip
+      if (currentBlock.length > 0) currentBlock.push(...row);
+    }
+  }
+  if (currentBlock.length > 0) aggregatedRows.push(currentBlock);
+
+  console.log(`[GTBank] Aggregated ${rows.length} rows into ${aggregatedRows.length} blocks`);
+
+  // Debug: log first 3 aggregated rows
+  for (let i = 0; i < Math.min(3, aggregatedRows.length); i++) {
+    console.log(`[GTBank] Block ${i} (${aggregatedRows[i].length} cells): ${aggregatedRows[i].join(" | ")}`);
   }
 
-  for (let i = headerIdx + 1; i < rows.length; i++) {
+  for (let i = 0; i < aggregatedRows.length; i++) {
     try {
-      const row = rows[i];
+      const row = aggregatedRows[i];
       if (row.length < 4) continue;
 
       let dateStr = "";
-      if (colMap.date !== undefined && datePattern.test(row[colMap.date])) {
-        const m = row[colMap.date].match(datePattern);
-        if (m) dateStr = m[1];
-      } else {
-        for (const cell of row) {
-          if (datePattern.test(cell)) { const m = cell.match(datePattern); if (m) { dateStr = m[1]; break; } }
+      let dateColIdx = -1;
+      for (let j = 0; j < row.length; j++) {
+        if (datePattern.test(row[j])) {
+          const m = row[j].match(datePattern);
+          if (m) { dateStr = m[1]; dateColIdx = j; break; }
         }
       }
       if (!dateStr) continue;
 
-      const remarks = colMap.remarks !== undefined ? (row[colMap.remarks] || "") : (row[row.length - 1] || "");
+      // Find debit/credit columns dynamically based on which cells have amounts
+      const amountCells: { val: number; col: number }[] = [];
+      for (let j = 0; j < row.length; j++) {
+        if (j === dateColIdx) continue;
+        const cleaned = row[j].replace(/[^0-9.]/g, "");
+        const val = parseFloat(cleaned);
+        if (!isNaN(val) && val > 0 && !datePattern.test(row[j])) {
+          amountCells.push({ val, col: j });
+        }
+      }
+
+      // Find remarks - last cell that contains text (not a number or date)
+      let remarks = "";
+      for (let j = row.length - 1; j >= 0; j--) {
+        const cell = row[j].trim();
+        if (cell && !datePattern.test(cell) && !/^\d+[\.,]?\d*$/.test(cell) && cell.length > 3) {
+          remarks = cell;
+          break;
+        }
+      }
+
       const description = cleanNarration(remarks);
       if (!description) continue;
 
       let debit = 0, credit = 0;
-      if (colMap.debit !== undefined) {
-        const val = parseFloat(row[colMap.debit]?.replace(/[^0-9.]/g, "") || "0");
-        if (!isNaN(val) && val > 0) debit = val;
-      }
-      if (colMap.credit !== undefined) {
-        const val = parseFloat(row[colMap.credit]?.replace(/[^0-9.]/g, "") || "0");
-        if (!isNaN(val) && val > 0) credit = val;
+      if (amountCells.length >= 2) {
+        debit = amountCells[0].val;
+        credit = amountCells[1].val;
+      } else if (amountCells.length === 1) {
+        // Single amount - check if it's in a credit or debit position
+        const header = headerRow.join(" ").toLowerCase();
+        if (header.indexOf("debit") < header.indexOf("credit")) {
+          debit = amountCells[0].val;
+        } else {
+          credit = amountCells[0].val;
+        }
       }
 
       const amount = debit > 0 ? debit : credit;
@@ -299,7 +347,7 @@ function parseGTBankRows(rows: string[][]): ParseResult {
       if (isNaN(date.getTime())) continue;
 
       transactions.push({ date: date.toISOString(), description, amount, type, narration: description });
-    } catch (err) { errors.push(`Row ${i + 1}: ${err}`); }
+    } catch (err) { errors.push(`Block ${i + 1}: ${err}`); }
   }
 
   const dates = transactions.map(t => new Date(t.date).getTime()).sort((a, b) => a - b);
