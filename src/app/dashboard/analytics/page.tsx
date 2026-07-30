@@ -289,7 +289,7 @@ export default function AnalyticsPage() {
               const maxVal = Math.max(...allValues, 1);
               return (
                 <div>
-                  <div className="relative h-48">
+                  <div className="relative h-72">
                     {/* Zero line at center */}
                     <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
                     {/* Income bars */}
@@ -356,7 +356,7 @@ export default function AnalyticsPage() {
               const showEveryN = displayDays.length > 15 ? Math.ceil(displayDays.length / 15) : 1;
               return (
                 <div>
-                  <div className="relative h-48">
+                  <div className="relative h-72">
                     {/* Zero line at center */}
                     <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
                     {/* Income bars: container fills top half, bars align to bottom (zero line) */}
@@ -446,15 +446,15 @@ export default function AnalyticsPage() {
               <div className="mt-4 pt-4 border-t border-[#ececec]">
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <h3 className="text-xs font-semibold text-ink-black">Transaction Intensity</h3>
-                    <p className="text-[9px] text-ash-gray">{data.transactionCount} txns · {DAYS.length} days</p>
+                    <h3 className="text-sm font-semibold text-ink-black">Transaction Intensity</h3>
+                    <p className="text-[10px] text-ash-gray">{data.transactionCount} txns · {DAYS.length} days</p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-[7px] text-ash-gray">Less</span>
+                    <span className="text-[8px] text-ash-gray">Less</span>
                     {[0, 0.2, 0.4, 0.6, 0.85].map((o) => (
-                      <div key={o} className="w-2 h-2 rounded-[2px]" style={{ backgroundColor: o === 0 ? "#f0f0f0" : `rgba(0,53,39,${o})` }} />
+                      <div key={o} className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: o === 0 ? "#f0f0f0" : `rgba(0,53,39,${o})` }} />
                     ))}
-                    <span className="text-[7px] text-ash-gray">More</span>
+                    <span className="text-[8px] text-ash-gray">More</span>
                   </div>
                 </div>
 
@@ -482,13 +482,13 @@ export default function AnalyticsPage() {
                 )}
 
                 <div className="overflow-x-auto">
-                  <div className="min-w-[400px]">
+                  <div className="min-w-[460px]">
                     {/* Hour labels */}
-                    <div className="flex mb-0.5 ml-8">
+                    <div className="flex mb-0.5 ml-9">
                       {HOURS.map((h) => (
                         <div key={h} className="flex-1 text-center">
                           {h % 3 === 0 ? (
-                            <span className="text-[7px] text-ash-gray">{h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h-12}p`}</span>
+                            <span className="text-[8px] text-ash-gray">{h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h-12}p`}</span>
                           ) : null}
                         </div>
                       ))}
@@ -496,7 +496,7 @@ export default function AnalyticsPage() {
                     {/* Grid */}
                     {DAYS.map((day) => (
                       <div key={day} className="flex items-center gap-px mb-px">
-                        <span className="w-8 text-[8px] text-ash-gray text-right pr-1 shrink-0">{day}</span>
+                        <span className="w-9 text-[9px] text-ash-gray text-right pr-1.5 shrink-0">{day}</span>
                         {HOURS.map((hour) => {
                           const detail = intensityMap.get(`${day}-${hour}`);
                           const count = detail?.count || 0;
