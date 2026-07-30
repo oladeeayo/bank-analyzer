@@ -8,7 +8,7 @@ import { getSessionUserId } from "@/lib/session";
 import crypto from "crypto";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
-const MAX_DATE_RANGE_YEARS = 2;
+const MAX_DATE_RANGE_YEARS = 5;
 
 async function findOrCreateBank(userId: string, detected: {
   bankName?: string | null;

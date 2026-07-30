@@ -23,12 +23,29 @@ function detectBankFormat(text: string): BankFormat {
 
 function cleanNarration(text: string): string {
   let cleaned = text.replace(/\d{15,}/g, "").replace(/\|/g, " ").replace(/\s+/g, " ").trim();
-  cleaned = cleaned.replace(/^(TRANSFER BETWEEN CUSTOMERS|CASH WITHDRAWAL|POS\/WEB PURCHASE TRANSACTION|AIRTIME PURCHASE|BILL PAYMENT|SALARY PAYMENT|INFLOWS|OUTFLOWS)\s*/i, "");
   cleaned = cleaned.replace(/REF:\s*\d+/gi, "").replace(/REF\s*\d+/gi, "");
   cleaned = cleaned.replace(/\|\|/g, " ").replace(/\|/g, " ").trim();
+
+  // Extract counterparty name from transfer patterns
+  const transferPatterns = [
+    /(?:OneBank Transfer|Transfer|TRF)\s+(?:from|FROM)\s+[\w\s]+\s+(?:to|TO)\s+(.+)/i,
+    /(?:Transfer between customers|TRANSFER BETWEEN CUSTOMERS)\s+[\w\s]+\s+(?:to|TO)\s+(.+)/i,
+  ];
+  for (const pattern of transferPatterns) {
+    const match = cleaned.match(pattern);
+    if (match && match[1]) {
+      let name = match[1].trim();
+      name = name.replace(/\s+Ref:?\s*$/i, "").replace(/\s+REF:?\s*$/i, "").trim();
+      if (name.length > 3 && name.length < 60) return name;
+    }
+  }
+
+  cleaned = cleaned.replace(/^(TRANSFER BETWEEN CUSTOMERS|CASH WITHDRAWAL|POS\/WEB PURCHASE TRANSACTION|AIRTIME PURCHASE|BILL PAYMENT|SALARY PAYMENT|INFLOWS|OUTFLOWS)\s*/i, "");
+  cleaned = cleaned.replace(/^(OneBank Transfer|Transfer|TRF)\s+(from|FROM)\s+/i, "");
+  cleaned = cleaned.replace(/\s+(to|TO)\s+[\w\s]+$/i, "");
   cleaned = cleaned.replace(/^[\s\-]+|[\s\-]+$/g, "");
-  if (cleaned.length > 80) cleaned = cleaned.substring(0, 80).trim();
-  return cleaned || text.substring(0, 80).trim();
+  if (cleaned.length > 60) cleaned = cleaned.substring(0, 60).trim();
+  return cleaned || text.substring(0, 60).trim();
 }
 
 function parseGTBankRows(rows: string[][]): ParseResult {
