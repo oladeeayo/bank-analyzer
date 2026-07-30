@@ -243,11 +243,14 @@ export async function POST(request: NextRequest) {
         index: String(idx),
         rawText: tx.narration || tx.description || '',
       }));
+      console.log(`[Upload] Sample raw narrations:`, rawNarrations.slice(0, 3).map(r => r.rawText.substring(0, 80)));
       const aiResults = await extractMerchantFromNarration(rawNarrations);
+      console.log(`[Upload] AI results:`, aiResults);
       for (const tx of needsAI) {
         const idx = needsAI.indexOf(tx);
         const cleanName = aiResults[String(idx)];
         if (cleanName && cleanName.length > 2) {
+          console.log(`[Upload] Replacing "${tx.description}" with "${cleanName}"`);
           tx.description = cleanName;
         }
       }

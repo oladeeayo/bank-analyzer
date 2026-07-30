@@ -30,10 +30,20 @@ function cleanNarration(text: string): string {
   cleaned = cleaned.replace(/\|+/g, ' ').replace(/\s+/g, ' ').trim();
   cleaned = cleaned.replace(/^[\s|:\-\']+/g, '').trim();
 
-  const oneBankMatch = cleaned.match(/OneBank Transfer from\s+(.+?)\s+to\s+(.+)/i);
+  // Sterling: "OneBank Transfer from X to Y" (may have line breaks/spaces)
+  const oneBankMatch = cleaned.match(/OneBank\s+Transfer\s+from\s+(.+?)\s+to\s+(.+)/i);
   if (oneBankMatch) {
     const recipient = oneBankMatch[2].trim();
     if (recipient.length > 3 && recipient.length < 80) return recipient;
+  }
+
+  // Fallback: if text contains "OneBank Transfer" but pattern didn't match,
+  // try to extract any name-like text after "to"
+  if (/OneBank\s+Transfer/i.test(cleaned)) {
+    const toMatch = cleaned.match(/\bto\s+([A-Z][A-Z\s,\.]+?)(?:\s+Ref|\s+00000|\s*$)/i);
+    if (toMatch && toMatch[1].trim().length > 3) {
+      return toMatch[1].trim();
+    }
   }
 
   const gt737Match = cleaned.match(/737\s+MERCHANT PAYMENTS\s+.+?from\s+(.+?)\s+to\s+(.+)/i);
