@@ -107,19 +107,23 @@ export async function GET(
     }
 
     // Transaction intensity: day of week x hour of day
-    const intensityMap = new Map<string, number>();
+    const intensityDetailMap = new Map<string, { count: number; credits: number; debits: number }>();
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     for (const tx of transactions) {
       const d = new Date(tx.date);
       const day = dayNames[d.getDay()];
       const hour = d.getHours();
       const key = `${day}-${hour}`;
-      intensityMap.set(key, (intensityMap.get(key) || 0) + 1);
+      const existing = intensityDetailMap.get(key) || { count: 0, credits: 0, debits: 0 };
+      existing.count += 1;
+      if (tx.type === "credit") existing.credits += tx.amount;
+      else existing.debits += tx.amount;
+      intensityDetailMap.set(key, existing);
     }
-    const intensity: { day: string; hour: number; count: number }[] = [];
-    for (const [key, count] of intensityMap) {
+    const intensity: { day: string; hour: number; count: number; credits: number; debits: number }[] = [];
+    for (const [key, detail] of intensityDetailMap) {
       const [day, hour] = key.split("-");
-      intensity.push({ day, hour: parseInt(hour), count });
+      intensity.push({ day, hour: parseInt(hour), ...detail });
     }
 
     const netAmount = totalReceived - totalSpent;

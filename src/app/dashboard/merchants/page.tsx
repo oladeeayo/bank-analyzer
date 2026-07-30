@@ -37,7 +37,7 @@ interface MerchantAnalytics {
   receiveCount: number;
   avgVisit: number;
   monthlySpending: { month: number; year: number; amount: number; count: number }[];
-  intensity: { day: string; hour: number; count: number }[];
+  intensity: { day: string; hour: number; count: number; credits: number; debits: number }[];
   categorySplit: { name: string; icon: string; color: string; amount: number; count: number }[];
   recentTransactions: {
     id: string;
@@ -138,18 +138,18 @@ export default function MerchantsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
-        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
-          <p className="text-[10px] sm:text-[11px] text-ash-gray uppercase tracking-wider">Total Merchants</p>
-          <p className="text-base sm:text-xl font-mono font-medium text-ink-black mt-1">{merchants.length}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="bg-paper-white border border-[#ececec] p-2.5 sm:p-4 rounded-cards">
+          <p className="text-[8px] sm:text-[11px] text-ash-gray uppercase tracking-wider leading-tight">Total Merchants</p>
+          <p className="text-sm sm:text-xl font-mono font-medium text-ink-black mt-1">{merchants.length}</p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
-          <p className="text-[10px] sm:text-[11px] text-ash-gray uppercase tracking-wider">Total Transactions</p>
-          <p className="text-base sm:text-xl font-mono font-medium text-ink-black mt-1">{formatCurrency(totalSpent)}</p>
+        <div className="bg-paper-white border border-[#ececec] p-2.5 sm:p-4 rounded-cards">
+          <p className="text-[8px] sm:text-[11px] text-ash-gray uppercase tracking-wider leading-tight">Total Txns</p>
+          <p className="text-sm sm:text-xl font-mono font-medium text-ink-black mt-1 truncate">{formatCurrency(totalSpent)}</p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
-          <p className="text-[10px] sm:text-[11px] text-ash-gray uppercase tracking-wider">Avg per Merchant</p>
-          <p className="text-base sm:text-xl font-mono font-medium text-ink-black mt-1">
+        <div className="bg-paper-white border border-[#ececec] p-2.5 sm:p-4 rounded-cards">
+          <p className="text-[8px] sm:text-[11px] text-ash-gray uppercase tracking-wider leading-tight">Avg/Merchant</p>
+          <p className="text-sm sm:text-xl font-mono font-medium text-ink-black mt-1 truncate">
             {merchants.length > 0 ? formatCurrency(totalSpent / merchants.length) : "₦0"}
           </p>
         </div>
@@ -246,12 +246,17 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
     amount: Math.round(m.amount),
   }));
 
-  // Build intensity grid
-  const maxIntensity = Math.max(1, ...intensity.map((i) => i.count));
-  const intensityGrid = new Map<string, number>();
+  // Build intensity grid with credits/debits
+  const intensityDetailMap = new Map<string, { count: number; credits: number; debits: number }>();
   for (const i of intensity) {
-    intensityGrid.set(`${i.day}-${i.hour}`, i.count);
+    const existing = intensityDetailMap.get(`${i.day}-${i.hour}`) || { count: 0, credits: 0, debits: 0 };
+    existing.count += i.count;
+    existing.credits += i.credits || 0;
+    existing.debits += i.debits || 0;
+    intensityDetailMap.set(`${i.day}-${i.hour}`, existing);
   }
+  const maxIntensity = Math.max(1, ...Array.from(intensityDetailMap.values()).map(v => v.count));
+  const [selectedCell, setSelectedCell] = useState<{ day: string; hour: number; count: number; credits: number; debits: number } | null>(null);
 
   // Hour labels to show (compact)
   const hourLabels = [0, 3, 6, 9, 12, 15, 18, 21];
@@ -338,17 +343,41 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
       <div className="bg-paper-white border border-[#ececec] p-3 sm:p-5 rounded-cards">
         <div className="mb-2">
           <h3 className="font-signifier text-sm sm:text-lg text-ink-black">Transaction Intensity</h3>
-          <p className="text-[10px] text-ash-gray mt-0.5">When you transact most</p>
+          <p className="text-[10px] text-ash-gray mt-0.5">{txnTimes} txns · {data.uniqueDays} days</p>
         </div>
-        <div className="overflow-x-auto">
-          <div className="min-w-[320px]">
+
+        {/* Selected cell details */}
+        {selectedCell && (
+          <div className="flex items-center gap-3 mb-2 p-2 bg-forest/5 rounded-lg">
+            <div>
+              <p className="text-[9px] text-ash-gray uppercase">{selectedCell.day} {selectedCell.hour === 0 ? "12:00 AM" : selectedCell.hour < 12 ? `${selectedCell.hour}:00 AM` : selectedCell.hour === 12 ? "12:00 PM" : `${selectedCell.hour - 12}:00 PM`}</p>
+              <p className="text-sm font-mono font-medium text-ink-black">{selectedCell.count} txn{selectedCell.count !== 1 ? "s" : ""}</p>
+            </div>
+            <div className="h-6 w-px bg-[#ececec]" />
+            <div>
+              <p className="text-[9px] text-forest uppercase">Sent</p>
+              <p className="text-xs font-mono font-medium text-forest">{formatCurrency(selectedCell.debits)}</p>
+            </div>
+            <div className="h-6 w-px bg-[#ececec]" />
+            <div>
+              <p className="text-[9px] text-[#4a7c0f] uppercase">Received</p>
+              <p className="text-xs font-mono font-medium text-[#4a7c0f]">{formatCurrency(selectedCell.credits)}</p>
+            </div>
+            <button onClick={() => setSelectedCell(null)} className="ml-auto text-ash-gray hover:text-ink-black">
+              <XMarkIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        <div>
+          <div>
             {/* Hour labels */}
             <div className="flex mb-0.5">
               <div className="w-8 shrink-0" />
               {HOURS.map((h) => (
                 <div key={h} className="flex-1 text-center">
                   {hourLabels.includes(h) ? (
-                    <span className="text-[7px] text-ash-gray">{h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h-12}p`}</span>
+                    <span className="text-[7px] sm:text-[8px] text-ash-gray">{h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h-12}p`}</span>
                   ) : null}
                 </div>
               ))}
@@ -356,20 +385,22 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
             {/* Grid */}
             {DAYS.map((day) => (
               <div key={day} className="flex items-center gap-px mb-px">
-                <span className="w-8 text-[8px] text-ash-gray shrink-0 text-right pr-1">{day}</span>
+                <span className="w-8 text-[8px] sm:text-[9px] text-ash-gray shrink-0 text-right pr-1">{day}</span>
                 {HOURS.map((h) => {
-                  const count = intensityGrid.get(`${day}-${h}`) || 0;
-                  const intensity = count > 0 ? count / maxIntensity : 0;
+                  const detail = intensityDetailMap.get(`${day}-${h}`);
+                  const count = detail?.count || 0;
+                  const opacity = count > 0 ? 0.15 + (count / maxIntensity) * 0.85 : 0;
+                  const isSelected = selectedCell?.day === day && selectedCell?.hour === h;
                   return (
                     <div
                       key={h}
-                      className="flex-1 aspect-square rounded-[2px] transition-colors"
-                      style={{
-                        backgroundColor: count === 0
-                          ? "#f5f5f5"
-                          : `rgba(0, 53, 39, ${0.15 + intensity * 0.85})`,
+                      onClick={() => {
+                        if (detail) setSelectedCell(isSelected ? null : { day, hour: h, ...detail });
                       }}
-                      title={`${day} ${h}:00 — ${count} txns`}
+                      className={`flex-1 aspect-square rounded-[2px] cursor-pointer transition-all hover:scale-110 hover:z-10 ${isSelected ? "ring-2 ring-forest ring-offset-1 scale-110" : ""}`}
+                      style={{
+                        backgroundColor: count === 0 ? "#f0f0f0" : `rgba(0,53,39,${opacity})`,
+                      }}
                     />
                   );
                 })}
@@ -377,11 +408,11 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
             ))}
             {/* Legend */}
             <div className="flex items-center justify-end gap-1 mt-1.5">
-              <span className="text-[7px] text-ash-gray">Less</span>
-              {[0.15, 0.35, 0.55, 0.75, 1].map((o) => (
-                <div key={o} className="w-2 h-2 rounded-[1px]" style={{ backgroundColor: `rgba(0, 53, 39, ${o})` }} />
+              <span className="text-[7px] sm:text-[8px] text-ash-gray">Less</span>
+              {[0, 0.2, 0.4, 0.6, 0.85].map((o) => (
+                <div key={o} className="w-2 h-2 rounded-[1px]" style={{ backgroundColor: o === 0 ? "#f0f0f0" : `rgba(0,53,39,${o})` }} />
               ))}
-              <span className="text-[7px] text-ash-gray">More</span>
+              <span className="text-[7px] sm:text-[8px] text-ash-gray">More</span>
             </div>
           </div>
         </div>
