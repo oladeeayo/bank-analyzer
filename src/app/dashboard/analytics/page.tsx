@@ -26,7 +26,7 @@ interface AnalyticsData {
   dailyCredits: Record<string, number>;
   weeklySpending: Record<number, number>;
   monthlyChart: { month: number; year: number; credits: number; debits: number; net: number }[];
-  intensity: { day: string; hour: number; count: number }[];
+  intensity: { day: string; hour: number; count: number; credits: number; debits: number }[];
   transactionCount: number;
   daysInPeriod: number;
 }
@@ -63,6 +63,7 @@ export default function AnalyticsPage() {
   const [showAllMerchants, setShowAllMerchants] = useState(false);
   const [showAllBreakdown, setShowAllBreakdown] = useState(false);
   const [showDrilldownTxns, setShowDrilldownTxns] = useState(false);
+  const [selectedHeatCell, setSelectedHeatCell] = useState<{ day: string; hour: number; count: number; credits: number; debits: number } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -269,9 +270,9 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Cashflow Dual-Direction Chart */}
-        <div className="lg:col-span-2 bg-paper-white border border-[#ececec] rounded-cards p-4 sm:p-6">
+        <div className="lg:col-span-2 bg-paper-white border border-[#ececec] rounded-cards p-3 sm:p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-ink-black">
               {period === "monthly" ? "Daily Cashflow" : "Cashflow"}
@@ -288,7 +289,7 @@ export default function AnalyticsPage() {
               const maxVal = Math.max(...allValues, 1);
               return (
                 <div>
-                  <div className="relative h-72">
+                  <div className="relative h-48">
                     {/* Zero line at center */}
                     <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
                     {/* Income bars */}
@@ -355,7 +356,7 @@ export default function AnalyticsPage() {
               const showEveryN = displayDays.length > 15 ? Math.ceil(displayDays.length / 15) : 1;
               return (
                 <div>
-                  <div className="relative h-72">
+                  <div className="relative h-48">
                     {/* Zero line at center */}
                     <div className="absolute top-1/2 left-0 right-0 h-px bg-ink-black/20 z-10" />
                     {/* Income bars: container fills top half, bars align to bottom (zero line) */}
@@ -433,60 +434,85 @@ export default function AnalyticsPage() {
           {/* Transaction Intensity Heatmap — inside cashflow card */}
           {data.intensity && data.intensity.length > 0 && (() => {
             const maxCount = Math.max(...data.intensity.map(i => i.count));
-            const intensityMap = new Map<string, number>();
-            data.intensity.forEach(i => intensityMap.set(`${i.day}-${i.hour}`, i.count));
+            const intensityMap = new Map<string, { count: number; credits: number; debits: number }>();
+            data.intensity.forEach(i => intensityMap.set(`${i.day}-${i.hour}`, { count: i.count, credits: i.credits, debits: i.debits }));
             const getOpacity = (count: number) => {
               if (count === 0) return 0;
               return 0.15 + (count / maxCount) * 0.85;
             };
+            const dayLabel = selectedHeatCell?.day || "";
+            const hourLabel = selectedHeatCell !== null ? (selectedHeatCell.hour === 0 ? "12:00 AM" : selectedHeatCell.hour < 12 ? `${selectedHeatCell.hour}:00 AM` : selectedHeatCell.hour === 12 ? "12:00 PM" : `${selectedHeatCell.hour - 12}:00 PM`) : "";
             return (
-              <div className="mt-5 pt-5 border-t border-[#ececec]">
-                <div className="flex items-center justify-between mb-3">
+              <div className="mt-4 pt-4 border-t border-[#ececec]">
+                <div className="flex items-center justify-between mb-2">
                   <div>
-                    <h3 className="text-sm font-semibold text-ink-black">Transaction Intensity</h3>
-                    <p className="text-[10px] text-ash-gray">{data.transactionCount} txns across {DAYS.length} days</p>
+                    <h3 className="text-xs font-semibold text-ink-black">Transaction Intensity</h3>
+                    <p className="text-[9px] text-ash-gray">{data.transactionCount} txns · {DAYS.length} days</p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-[8px] text-ash-gray">Less</span>
+                    <span className="text-[7px] text-ash-gray">Less</span>
                     {[0, 0.2, 0.4, 0.6, 0.85].map((o) => (
-                      <div key={o} className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: o === 0 ? "#f0f0f0" : `rgba(0,53,39,${o})` }} />
+                      <div key={o} className="w-2 h-2 rounded-[2px]" style={{ backgroundColor: o === 0 ? "#f0f0f0" : `rgba(0,53,39,${o})` }} />
                     ))}
-                    <span className="text-[8px] text-ash-gray">More</span>
+                    <span className="text-[7px] text-ash-gray">More</span>
                   </div>
                 </div>
+
+                {/* Selected cell details */}
+                {selectedHeatCell && (
+                  <div className="flex items-center gap-3 mb-2 p-2 bg-forest/5 rounded-lg">
+                    <div>
+                      <p className="text-[9px] text-ash-gray uppercase">{dayLabel} {hourLabel}</p>
+                      <p className="text-sm font-mono font-medium text-ink-black">{selectedHeatCell.count} txn{selectedHeatCell.count !== 1 ? "s" : ""}</p>
+                    </div>
+                    <div className="h-6 w-px bg-[#ececec]" />
+                    <div>
+                      <p className="text-[9px] text-forest uppercase">Sent</p>
+                      <p className="text-xs font-mono font-medium text-forest">{formatCurrency(selectedHeatCell.debits)}</p>
+                    </div>
+                    <div className="h-6 w-px bg-[#ececec]" />
+                    <div>
+                      <p className="text-[9px] text-[#4a7c0f] uppercase">Received</p>
+                      <p className="text-xs font-mono font-medium text-[#4a7c0f]">{formatCurrency(selectedHeatCell.credits)}</p>
+                    </div>
+                    <button onClick={() => setSelectedHeatCell(null)} className="ml-auto text-ash-gray hover:text-ink-black">
+                      <XMarkIcon className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+
                 <div className="overflow-x-auto">
-                  <div className="min-w-[420px]">
+                  <div className="min-w-[400px]">
                     {/* Hour labels */}
-                    <div className="flex mb-0.5 ml-9">
+                    <div className="flex mb-0.5 ml-8">
                       {HOURS.map((h) => (
                         <div key={h} className="flex-1 text-center">
                           {h % 3 === 0 ? (
-                            <span className="text-[8px] text-ash-gray">{h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h-12}p`}</span>
-                          ) : (
-                            <span className="text-[8px] text-transparent">.</span>
-                          )}
+                            <span className="text-[7px] text-ash-gray">{h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h-12}p`}</span>
+                          ) : null}
                         </div>
                       ))}
                     </div>
                     {/* Grid */}
                     {DAYS.map((day) => (
                       <div key={day} className="flex items-center gap-px mb-px">
-                        <span className="w-9 text-[9px] text-ash-gray text-right pr-1.5 shrink-0">{day}</span>
+                        <span className="w-8 text-[8px] text-ash-gray text-right pr-1 shrink-0">{day}</span>
                         {HOURS.map((hour) => {
-                          const count = intensityMap.get(`${day}-${hour}`) || 0;
+                          const detail = intensityMap.get(`${day}-${hour}`);
+                          const count = detail?.count || 0;
                           const opacity = getOpacity(count);
+                          const isSelected = selectedHeatCell?.day === day && selectedHeatCell?.hour === hour;
                           return (
                             <div
                               key={hour}
-                              className="flex-1 aspect-square rounded-[2px] relative group cursor-pointer transition-transform hover:scale-125 hover:z-10"
+                              onClick={() => {
+                                if (detail) setSelectedHeatCell(isSelected ? null : { day, hour, ...detail });
+                              }}
+                              className={`flex-1 aspect-square rounded-[2px] cursor-pointer transition-all hover:scale-125 hover:z-10 ${isSelected ? "ring-2 ring-forest ring-offset-1 scale-110" : ""}`}
                               style={{
                                 backgroundColor: count === 0 ? "#f0f0f0" : `rgba(0,53,39,${opacity})`,
                               }}
-                            >
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-ink-black text-white text-[9px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-                                {day} {hour}:00 — {count} txn{count !== 1 ? "s" : ""}
-                              </div>
-                            </div>
+                            />
                           );
                         })}
                       </div>
@@ -551,12 +577,12 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Insights Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {insights.map((insight, i) => (
-          <div key={i} className="bg-paper-white border border-[#ececec] rounded-cards p-3 sm:p-5">
-            <p className="text-[10px] uppercase tracking-wider text-ash-gray font-medium">{insight.title}</p>
-            <p className={`text-lg font-mono font-medium mt-1 ${insight.color}`}>{insight.value}</p>
-            <p className="text-[10px] text-ash-gray mt-1">{insight.detail}</p>
+          <div key={i} className="bg-paper-white border border-[#ececec] rounded-cards p-3">
+            <p className="text-[9px] uppercase tracking-wider text-ash-gray font-medium">{insight.title}</p>
+            <p className={`text-sm font-mono font-medium mt-0.5 ${insight.color}`}>{insight.value}</p>
+            <p className="text-[9px] text-ash-gray mt-0.5">{insight.detail}</p>
           </div>
         ))}
       </div>
@@ -637,7 +663,7 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
         {/* Merchant Ranking */}
         <div className="bg-paper-white border border-[#ececec] rounded-cards p-4 sm:p-6">
           <h2 className="font-semibold text-ink-black mb-4">Top Merchants</h2>

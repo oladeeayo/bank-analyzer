@@ -156,21 +156,25 @@ export async function GET(request: NextRequest) {
 
     // Transaction intensity heatmap data
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const intensityMap = new Map<string, number>();
+    const intensityDetailMap = new Map<string, { count: number; credits: number; debits: number }>();
     transactions.forEach(t => {
       const d = new Date(t.date);
       const dayOfWeek = dayNames[d.getDay()];
       const hour = d.getHours();
       const key = `${dayOfWeek}-${hour}`;
-      intensityMap.set(key, (intensityMap.get(key) || 0) + 1);
+      const existing = intensityDetailMap.get(key) || { count: 0, credits: 0, debits: 0 };
+      existing.count += 1;
+      if (t.type === "credit") existing.credits += t.amount;
+      else existing.debits += t.amount;
+      intensityDetailMap.set(key, existing);
     });
-    const intensity: { day: string; hour: number; count: number }[] = [];
+    const intensity: { day: string; hour: number; count: number; credits: number; debits: number }[] = [];
     const orderedDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     for (const day of orderedDays) {
       for (let hour = 0; hour < 24; hour++) {
-        const count = intensityMap.get(`${day}-${hour}`) || 0;
-        if (count > 0) {
-          intensity.push({ day, hour, count });
+        const detail = intensityDetailMap.get(`${day}-${hour}`);
+        if (detail && detail.count > 0) {
+          intensity.push({ day, hour, ...detail });
         }
       }
     }
