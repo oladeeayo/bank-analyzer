@@ -77,10 +77,21 @@ export async function POST(request: NextRequest) {
       where: { fileHash, userId },
     });
     if (existingUpload) {
-      return NextResponse.json(
-        { error: "duplicate", message: "This file has already been uploaded." },
-        { status: 409 }
-      );
+      // Check if the statement still exists — allow re-upload if it was deleted
+      const statementStillExists = await db.statement.findFirst({
+        where: {
+          bankId: existingUpload.bankId,
+          filename: existingUpload.filename,
+        },
+      });
+      if (statementStillExists) {
+        return NextResponse.json(
+          { error: "duplicate", message: "This file has already been uploaded." },
+          { status: 409 }
+        );
+      }
+      // Statement was deleted — allow re-upload, clean up old log
+      await db.uploadLog.delete({ where: { id: existingUpload.id } });
     }
 
     // ── Parse the file ───────────────────────────────────────────────────
