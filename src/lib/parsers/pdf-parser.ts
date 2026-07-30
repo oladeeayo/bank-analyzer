@@ -5,15 +5,19 @@ import { detectBankNameFromFormat, extractAccountNumber, extractAccountName } fr
 
 function detectBankFormat(text: string): BankFormat {
   const lower = text.toLowerCase();
-  if (lower.includes("palmpay") || lower.includes("palm pay")) return "palmpay-pdf";
-  if (lower.includes("gtbank") || lower.includes("gtb")) return "gtbank-pdf";
+  if (lower.includes("palmpay") || lower.includes("palm pay") || lower.includes("cashbox")) return "palmpay-pdf";
+  if (lower.includes("gtbank") || lower.includes("gtb") || lower.includes("gtco") || lower.includes("guaranty trust")) return "gtbank-pdf";
   if (lower.includes("access bank")) return "access-pdf";
   if (lower.includes("uba")) return "uba-pdf";
-  if (lower.includes("opay")) return "opay-pdf";
-  if (lower.includes("kuda")) return "kuda-pdf";
+  if (lower.includes("opay") || lower.includes("owealth") || lower.includes("paycom")) return "opay-pdf";
+  if (lower.includes("kuda") || lower.includes("kuda microfinance")) return "kuda-pdf";
   if (lower.includes("moniepoint")) return "moniepoint-pdf";
   if (lower.includes("first bank") || lower.includes("firstbank")) return "firstbank-pdf";
-  if (lower.includes("zenith")) return "zenith-pdf";
+  if (lower.includes("zenith") || lower.includes("zenithbank")) return "zenith-pdf";
+  if (lower.includes("sterling") || lower.includes("onebank")) return "generic-pdf";
+  if (lower.includes("wema") || lower.includes("alat")) return "generic-pdf";
+  if (lower.includes("fidelity")) return "generic-pdf";
+  if (lower.includes("fcmb")) return "generic-pdf";
   return "generic-pdf";
 }
 
@@ -265,100 +269,163 @@ function parsePalmPayText(fullText: string): ParseResult {
   };
 }
 
+function isDateOnly(cell: string): boolean {
+  const d = cell.trim();
+  return /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(d)
+    || /^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/.test(d)
+    || /^\d{1,2}[\/\-]\w{3,9}[\/\-]\d{2,4}$/.test(d)
+    || /^\d{1,2}\s+\w{3}\s+\d{4}$/.test(d)
+    || /^\d{1,2}\s+\w{3}\s+\d{2}$/.test(d);
+}
+
+function isReferenceCode(s: string): boolean {
+  const digitsOnly = s.replace(/[^0-9]/g, "");
+  if (digitsOnly.length >= 10 && !s.includes(".")) return true;
+  if (/^0{5,}/.test(s.replace(/[^0-9]/g, ""))) return true;
+  return false;
+}
+
+function isValidAmount(s: string): number | null {
+  const cleaned = s.replace(/[^0-9.\-]/g, "").replace(/,/g, "");
+  if (!cleaned || cleaned === ".") return null;
+  if (isReferenceCode(s)) return null;
+  const num = parseFloat(cleaned);
+  if (isNaN(num)) return null;
+  if (Math.abs(num) > 50_000_000) return null;
+  return num;
+}
+
+function aggregateLinesToBlocks(rows: string[][]): string[][] {
+  const datePattern = /^\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\w{3,9}[\/\-]\d{2,4}|\d{1,2}\s+\w{3}\s+\d{4}|\d{1,2}\s+\w{3}\s+\d{2})/;
+  const blocks: string[][] = [];
+  let current: string[] = [];
+
+  for (const row of rows) {
+    const combined = row.join(" ").trim();
+    if (!combined) continue;
+    const firstCell = (row[0] || "").trim();
+    if (datePattern.test(firstCell) || datePattern.test(combined)) {
+      if (current.length > 0) blocks.push(current);
+      current = [...row];
+    } else {
+      current.push(...row);
+    }
+  }
+  if (current.length > 0) blocks.push(current);
+  return blocks;
+}
+
 function parseGenericRows(rows: string[][]): ParseResult {
   const transactions: ParsedTransaction[] = [];
   const errors: string[] = [];
 
-  const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w{3}\s+\d{4}|\d{1,2}\s+\w{3}\s+\d{2}|\d{1,2}[\/\-]\w{3}[\/\-]\d{2,4}|\d{1,2}[\/\-]\w{3,9}[\/\-]\d{2,4})/;
+  const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\w{3}[\/\-]\d{2,4}|\d{1,2}[\/\-]\w{3,9}[\/\-]\d{2,4}|\d{1,2}\s+\w{3}\s+\d{4}|\d{1,2}\s+\w{3}\s+\d{2})/;
 
-  for (let i = 0; i < rows.length; i++) {
+  const blocks = aggregateLinesToBlocks(rows);
+  console.log(`[GenericParser] Aggregated ${rows.length} rows into ${blocks.length} blocks`);
+
+  for (let i = 0; i < blocks.length; i++) {
     try {
-      const row = rows[i];
-      if (row.length < 2) continue;
+      const block = blocks[i];
+      const combined = block.join(" ");
+      if (combined.trim().length < 3) continue;
 
       let dateStr = "";
       let description = "";
       let amount = 0;
       let type: "debit" | "credit" = "debit";
-      const reference = "";
 
-      for (const cell of row) {
-        if (!dateStr && datePattern.test(cell)) {
-          const m = cell.match(datePattern);
-          if (m) dateStr = m[1];
+      const dm = combined.match(datePattern);
+      if (dm) dateStr = dm[1];
+
+      const amounts: { val: number; raw: string; col: number }[] = [];
+      for (let j = 0; j < block.length; j++) {
+        const cell = block[j].trim();
+        if (!cell || isReferenceCode(cell)) continue;
+        if (isDateOnly(cell)) continue;
+        const val = isValidAmount(cell);
+        if (val !== null && val !== 0) {
+          amounts.push({ val: Math.abs(val), raw: cell, col: j });
         }
       }
 
-      // Collect numeric cells that could be amounts
-      const numericCells: { cell: string; num: number; index: number }[] = [];
-      for (let j = 0; j < row.length; j++) {
-        const cell = row[j];
-        const cleaned = cell.replace(/[^0-9.,\-+]/g, "").replace(/,/g, "");
-        const num = parseFloat(cleaned);
-        if (!isNaN(num) && cleaned.length > 0 && !datePattern.test(cell)) {
-          numericCells.push({ cell, num: Math.abs(num), index: j });
-        }
-      }
-
-      // Find description (non-numeric, non-date cell with length > 2)
-      for (const cell of row) {
+      const textParts: string[] = [];
+      for (const cell of block) {
         const trimmed = cell.trim();
-        if (!datePattern.test(cell) && trimmed.length > 2 && !trimmed.match(/^[\d,.\-+]+$/) && trimmed !== "") {
-          if (!description) description = trimmed;
-          else description += " " + trimmed;
+        if (!trimmed) continue;
+        if (isDateOnly(trimmed)) continue;
+        if (isReferenceCode(trimmed)) continue;
+        if (isValidAmount(trimmed) !== null) continue;
+        if (datePattern.test(trimmed)) continue;
+        if (trimmed.length > 2 && !/^\d+$/.test(trimmed)) {
+          textParts.push(trimmed);
         }
       }
+      description = textParts.join(" ").replace(/\s+/g, " ").trim();
 
-      // Determine amount and type from numeric cells
-      if (numericCells.length >= 2) {
-        // Likely separate debit/credit columns
-        const nonZero = numericCells.filter(c => c.num > 0);
-        if (nonZero.length === 1) {
-          amount = nonZero[0].num;
-          // Check if it's a credit (positive) or debit (negative or has negative sign)
-          type = nonZero[0].cell.trim().startsWith("-") ? "debit" : "credit";
-        } else if (nonZero.length === 2) {
-          // Two non-zero values: first is usually debit, second is credit
-          // Check which column the non-zero value is in
-          const hasDebit = nonZero[0].num > 0;
-          const hasCredit = nonZero[1].num > 0;
-          if (hasDebit && hasCredit) {
-            // Both present - shouldn't happen for a single row
-            amount = nonZero[0].num;
-            type = "debit";
-          } else if (hasDebit) {
-            amount = nonZero[0].num;
-            type = "debit";
-          } else {
-            amount = nonZero[1].num;
-            type = "credit";
+      if (amounts.length === 0) {
+        for (const cell of block) {
+          const val = isValidAmount(cell);
+          if (val !== null && val !== 0) {
+            amounts.push({ val: Math.abs(val), raw: cell, col: block.indexOf(cell) });
           }
-        } else {
-          // More than 2 non-zero numeric cells - use the first one
-          amount = nonZero[0].num;
-          type = nonZero[0].cell.trim().startsWith("-") ? "debit" : "credit";
         }
-      } else if (numericCells.length === 1) {
-        amount = numericCells[0].num;
-        type = numericCells[0].cell.trim().startsWith("-") ? "debit" : "credit";
       }
 
-      if (!dateStr || !description) continue;
+      if (amounts.length >= 2) {
+        const debitIdx = amounts.findIndex(a => {
+          const hasMinus = a.raw.trim().startsWith("-");
+          const colHeader = block[a.col - 1]?.toLowerCase() || "";
+          return hasMinus || colHeader.includes("debit") || colHeader.includes("out");
+        });
+        const creditIdx = amounts.findIndex(a => {
+          const colHeader = block[a.col - 1]?.toLowerCase() || "";
+          return colHeader.includes("credit") || colHeader.includes("in");
+        });
+
+        if (debitIdx >= 0 && amounts[debitIdx].val > 0) {
+          amount = amounts[debitIdx].val;
+          type = "debit";
+        } else if (creditIdx >= 0 && amounts[creditIdx].val > 0) {
+          amount = amounts[creditIdx].val;
+          type = "credit";
+        } else {
+          const nonZero = amounts.filter(a => a.val > 0);
+          if (nonZero.length === 1) {
+            amount = nonZero[0].val;
+            type = nonZero[0].raw.trim().startsWith("-") ? "debit" : "credit";
+          } else if (nonZero.length >= 2) {
+            if (nonZero[0].val > 0 && nonZero[1].val === 0) {
+              amount = nonZero[0].val;
+              type = "debit";
+            } else if (nonZero[0].val === 0 && nonZero[1].val > 0) {
+              amount = nonZero[1].val;
+              type = "credit";
+            } else {
+              amount = nonZero[0].val;
+              type = "debit";
+            }
+          }
+        }
+      } else if (amounts.length === 1) {
+        amount = amounts[0].val;
+        type = amounts[0].raw.trim().startsWith("-") ? "debit" : "credit";
+      }
+
+      if (!dateStr || !description || amount === 0) continue;
 
       const date = parseDate(dateStr);
       if (isNaN(date.getTime())) continue;
-      if (amount === 0) continue;
 
       transactions.push({
         date: date.toISOString(),
         description: description.trim(),
         amount,
         type,
-        reference: reference || undefined,
         narration: description.trim(),
       });
     } catch (err) {
-      errors.push(`Row ${i + 1}: Parse error - ${err}`);
+      errors.push(`Block ${i + 1}: Parse error - ${err}`);
     }
   }
 
@@ -370,7 +437,7 @@ function parseGenericRows(rows: string[][]): ParseResult {
     metadata: {
       fileName: "",
       fileType: "pdf",
-      totalRows: rows.length,
+      totalRows: blocks.length,
       parsedRows: transactions.length,
       dateRange: dates.length > 0
         ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() }
