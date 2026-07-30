@@ -5,7 +5,7 @@ import { detectBankNameFromFormat, extractAccountNumber, extractAccountName } fr
 
 function detectBankFormat(text: string): BankFormat {
   const lower = text.toLowerCase();
-  if (lower.includes("palmpay") || lower.includes("palm pay") || lower.includes("cashbox")) return "palmpay-pdf";
+  if (lower.includes("palmpay") || lower.includes("palm pay")) return "palmpay-pdf";
   if (lower.includes("gtbank") || lower.includes("gtb") || lower.includes("gtco") || lower.includes("guaranty trust")) return "gtbank-pdf";
   if (lower.includes("access bank")) return "access-pdf";
   if (lower.includes("uba")) return "uba-pdf";

@@ -73,15 +73,17 @@ export async function POST(request: NextRequest) {
 
     // ── File hash dedup ──────────────────────────────────────────────────
     const fileHash = crypto.createHash("sha256").update(buffer).digest("hex");
-    const existingUpload = await db.uploadLog.findFirst({
+    const existingUploads = await db.uploadLog.findMany({
       where: { fileHash, userId },
     });
-    if (existingUpload) {
-      // Check if the statement still exists — allow re-upload if it was deleted
+    if (existingUploads.length > 0) {
+      // Check if ANY of these uploads have an associated statement that still exists
       const statementStillExists = await db.statement.findFirst({
         where: {
-          bankId: existingUpload.bankId,
-          filename: existingUpload.filename,
+          OR: existingUploads.map(u => ({
+            bankId: u.bankId,
+            filename: u.filename,
+          })),
         },
       });
       if (statementStillExists) {
@@ -90,8 +92,10 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
-      // Statement was deleted — allow re-upload, clean up old log
-      await db.uploadLog.delete({ where: { id: existingUpload.id } });
+      // All associated statements were deleted — clean up old logs
+      await db.uploadLog.deleteMany({
+        where: { id: { in: existingUploads.map(u => u.id) } },
+      });
     }
 
     // ── Parse the file ───────────────────────────────────────────────────

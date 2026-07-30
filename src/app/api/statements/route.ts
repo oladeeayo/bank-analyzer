@@ -75,6 +75,11 @@ export async function DELETE(request: NextRequest) {
 
     await db.statement.delete({ where: { id } });
 
+    // Clean up associated upload logs for this bank and filename
+    await db.uploadLog.deleteMany({
+      where: { bankId: statement.bankId, filename: statement.filename },
+    });
+
     return NextResponse.json({
       success: true,
       deleted: { id, transactionCount: statement._count.transactions },
