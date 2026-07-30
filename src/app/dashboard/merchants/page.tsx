@@ -144,7 +144,7 @@ export default function MerchantsPage() {
           <p className="text-base sm:text-xl font-mono font-medium text-ink-black mt-1">{merchants.length}</p>
         </div>
         <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
-          <p className="text-[10px] sm:text-[11px] text-ash-gray uppercase tracking-wider">Total Spent</p>
+          <p className="text-[10px] sm:text-[11px] text-ash-gray uppercase tracking-wider">Total Transactions</p>
           <p className="text-base sm:text-xl font-mono font-medium text-ink-black mt-1">{formatCurrency(totalSpent)}</p>
         </div>
         <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
@@ -191,7 +191,7 @@ export default function MerchantsPage() {
               </div>
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-[10px] text-ash-gray uppercase tracking-wider">Total Spent</p>
+                  <p className="text-[10px] text-ash-gray uppercase tracking-wider">Total Transactions</p>
                   <p className="text-lg font-mono font-medium text-forest">{formatCurrency(m.totalAmount)}</p>
                 </div>
                 <div className="text-right">
