@@ -233,7 +233,6 @@ function parseGTBankRows(rows: string[][]): ParseResult {
   const errors: string[] = [];
   const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}[\/\-]\w{3,9}[\/\-]\d{2,4})/;
 
-  // Find the header row (contains "Trans. Date" or "Debits")
   let headerIdx = -1;
   for (let i = 0; i < rows.length; i++) {
     const combined = rows[i].join(" ").toLowerCase();
@@ -242,37 +241,49 @@ function parseGTBankRows(rows: string[][]): ParseResult {
       break;
     }
   }
-  if (headerIdx === -1) {
-    console.log("[GTBank] No header row found, using row 0 as header");
-    headerIdx = 0;
-  }
+  if (headerIdx === -1) headerIdx = 0;
   const headerRow = rows[headerIdx];
-  console.log(`[GTBank] Header row ${headerIdx}: ${headerRow.join(" | ")}`);
+
+  // Map column indices by header names
+  const colMap: Record<string, number> = {};
+  for (let j = 0; j < headerRow.length; j++) {
+    const h = headerRow[j].toLowerCase().trim();
+    if (h.includes("trans") || h.includes("date")) colMap.date = colMap.date ?? j;
+    if (h.includes("debit")) colMap.debit = j;
+    if (h.includes("credit")) colMap.credit = j;
+    if (h.includes("remark") || h.includes("narration")) colMap.remarks = j;
+    if (h.includes("balance")) colMap.balance = j;
+  }
+  console.log(`[GTBank] Column map:`, colMap);
 
   for (let i = headerIdx + 1; i < rows.length; i++) {
     try {
       const row = rows[i];
-      if (row.length < 6) continue;
+      if (row.length < 4) continue;
 
       let dateStr = "";
-      for (const cell of row) {
-        if (datePattern.test(cell)) { const m = cell.match(datePattern); if (m) { dateStr = m[1]; break; } }
+      if (colMap.date !== undefined && datePattern.test(row[colMap.date])) {
+        const m = row[colMap.date].match(datePattern);
+        if (m) dateStr = m[1];
+      } else {
+        for (const cell of row) {
+          if (datePattern.test(cell)) { const m = cell.match(datePattern); if (m) { dateStr = m[1]; break; } }
+        }
       }
       if (!dateStr) continue;
 
-      const remarks = row[row.length - 1] || "";
+      const remarks = colMap.remarks !== undefined ? (row[colMap.remarks] || "") : (row[row.length - 1] || "");
       const description = cleanNarration(remarks);
       if (!description) continue;
 
       let debit = 0, credit = 0;
-      for (let j = 0; j < row.length; j++) {
-        const cell = row[j].trim();
-        const header = (headerRow[j] || "").toLowerCase();
-        const cleaned = cell.replace(/[^0-9.]/g, "");
-        const val = parseFloat(cleaned);
-        if (isNaN(val) || val === 0) continue;
-        if (header.includes("debit")) debit = val;
-        else if (header.includes("credit")) credit = val;
+      if (colMap.debit !== undefined) {
+        const val = parseFloat(row[colMap.debit]?.replace(/[^0-9.]/g, "") || "0");
+        if (!isNaN(val) && val > 0) debit = val;
+      }
+      if (colMap.credit !== undefined) {
+        const val = parseFloat(row[colMap.credit]?.replace(/[^0-9.]/g, "") || "0");
+        if (!isNaN(val) && val > 0) credit = val;
       }
 
       const amount = debit > 0 ? debit : credit;

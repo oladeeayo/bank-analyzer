@@ -224,33 +224,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── AI Narration Extraction ─────────────────────────────────────────
-    const GENERIC_DESCRIPTIONS = [
-      'TRANSFER BETWEEN CUSTOMERS', 'E-CHANNELS', 'E- CHANNELS', 'COMMISSION',
-      'Ref:C', 'REF:P', 'REF:C', 'OneBank Transfer', 'ACCOUNT',
-    ];
-    const needsAI = result.transactions.filter(tx => {
-      const desc = (tx.description || '').toUpperCase().trim();
-      return desc.length < 5
-        || GENERIC_DESCRIPTIONS.some(g => desc.includes(g))
-        || /^REF[:\s]/i.test(desc)
-        || desc === desc.toUpperCase() && desc.length < 20;
-    });
+    // ── AI Narration Extraction (for ALL transactions) ──────────────────
+    const rawNarrations = result.transactions.map((tx, idx) => ({
+      index: String(idx),
+      rawText: tx.narration || tx.description || '',
+    }));
 
-    if (needsAI.length > 0) {
-      console.log(`[Upload] AI extraction for ${needsAI.length} generic descriptions`);
-      const rawNarrations = needsAI.map((tx, idx) => ({
-        index: String(idx),
-        rawText: tx.narration || tx.description || '',
-      }));
-      console.log(`[Upload] Sample raw narrations:`, rawNarrations.slice(0, 3).map(r => r.rawText.substring(0, 80)));
+    if (rawNarrations.length > 0) {
+      console.log(`[Upload] AI extraction for ${rawNarrations.length} transactions`);
       const aiResults = await extractMerchantFromNarration(rawNarrations);
-      console.log(`[Upload] AI results:`, aiResults);
-      for (const tx of needsAI) {
-        const idx = needsAI.indexOf(tx);
+      console.log(`[Upload] AI returned ${Object.keys(aiResults).length} results`);
+
+      for (const tx of result.transactions) {
+        const idx = result.transactions.indexOf(tx);
         const cleanName = aiResults[String(idx)];
         if (cleanName && cleanName.length > 2) {
-          console.log(`[Upload] Replacing "${tx.description}" with "${cleanName}"`);
           tx.description = cleanName;
         }
       }
