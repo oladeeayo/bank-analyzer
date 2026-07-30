@@ -105,14 +105,34 @@ export async function GET(
       avgDaysBetween = gaps.reduce((s, g) => s + g, 0) / gaps.length;
     }
 
+    // Transaction intensity: day of week x hour of day
+    const intensityMap = new Map<string, number>();
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    for (const tx of transactions) {
+      const d = new Date(tx.date);
+      const day = dayNames[d.getDay()];
+      const hour = d.getHours();
+      const key = `${day}-${hour}`;
+      intensityMap.set(key, (intensityMap.get(key) || 0) + 1);
+    }
+    const intensity: { day: string; hour: number; count: number }[] = [];
+    for (const [key, count] of intensityMap) {
+      const [day, hour] = key.split("-");
+      intensity.push({ day, hour: parseInt(hour), count });
+    }
+
+    const netAmount = totalReceived - totalSpent;
+
     return NextResponse.json({
       merchant,
       totalSpent,
       totalReceived,
+      netAmount,
       visitCount,
       receiveCount,
       avgVisit,
       monthlySpending,
+      intensity,
       categorySplit,
       recentTransactions,
       peakDay,

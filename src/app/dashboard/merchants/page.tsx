@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { useUser } from "@/lib/hooks";
-import { MagnifyingGlassIcon, ArrowUpRightIcon, XMarkIcon, MapPinIcon, ArrowTrendingUpIcon, CalendarDaysIcon, BanknotesIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, ArrowUpRightIcon, XMarkIcon, ArrowTrendingUpIcon, CalendarDaysIcon, BanknotesIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import {
   BarChart,
   Bar,
@@ -12,13 +12,11 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
 
+const HOURS = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const PIE_COLORS = ["#003527", "#416900", "#95d3ba", "#acf847", "#91db2a"];
 
 interface MerchantSummary {
   merchantId: string;
@@ -34,10 +32,12 @@ interface MerchantAnalytics {
   merchant: { id: string; displayName: string; icon: string; color: string };
   totalSpent: number;
   totalReceived: number;
+  netAmount: number;
   visitCount: number;
   receiveCount: number;
   avgVisit: number;
   monthlySpending: { month: number; year: number; amount: number; count: number }[];
+  intensity: { day: string; hour: number; count: number }[];
   categorySplit: { name: string; icon: string; color: string; amount: number; count: number }[];
   recentTransactions: {
     id: string;
@@ -237,195 +237,194 @@ export default function MerchantsPage() {
 }
 
 function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
-  const { merchant, totalSpent, totalReceived, visitCount, receiveCount, avgVisit, monthlySpending, categorySplit, recentTransactions, peakDay, avgDaysBetween } = data;
+  const { merchant, totalSpent, totalReceived, netAmount, visitCount, receiveCount, avgVisit, monthlySpending, intensity, recentTransactions, peakDay, avgDaysBetween } = data;
   const hasBoth = totalSpent > 0 && totalReceived > 0;
+  const txnTimes = visitCount + receiveCount;
 
   const chartData = monthlySpending.map((m) => ({
     name: MONTH_NAMES[m.month - 1],
     amount: Math.round(m.amount),
   }));
 
-  const totalCategoryAmount = categorySplit.reduce((s, c) => s + c.amount, 0);
+  // Build intensity grid
+  const maxIntensity = Math.max(1, ...intensity.map((i) => i.count));
+  const intensityGrid = new Map<string, number>();
+  for (const i of intensity) {
+    intensityGrid.set(`${i.day}-${i.hour}`, i.count);
+  }
+
+  // Hour labels to show (compact)
+  const hourLabels = [0, 3, 6, 9, 12, 15, 18, 21];
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
-      {/* Merchant Profile Card */}
-      <div className="bg-forest rounded-cards p-4 sm:p-6 text-white relative overflow-hidden">
-        <div className="relative z-10 flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/10 rounded-2xl flex items-center justify-center text-xl sm:text-2xl backdrop-blur-sm shrink-0">
+    <div className="p-3 sm:p-5 space-y-3 sm:space-y-4">
+      {/* Profile Card */}
+      <div className="bg-forest rounded-cards p-4 sm:p-5 text-white relative overflow-hidden">
+        <div className="relative z-10">
+          {/* Top row: icon + name */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-11 h-11 sm:w-13 sm:h-13 bg-white/10 rounded-2xl flex items-center justify-center text-xl sm:text-2xl backdrop-blur-sm shrink-0">
               {merchant.icon}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-signifier text-xl sm:text-2xl truncate">{merchant.displayName}</h2>
-                <span className="px-2 py-0.5 bg-lime-vibrant/20 text-lime-vibrant text-[10px] font-semibold rounded-full uppercase tracking-wider shrink-0">
+                <h2 className="font-signifier text-lg sm:text-xl truncate">{merchant.displayName}</h2>
+                <span className="px-2 py-0.5 bg-lime-vibrant/20 text-lime-vibrant text-[9px] sm:text-[10px] font-semibold rounded-full uppercase tracking-wider shrink-0">
                   {hasBoth ? "Two-Way" : totalReceived > 0 ? "Received" : "Spent"}
                 </span>
               </div>
-              <p className="text-white/60 text-xs sm:text-sm flex items-center gap-1 mt-0.5">
-                <MapPinIcon className="h-3 w-3 shrink-0" />
-                {data.uniqueDays} unique visit days
+              <p className="text-white/50 text-[11px] sm:text-xs mt-0.5">
+                {data.uniqueDays} unique days
               </p>
             </div>
           </div>
 
-          <div className={`grid gap-3 sm:gap-6 sm:flex sm:justify-end ${hasBoth ? "grid-cols-4" : "grid-cols-3"}`}>
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 gap-3">
             {totalSpent > 0 && (
-              <div className="sm:text-right">
-                <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Total Spent</p>
-                <p className="font-mono text-lg sm:text-2xl font-medium text-lime-vibrant">{formatCurrency(totalSpent)}</p>
+              <div>
+                <p className="text-white/40 text-[9px] uppercase tracking-wider">Total Sent</p>
+                <p className="font-mono text-base sm:text-xl font-medium text-lime-vibrant">{formatCurrency(totalSpent)}</p>
               </div>
             )}
             {totalReceived > 0 && (
-              <div className="sm:text-right">
-                <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Total Received</p>
-                <p className="font-mono text-lg sm:text-2xl font-medium text-white">{formatCurrency(totalReceived)}</p>
+              <div>
+                <p className="text-white/40 text-[9px] uppercase tracking-wider">Total Received</p>
+                <p className="font-mono text-base sm:text-xl font-medium text-white">{formatCurrency(totalReceived)}</p>
               </div>
             )}
-            <div className="sm:text-right">
-              <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">{visitCount > 0 ? "Visits" : "Transactions"}</p>
-              <p className="font-mono text-lg sm:text-2xl font-medium">{visitCount > 0 ? visitCount : receiveCount}</p>
+            <div>
+              <p className="text-white/40 text-[9px] uppercase tracking-wider">Txn Times</p>
+              <p className="font-mono text-base sm:text-xl font-medium">{txnTimes}</p>
             </div>
-            {visitCount > 0 && (
-              <div className="sm:text-right">
-                <p className="text-white/50 text-[9px] sm:text-[10px] uppercase tracking-wider">Avg. Visit</p>
-                <p className="font-mono text-lg sm:text-2xl font-medium">{formatCurrency(avgVisit)}</p>
-              </div>
-            )}
+            <div>
+              <p className="text-white/40 text-[9px] uppercase tracking-wider">Net</p>
+              <p className={`font-mono text-base sm:text-xl font-medium ${netAmount >= 0 ? "text-white" : "text-red-300"}`}>
+                {netAmount >= 0 ? "+" : ""}{formatCurrency(netAmount)}
+              </p>
+            </div>
           </div>
         </div>
         <div className="absolute -right-8 -top-8 w-40 h-40 bg-lime-vibrant/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Spending Velocity */}
-        <div className="lg:col-span-2 bg-paper-white border border-[#ececec] p-4 sm:p-5 rounded-cards">
-          <div className="mb-4">
-            <h3 className="font-signifier text-lg text-ink-black">Spending Velocity</h3>
-            <p className="text-xs text-ash-gray mt-0.5">Historical analysis over {monthlySpending.length} months</p>
-          </div>
-          <div className="h-44 sm:h-56">
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} barCategoryGap="20%" barGap={4}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ececec" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#979799", fontSize: 10 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#979799", fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}
-                    formatter={(value) => [formatCurrency(Number(value)), "Spent"]}
-                  />
-                  <Bar dataKey="amount" fill="var(--color-lime-bright)" radius={[6, 6, 0, 0]} maxBarSize={50} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-ash-gray text-sm">No data</div>
-            )}
-          </div>
+      {/* Spending Velocity */}
+      <div className="bg-paper-white border border-[#ececec] p-4 sm:p-5 rounded-cards">
+        <div className="mb-3">
+          <h3 className="font-signifier text-base sm:text-lg text-ink-black">Spending Velocity</h3>
+          <p className="text-[11px] text-ash-gray mt-0.5">{monthlySpending.length} months of data</p>
         </div>
-
-        {/* Category Split */}
-        <div className="bg-paper-white border border-[#ececec] p-4 sm:p-5 rounded-cards">
-          <div className="mb-3">
-            <h3 className="font-signifier text-lg text-ink-black">Category Split</h3>
-            <p className="text-xs text-ash-gray mt-0.5">Spend distribution</p>
-          </div>
-          {categorySplit.length > 0 ? (
-            <>
-              <div className="flex justify-center mb-3">
-                <div className="relative">
-                  <ResponsiveContainer width={140} height={140}>
-                    <PieChart>
-                      <Pie
-                        data={categorySplit.map((c) => ({ name: c.name, value: c.amount }))}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={42}
-                        outerRadius={62}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {categorySplit.map((_, index) => (
-                          <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="text-[8px] uppercase tracking-widest text-ash-gray">Share</div>
-                    <div className="text-base font-mono font-medium text-ink-black">
-                      {totalCategoryAmount > 0 ? Math.round((categorySplit[0]?.amount || 0) / totalCategoryAmount * 100) : 0}%
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                {categorySplit.map((cat, idx) => {
-                  const pct = totalCategoryAmount > 0 ? (cat.amount / totalCategoryAmount) * 100 : 0;
-                  return (
-                    <div key={idx} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
-                        <span className="text-ink-black">{cat.name}</span>
-                      </div>
-                      <span className="font-mono text-ash-gray">{Math.round(pct)}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
+        <div className="h-40 sm:h-52">
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} barCategoryGap="20%" barGap={4}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ececec" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#979799", fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: "#979799", fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
+                <Tooltip
+                  contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", fontSize: "12px" }}
+                  formatter={(value) => [formatCurrency(Number(value)), "Amount"]}
+                />
+                <Bar dataKey="amount" fill="var(--color-lime-bright)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-24 text-ash-gray text-xs">No categories</div>
+            <div className="flex items-center justify-center h-full text-ash-gray text-sm">No data</div>
           )}
         </div>
       </div>
 
-      {/* Insight Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-paper-white border border-[#ececec] p-4 rounded-cards">
-          <div className="w-8 h-8 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
-            <ArrowTrendingUpIcon className="h-3.5 w-3.5 text-forest" />
-          </div>
-          <h4 className="text-xs font-semibold text-ink-black mb-0.5">Top Category</h4>
-          <p className="text-[11px] text-slate-gray leading-relaxed">
-            {categorySplit.length > 0
-              ? `${categorySplit[0].name} makes up ${Math.round((categorySplit[0].amount / totalCategoryAmount) * 100)}% of spending.`
-              : "No data."}
-          </p>
+      {/* Transaction Intensity Heatmap */}
+      <div className="bg-paper-white border border-[#ececec] p-4 sm:p-5 rounded-cards">
+        <div className="mb-3">
+          <h3 className="font-signifier text-base sm:text-lg text-ink-black">Transaction Intensity</h3>
+          <p className="text-[11px] text-ash-gray mt-0.5">When you transact most</p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] p-4 rounded-cards">
-          <div className="w-8 h-8 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
+        <div className="overflow-x-auto -mx-1">
+          <div className="min-w-[400px] px-1">
+            {/* Hour labels */}
+            <div className="flex mb-1">
+              <div className="w-10 shrink-0" />
+              {HOURS.map((h) => (
+                <div key={h} className="flex-1 text-center">
+                  {hourLabels.includes(h) ? (
+                    <span className="text-[8px] text-ash-gray">{h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h-12}p`}</span>
+                  ) : (
+                    <span className="text-[8px] text-transparent">.</span>
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* Grid */}
+            {DAYS.map((day) => (
+              <div key={day} className="flex items-center gap-0.5 mb-0.5">
+                <span className="w-10 text-[10px] text-ash-gray shrink-0 text-right pr-1.5">{day}</span>
+                {HOURS.map((h) => {
+                  const count = intensityGrid.get(`${day}-${h}`) || 0;
+                  const intensity = count > 0 ? count / maxIntensity : 0;
+                  return (
+                    <div
+                      key={h}
+                      className="flex-1 aspect-square rounded-[3px] transition-colors"
+                      style={{
+                        backgroundColor: count === 0
+                          ? "#f5f5f5"
+                          : `rgba(0, 53, 39, ${0.15 + intensity * 0.85})`,
+                      }}
+                      title={`${day} ${h}:00 — ${count} txns`}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+            {/* Legend */}
+            <div className="flex items-center justify-end gap-1.5 mt-2">
+              <span className="text-[9px] text-ash-gray">Less</span>
+              {[0.15, 0.35, 0.55, 0.75, 1].map((o) => (
+                <div key={o} className="w-3 h-3 rounded-[2px]" style={{ backgroundColor: `rgba(0, 53, 39, ${o})` }} />
+              ))}
+              <span className="text-[9px] text-ash-gray">More</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Insight Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
+          <div className="w-7 h-7 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
             <CalendarDaysIcon className="h-3.5 w-3.5 text-forest" />
           </div>
-          <h4 className="text-xs font-semibold text-ink-black mb-0.5">Peak Day</h4>
-          <p className="text-[11px] text-slate-gray leading-relaxed">
-            {peakDay
-              ? `${peakDay.day}s — ${formatCurrency(peakDay.amount)}`
-              : "Not enough data."}
+          <h4 className="text-[11px] sm:text-xs font-semibold text-ink-black mb-0.5">Peak Day</h4>
+          <p className="text-[10px] sm:text-[11px] text-slate-gray leading-relaxed">
+            {peakDay ? `${peakDay.day}s` : "Not enough data."}
           </p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] p-4 rounded-cards">
-          <div className="w-8 h-8 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
-            <BanknotesIcon className="h-3.5 w-3.5 text-forest" />
-          </div>
-          <h4 className="text-xs font-semibold text-ink-black mb-0.5">Saving Tip</h4>
-          <p className="text-[11px] text-slate-gray leading-relaxed">
-            {visitCount > 3
-              ? `${visitCount} visits — consider bulk buying.`
-              : `${visitCount} visit${visitCount === 1 ? "" : "s"} so far.`}
-          </p>
-        </div>
-        <div className="bg-paper-white border border-[#ececec] p-4 rounded-cards">
-          <div className="w-8 h-8 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
+        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
+          <div className="w-7 h-7 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
             <ArrowPathIcon className="h-3.5 w-3.5 text-forest" />
           </div>
-          <h4 className="text-xs font-semibold text-ink-black mb-0.5">Frequency</h4>
-          <p className="text-[11px] text-slate-gray leading-relaxed">
-            {avgDaysBetween > 0
-              ? `Every ~${Math.round(avgDaysBetween)} days.`
-              : "Not enough data."}
+          <h4 className="text-[11px] sm:text-xs font-semibold text-ink-black mb-0.5">Frequency</h4>
+          <p className="text-[10px] sm:text-[11px] text-slate-gray leading-relaxed">
+            {avgDaysBetween > 0 ? `Every ~${Math.round(avgDaysBetween)} days` : "Not enough data."}
+          </p>
+        </div>
+        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
+          <div className="w-7 h-7 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
+            <BanknotesIcon className="h-3.5 w-3.5 text-forest" />
+          </div>
+          <h4 className="text-[11px] sm:text-xs font-semibold text-ink-black mb-0.5">Avg. Transaction</h4>
+          <p className="text-[10px] sm:text-[11px] text-slate-gray leading-relaxed">
+            {txnTimes > 0 ? formatCurrency((totalSpent + totalReceived) / txnTimes) : "No data."}
+          </p>
+        </div>
+        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
+          <div className="w-7 h-7 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
+            <ArrowTrendingUpIcon className="h-3.5 w-3.5 text-forest" />
+          </div>
+          <h4 className="text-[11px] sm:text-xs font-semibold text-ink-black mb-0.5">Net Flow</h4>
+          <p className="text-[10px] sm:text-[11px] text-slate-gray leading-relaxed">
+            {netAmount >= 0 ? `You received ${formatCurrency(netAmount)} more` : `You sent ${formatCurrency(Math.abs(netAmount))} more`}
           </p>
         </div>
       </div>
@@ -433,38 +432,35 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
       {/* Activity History */}
       <div className="bg-paper-white border border-[#ececec] rounded-cards overflow-hidden">
         <div className="px-4 sm:px-5 pb-3 border-b border-[#ececec]">
-          <h3 className="font-signifier text-lg text-ink-black">Activity History</h3>
+          <h3 className="font-signifier text-base sm:text-lg text-ink-black">Activity History</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px]">
+          <table className="w-full min-w-[420px]">
             <thead>
               <tr className="bg-mist-gray">
-                <th className="text-left text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-2.5">Date</th>
-                <th className="text-left text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-2.5">Category</th>
-                <th className="text-left text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-2.5">Description</th>
-                <th className="text-right text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-4 py-2.5">Amount</th>
+                <th className="text-left text-[9px] sm:text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-3 sm:px-4 py-2">Date</th>
+                <th className="text-left text-[9px] sm:text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-3 sm:px-4 py-2">Description</th>
+                <th className="text-right text-[9px] sm:text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-3 sm:px-4 py-2">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#ececec]">
               {recentTransactions.map((tx) => (
                 <tr key={tx.id} className="hover:bg-mist-gray/50 transition-colors">
-                  <td className="px-4 py-3 text-xs text-ash-gray whitespace-nowrap">
+                  <td className="px-3 sm:px-4 py-2.5 text-[11px] text-ash-gray whitespace-nowrap">
                     {new Date(tx.date).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-gray whitespace-nowrap">
-                    {tx.category?.icon} {tx.category?.name || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-ink-black truncate max-w-[200px]">
+                  <td className="px-3 sm:px-4 py-2.5 text-[11px] text-ink-black truncate max-w-[200px]">
+                    {tx.category?.icon && <span className="mr-1">{tx.category.icon}</span>}
                     {tx.description}
                   </td>
-                  <td className={`px-4 py-3 text-xs font-mono font-medium text-right whitespace-nowrap ${tx.type === "credit" ? "text-forest" : "text-error"}`}>
+                  <td className={`px-3 sm:px-4 py-2.5 text-[11px] font-mono font-medium text-right whitespace-nowrap ${tx.type === "credit" ? "text-forest" : "text-error"}`}>
                     {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
                   </td>
                 </tr>
               ))}
               {recentTransactions.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-ash-gray text-xs">No transactions</td>
+                  <td colSpan={3} className="py-6 text-center text-ash-gray text-xs">No transactions</td>
                 </tr>
               )}
             </tbody>
