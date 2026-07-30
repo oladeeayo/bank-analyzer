@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { ParsedTransaction, ParseResult } from "./types";
+import { extractBankNameFromText, extractAccountNumber, extractAccountName } from "./bank-detection";
 
 function parseDate(dateStr: string | number | Date): Date {
   if (dateStr instanceof Date) return dateStr;
@@ -50,17 +51,24 @@ function normalizeAmount(val: string | number): number {
 }
 
 function findHeaderRow(rows: any[][]): number {
-  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+  const HEADER_TRIGGERS = [
+    "trans.*date", "transaction date", "posting date",
+    "description", "narration", "details", "particulars", "remarks",
+    "debit", "credit", "money in", "money out",
+    "inflow", "outflow", "paid in", "paid out",
+    "date", "balance", "reference",
+    "to / from", "to/from", "beneficiary",
+  ];
+
+  for (let i = 0; i < Math.min(rows.length, 25); i++) {
     const row = rows[i];
     if (!row) continue;
     const joined = row.map((c) => String(c || "").toLowerCase().trim()).join("|");
-    if (
-      joined.includes("trans") && joined.includes("date") ||
-      joined.includes("description") && (joined.includes("debit") || joined.includes("amount")) ||
-      joined.includes("narration") ||
-      joined.includes("transaction date")
-    ) {
-      return i;
+
+    let matches = 0;
+    for (const trigger of HEADER_TRIGGERS) {
+      if (joined.includes(trigger)) matches++;
+      if (matches >= 2) return i;
     }
   }
   return -1;
@@ -70,17 +78,42 @@ function mapColumns(headers: string[]): Record<string, number> {
   const map: Record<string, number> = {};
   headers.forEach((h, i) => {
     const lower = h.toLowerCase().trim();
+
+    // Date
     if (lower.includes("trans") && lower.includes("date")) map.date = i;
-    else if (lower === "date" || lower.includes("value date") || lower.includes("transaction date")) {
-      if (map.date === undefined) map.date = i;
+    else if ((lower === "date" || lower.includes("value date") || lower.includes("transaction date") || lower.includes("posting date") || lower.includes("time")) && map.date === undefined) map.date = i;
+
+    // Description
+    if (lower.includes("description") || lower.includes("narration") || lower.includes("details") || lower.includes("particulars") || lower.includes("remarks") || lower.includes("memo") || lower.includes("to / from") || lower.includes("to/from") || lower.includes("beneficiary") || lower.includes("sender")) {
+      if (map.description === undefined) map.description = i;
     }
-    else if (lower.includes("description") || lower.includes("narration") || lower.includes("details")) map.description = i;
-    else if (lower.includes("debit")) map.debit = i;
-    else if (lower.includes("credit")) map.credit = i;
-    else if (lower.includes("amount") && map.debit === undefined) map.amount = i;
-    else if (lower.includes("balance")) map.balance = i;
-    else if (lower.includes("reference") || lower.includes("ref")) map.reference = i;
-    else if (lower.includes("channel") || lower.includes("type")) map.type = i;
+
+    // Debit
+    if (lower.includes("debit") || lower.includes("money out") || lower.includes("outflow") || lower.includes("paid out") || lower.includes("withdrawal") || lower.includes("dr")) {
+      if (map.debit === undefined) map.debit = i;
+    }
+
+    // Credit
+    if (lower.includes("credit") || lower.includes("money in") || lower.includes("inflow") || lower.includes("paid in") || lower.includes("deposit") || lower.includes("cr")) {
+      if (map.credit === undefined) map.credit = i;
+    }
+
+    // Amount (fallback if no debit/credit found)
+    if ((lower.includes("amount") || lower.includes("sum")) && map.debit === undefined && map.credit === undefined) {
+      if (map.amount === undefined) map.amount = i;
+    }
+
+    // Balance
+    if (lower.includes("balance") || lower.includes("running balance") || lower.includes("closing balance") || lower.includes("book balance") || lower.includes("bal")) {
+      if (map.balance === undefined) map.balance = i;
+    }
+
+    // Reference
+    if (lower.includes("reference") || lower.includes("ref") || lower.includes("transaction id") || lower.includes("trans id") || lower.includes("txn id")) {
+      if (map.reference === undefined) map.reference = i;
+    }
+
+    if (lower.includes("channel") || lower.includes("type")) map.type = i;
   });
   return map;
 }
@@ -116,6 +149,19 @@ export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
         metadata: { fileName, fileType: "excel", totalRows: 0, parsedRows: 0 },
       };
     }
+    // Detect bank/account info from all rows
+    const fullText = allRows.map(r => r.map(c => String(c || "")).join(" ")).join("\n");
+    const detectedBank = extractBankNameFromText(fullText) || (extractAccountNumber(fullText) ? "Unknown" : undefined);
+    const detectedAccountNumber = extractAccountNumber(fullText) || undefined;
+    const detectedAccountName = extractAccountName(fullText) || undefined;
+
+    function withBankMeta(result: ParseResult): ParseResult {
+      result.metadata.detectedBank = result.metadata.detectedBank || detectedBank;
+      result.metadata.detectedAccountNumber = result.metadata.detectedAccountNumber || detectedAccountNumber;
+      result.metadata.detectedAccountName = result.metadata.detectedAccountName || detectedAccountName;
+      return result;
+    }
+
     const headerIdx = findHeaderRow(allRows);
     console.log(`[ExcelParser] Header row index: ${headerIdx}`);
 
@@ -183,10 +229,12 @@ export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
             }
           }
 
+          validateBalanceConsistency(transactions);
+
           const dates = transactions.map((t) => new Date(t.date).getTime()).sort((a, b) => a - b);
           console.log(`[ExcelParser] OPay format: ${transactions.length} transactions, ${errors.length} errors`);
 
-          return {
+          return withBankMeta({
             transactions,
             errors,
             metadata: {
@@ -198,13 +246,13 @@ export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
                 ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() }
                 : undefined,
             },
-          };
+          });
         }
       }
 
       // Fallback: try CSV conversion
       const csvContent = XLSX.utils.sheet_to_csv(sheet);
-      return parseCSVFromExcel(csvContent, fileName);
+      return withBankMeta(parseCSVFromExcel(csvContent, fileName));
     }
 
     const headers = allRows[headerIdx].map((h) => String(h || "").trim());
@@ -276,11 +324,17 @@ export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
       }
     }
 
+    // Post-parse: validate balance consistency to detect swapped debit/credit
+    const corrected = validateBalanceConsistency(transactions);
+    if (corrected > 0) {
+      console.log(`[ExcelParser] Auto-corrected ${corrected} transactions (swapped debit/credit based on balance check)`);
+    }
+
     const dates = transactions.map((t) => new Date(t.date).getTime()).sort((a, b) => a - b);
 
     console.log(`[ExcelParser] Parsed ${transactions.length} transactions, ${errors.length} errors`);
 
-    return {
+    return withBankMeta({
       transactions,
       errors,
       metadata: {
@@ -293,7 +347,7 @@ export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
             ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() }
             : undefined,
       },
-    };
+    });
   } catch (error) {
     return {
       transactions: [],
@@ -301,6 +355,31 @@ export function parseExcel(buffer: ArrayBuffer, fileName: string): ParseResult {
       metadata: { fileName, fileType: "excel", totalRows: 0, parsedRows: 0 },
     };
   }
+}
+
+function validateBalanceConsistency(transactions: ParsedTransaction[]): number {
+  if (transactions.length < 3) return 0;
+
+  let corrections = 0;
+  for (let i = 1; i < transactions.length; i++) {
+    const prev = transactions[i - 1];
+    const curr = transactions[i];
+
+    if (prev.balance === undefined || curr.balance === undefined) continue;
+
+    const expected = prev.balance + (curr.type === "credit" ? curr.amount : -curr.amount);
+    const swappedExpected = prev.balance + (curr.type === "debit" ? curr.amount : -curr.amount);
+
+    const currentDiff = Math.abs(curr.balance - expected);
+    const swappedDiff = Math.abs(curr.balance - swappedExpected);
+
+    if (swappedDiff < currentDiff && swappedDiff < 1) {
+      curr.type = curr.type === "debit" ? "credit" : "debit";
+      corrections++;
+    }
+  }
+
+  return corrections;
 }
 
 function parseCSVFromExcel(csvContent: string, fileName: string): ParseResult {

@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFParser = require("pdf2json");
 import { ParsedTransaction, ParseResult, BankFormat } from "./types";
+import { detectBankNameFromFormat, extractAccountNumber, extractAccountName } from "./bank-detection";
 
 function detectBankFormat(text: string): BankFormat {
   const lower = text.toLowerCase();
@@ -385,6 +386,12 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
           }
 
           result.metadata.fileName = fileName;
+
+          const bankDisplayName = detectBankNameFromFormat(bankFormat) || undefined;
+          result.metadata.detectedBank = bankDisplayName;
+          result.metadata.detectedAccountNumber = extractAccountNumber(text) || undefined;
+          result.metadata.detectedAccountName = extractAccountName(text) || undefined;
+
           console.log(`[PDFParser] Parsed ${result.transactions.length} transactions, ${result.errors.length} errors`);
 
           resolve(result);

@@ -7,8 +7,42 @@ import { groupSimilarTransactions } from "@/lib/counterparty-matcher";
 import { getSessionUserId } from "@/lib/session";
 import crypto from "crypto";
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_DATE_RANGE_YEARS = 2;
+
+async function findOrCreateBank(userId: string, detected: {
+  bankName?: string | null;
+  accountNumber?: string | null;
+  accountName?: string | null;
+}): Promise<{ id: string; bankName: string }> {
+  const bankName = detected.bankName || "Unknown Bank";
+  const accountNumber = detected.accountNumber || undefined;
+  const accountName = detected.accountName || undefined;
+
+  // Try to find existing bank by userId + bankName + accountNumber
+  if (accountNumber) {
+    const existing = await db.bank.findFirst({
+      where: { userId, bankName, accountNumber },
+      select: { id: true, bankName: true },
+    });
+    if (existing) return existing;
+  }
+
+  // Try by userId + bankName only (no account number)
+  const existing = await db.bank.findFirst({
+    where: { userId, bankName },
+    select: { id: true, bankName: true },
+  });
+  if (existing) return existing;
+
+  // Create new bank
+  const created = await db.bank.create({
+    data: { userId, bankName, accountNumber, accountName },
+    select: { id: true, bankName: true },
+  });
+
+  return created;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,25 +53,14 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
-    const bankId = formData.get("bankId") as string;
 
-    if (!file || !bankId) {
+    if (!file) {
       return NextResponse.json(
-        { error: "file and bankId are required" },
+        { error: "file is required" },
         { status: 400 }
       );
     }
 
-    // Verify the bank belongs to the authenticated user
-    const ownedBank = await db.bank.findFirst({
-      where: { id: bankId, userId },
-      select: { id: true },
-    });
-    if (!ownedBank) {
-      return NextResponse.json({ error: "Bank not found" }, { status: 404 });
-    }
-
-    // ── File size guard ──────────────────────────────────────────────────
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.` },
@@ -50,13 +73,23 @@ export async function POST(request: NextRequest) {
 
     // ── File hash dedup ──────────────────────────────────────────────────
     const fileHash = crypto.createHash("sha256").update(buffer).digest("hex");
-    const existingUpload = await db.uploadLog.findUnique({
-      where: { bankId_fileHash: { bankId, fileHash } },
+    const existingUpload = await db.uploadLog.findFirst({
+      where: { fileHash, userId },
     });
     if (existingUpload) {
       return NextResponse.json(
-        { error: "duplicate", message: "This file has already been uploaded to this bank account." },
+        { error: "duplicate", message: "This file has already been uploaded." },
         { status: 409 }
+      );
+    }
+
+    // ── Parse the file ───────────────────────────────────────────────────
+    const result = await parseStatement(arrayBuffer, file.name);
+
+    if (result.transactions.length === 0) {
+      return NextResponse.json(
+        { error: "No transactions found", errors: result.errors },
+        { status: 400 }
       );
     }
 
@@ -65,36 +98,10 @@ export async function POST(request: NextRequest) {
     const maxPast = new Date(now.getFullYear() - MAX_DATE_RANGE_YEARS, now.getMonth(), 1);
     const maxFuture = new Date(now.getFullYear() + 1, 11, 31);
 
-    // Get user's own account names for self-transfer detection
-    const userBanks = await db.bank.findMany({
-      where: { userId },
-      select: { accountName: true, bankName: true, accountNumber: true },
-    });
-    const userOwnNames = userBanks
-      .map(b => b.accountName)
-      .filter((n): n is string => !!n);
-
-    // Parse the file
-    const result = await parseStatement(arrayBuffer, file.name);
-
-    if (result.transactions.length === 0) {
-      await db.uploadLog.create({
-        data: { userId, bankId, fileHash, filename: file.name, fileSize: file.size, status: "failed" },
-      });
-      return NextResponse.json(
-        { error: "No transactions found", errors: result.errors },
-        { status: 400 }
-      );
-    }
-
-    // Validate date range
     const firstDate = new Date(result.transactions[0].date);
     const lastDate = new Date(result.transactions[result.transactions.length - 1].date);
 
     if (firstDate < maxPast || lastDate > maxFuture) {
-      await db.uploadLog.create({
-        data: { userId, bankId, fileHash, filename: file.name, fileSize: file.size, status: "failed" },
-      });
       return NextResponse.json(
         {
           error: "invalid_date_range",
@@ -104,10 +111,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── Auto-detect / auto-create bank ───────────────────────────────────
+    const bank = await findOrCreateBank(userId, {
+      bankName: result.metadata.detectedBank,
+      accountNumber: result.metadata.detectedAccountNumber,
+      accountName: result.metadata.detectedAccountName,
+    });
+
+    const bankId = bank.id;
     const month = firstDate.getMonth() + 1;
     const year = firstDate.getFullYear();
 
-    // Check for existing statements with overlapping dates
+    // ── Get user's own account names for self-transfer detection ─────────
+    const userBanks = await db.bank.findMany({
+      where: { userId },
+      select: { accountName: true, bankName: true, accountNumber: true },
+    });
+    const userOwnNames = userBanks
+      .map(b => b.accountName)
+      .filter((n): n is string => !!n);
+
+    // ── Check overlapping statements ────────────────────────────────────
     const existingStatements = await db.statement.findMany({
       where: {
         bankId,
@@ -124,7 +148,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Find statements with overlapping date ranges
     const overlapping = existingStatements.filter(s => {
       const stmtStart = new Date(s.year, s.month - 1, 1);
       const stmtEnd = new Date(s.year, s.month, 0, 23, 59, 59);
@@ -167,7 +190,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Some new transactions found - offer merge
       return NextResponse.json(
         {
           error: "partial_overlap",
@@ -186,17 +208,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize with counterparty extraction
+    // ── Normalize, classify, group ───────────────────────────────────────
     const normalized = normalizeTransactions(result.transactions, userOwnNames);
-
-    // Classify transactions
     const classifications = await classifyBatch(normalized, userId);
-
-    // Find similar counterparty groups using trinity matching
     const descriptions = normalized.map(tx => tx.description);
     const similarGroups = groupSimilarTransactions(descriptions, userOwnNames);
 
-    // Create statement
+    // ── Create statement ────────────────────────────────────────────────
     const statement = await db.statement.create({
       data: {
         bankId,
@@ -233,15 +251,14 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    // Use skipDuplicates with composite fallback for null references
     await db.transaction.createMany({ data: transactionData, skipDuplicates: true });
 
-    // Log successful upload
+    // ── Log upload ──────────────────────────────────────────────────────
     await db.uploadLog.create({
       data: { userId, bankId, fileHash, filename: file.name, fileSize: file.size, status: "completed" },
     });
 
-    // Calculate summary stats
+    // ── Summary ─────────────────────────────────────────────────────────
     const totalCredits = normalized.filter(t => t.type === "credit").reduce((s, t) => s + t.amount, 0);
     const totalDebits = normalized.filter(t => t.type === "debit").reduce((s, t) => s + t.amount, 0);
     const dateRange = {
@@ -251,6 +268,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       statement,
+      bank: { id: bank.id, bankName: bank.bankName },
       transactionCount: normalized.length,
       errorCount: result.errors.length,
       errors: result.errors.slice(0, 10),

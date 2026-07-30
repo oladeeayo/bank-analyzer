@@ -17,6 +17,14 @@ export interface AISimilarGroup {
   reason: string;
 }
 
+export interface AIRecurringValidation {
+  index: number;
+  isTrulyRecurring: boolean;
+  category: string;
+  tags: string[];
+  insights: string[];
+}
+
 const CATEGORY_LIST = `Income: Salary, Freelance, Business Income, Gift Received, Refund, Interest, Dividend, Other Income
 Savings: AutoSave, Goal Savings, Fixed Deposit, Emergency Fund, Other Savings
 Food: Restaurant, Fast Food, Groceries, Snacks, Drinks, Coffee, Other Food
@@ -212,4 +220,111 @@ export async function findSimilarGroups(
   }
 
   return allGroups;
+}
+
+const RECURRING_VALIDATION_PROMPT = `You are a Nigerian financial analyst evaluating recurring transaction patterns.
+
+For each pattern, determine if it is TRULY a recurring transaction (a committed, repeating obligation or subscription) or just a repeated one-off action.
+
+TRULY RECURRING (isTrulyRecurring: true):
+- Subscriptions: Netflix, Spotify, DSTV, YouTube Premium, Apple Music, etc.
+- Utility bills: Electricity (Ikeja Electric, Eko Electric, etc.), Water, Internet (ISP), Cable TV
+- Data/Airtime: MTN, Airtel, Glo, 9mobile data plans
+- Rent and housing payments
+- Salary credits
+- Insurance premiums
+- Loan repayments (structured, not one-off)
+- Bank fees: Stamp Duty, Account Maintenance, card fees
+- Savings contributions: OWealth auto-save, PiggyVest, Cowrywise
+- School fees
+- Domain/hosting renewals
+
+NOT TRULY RECURRING (isTrulyRecurring: false):
+- Transfers to individuals (even if repeated): "Transfer to JOHN DOE", "Transfer from NAME | BANK"
+- POS/card payments at random stores (even if same store multiple times)
+- ATM withdrawals
+- Random purchases at the same merchant (e.g., buying food at a restaurant 3 times)
+- One-off purchases that happen to repeat
+- Cash deposits
+- Internal wallet movements (OWealth Withdrawal/Deposit is internal, not a bill)
+
+For each pattern, also provide:
+1. Category: "subscription" | "bills" | "savings" | "income" | "financial" | "essential" | "transfer" | "other"
+2. Tags: up to 2 descriptive tags from this set: ["essential", "entertainment", "can-review", "increasing", "decreasing", "stable", "high-cost", "low-cost"]
+3. Insights: 1-2 specific, actionable observations based on the merchant, amount, and frequency
+
+Insight examples:
+- "This Netflix subscription costs ~₦72,000/year. Consider if you still use it enough."
+- "Your data plan spending has increased 15% — you may need a bigger plan."
+- "This is one of your largest recurring expenses at ~₦180,000/year."
+- "Reliable monthly charge. Consider setting a budget cap for this."
+- "This hasn't appeared in a while — it may have been cancelled."
+
+RULES:
+- Be conservative: only mark as truly recurring if you are confident
+- When in doubt about transfers to people, mark as NOT truly recurring
+- Insights should be specific to the Nigerian context
+- Amounts are in Nigerian Naira (₦)
+
+Respond in JSON only:
+{
+  "patterns": [
+    {
+      "index": 0,
+      "isTrulyRecurring": true,
+      "category": "subscription",
+      "tags": ["entertainment", "can-review"],
+      "insights": ["This Netflix subscription costs ~₦72,000/year. Consider if you use it actively."]
+    }
+  ]
+}`;
+
+export interface RecurringCandidate {
+  index: number;
+  description: string;
+  normalizedDescription: string;
+  frequency: string;
+  avgAmount: number;
+  transactionCount: number;
+  type: string;
+  lastSeenDate: string;
+}
+
+export async function validateRecurringPatterns(
+  candidates: RecurringCandidate[]
+): Promise<AIRecurringValidation[]> {
+  if (!process.env.GEMINI_API_KEY) {
+    return candidates.map((c) => ({
+      index: c.index,
+      isTrulyRecurring: true,
+      category: "other",
+      tags: [],
+      insights: [],
+    }));
+  }
+
+  const BATCH_SIZE = 8;
+  const allResults: AIRecurringValidation[] = [];
+
+  for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
+    const batch = candidates.slice(i, i + BATCH_SIZE);
+    const data = JSON.stringify(batch, null, 2);
+    try {
+      const response = await callGemini(RECURRING_VALIDATION_PROMPT, data);
+      const parsed = parseJSON(response);
+      allResults.push(...(parsed.patterns || []));
+    } catch {
+      for (const c of batch) {
+        allResults.push({
+          index: c.index,
+          isTrulyRecurring: true,
+          category: "other",
+          tags: [],
+          insights: [],
+        });
+      }
+    }
+  }
+
+  return allResults;
 }

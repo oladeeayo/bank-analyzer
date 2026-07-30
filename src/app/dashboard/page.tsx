@@ -66,6 +66,12 @@ interface RecurringPattern {
   nextExpectedDate: string | null;
   confidence: number;
   type?: string;
+  annualCost: number;
+  trend: "increasing" | "decreasing" | "stable";
+  trendPercent: number;
+  category: string;
+  tags: string[];
+  insights: string[];
 }
 
 const CHART_COLORS = ["#003527", "#416900", "#95d3ba", "#acf847", "#91db2a"];
@@ -423,37 +429,104 @@ export default function DashboardPage() {
       </div>
 
       {/* Recurring Transactions */}
-      {recurring.length > 0 && (
-        <div className="bg-paper-white border border-[#ececec] p-4 sm:p-6 rounded-cards shadow-subtle">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-signifier text-xl text-ink-black">Recurring Transactions</h2>
-              <p className="text-xs text-ash-gray mt-1">Detected from your transaction history</p>
+      {recurring.length > 0 && (() => {
+        const monthlyTotal = recurring.reduce((sum, r) => {
+          if (r.frequency === "monthly") return sum + r.avgAmount;
+          if (r.frequency === "weekly") return sum + r.avgAmount * 4.33;
+          if (r.frequency === "biweekly") return sum + r.avgAmount * 2.17;
+          if (r.frequency === "daily") return sum + r.avgAmount * 30;
+          if (r.frequency === "quarterly") return sum + r.avgAmount / 3;
+          if (r.frequency === "yearly") return sum + r.avgAmount / 12;
+          return sum + r.avgAmount;
+        }, 0);
+        const annualTotal = recurring.reduce((sum, r) => sum + r.annualCost, 0);
+        const needsAttention = recurring.filter(r => r.tags.includes("can-review") || r.tags.includes("high-cost") || r.trend === "increasing");
+
+        return (
+          <div className="bg-paper-white border border-[#ececec] p-4 sm:p-6 rounded-cards shadow-subtle">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-signifier text-xl text-ink-black">Recurring Transactions</h2>
+                <p className="text-xs text-ash-gray mt-1">AI-detected subscriptions and regular bills</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 mb-5">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-mist-gray rounded-full">
+                <span className="text-[10px] text-ash-gray uppercase tracking-wide">Monthly</span>
+                <span className="text-sm font-mono font-medium text-forest">{formatCurrency(monthlyTotal)}</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-mist-gray rounded-full">
+                <span className="text-[10px] text-ash-gray uppercase tracking-wide">Annual</span>
+                <span className="text-sm font-mono font-medium text-forest">{formatCurrency(annualTotal)}</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-mist-gray rounded-full">
+                <span className="text-[10px] text-ash-gray uppercase tracking-wide">Active</span>
+                <span className="text-sm font-medium text-ink-black">{recurring.length}</span>
+              </div>
+              {needsAttention.length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
+                  <span className="text-[10px] text-amber-700 uppercase tracking-wide">Review</span>
+                  <span className="text-sm font-medium text-amber-800">{needsAttention.length}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recurring.slice(0, 6).map((r, idx) => {
+                const hasAttention = r.tags.includes("can-review") || r.tags.includes("high-cost") || r.trend === "increasing";
+                return (
+                  <div key={idx} className={`p-4 rounded-cards border ${hasAttention ? "bg-amber-50/50 border-amber-200" : "bg-mist-gray border-transparent"}`}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-medium text-ink-black truncate">{r.normalizedDescription}</span>
+                      <div className="flex items-center gap-1.5">
+                        {r.trend !== "stable" && (
+                          <span className={`text-[10px] font-medium ${
+                            r.trend === "increasing" ? "text-red-600" : "text-emerald-600"
+                          }`}>
+                            {r.trend === "increasing" ? "↑" : "↓"} {r.trendPercent}%
+                          </span>
+                        )}
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                          r.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-[#8BC34A]/20 text-[#4a7c0f]"
+                        }`}>
+                          {r.frequency}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-lg font-mono font-medium text-forest">{formatCurrency(r.avgAmount)}</span>
+                      <span className="text-[10px] text-ash-gray">≈ {formatCurrency(r.annualCost)}/yr</span>
+                    </div>
+
+                    {r.category && r.category !== "other" && (
+                      <div className="mb-2">
+                        <span className="text-[10px] px-1.5 py-0.5 bg-forest/10 text-forest rounded capitalize">{r.category}</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] text-ash-gray">{r.transactionCount}x transactions</span>
+                      {r.nextExpectedDate && (
+                        <span className="text-[10px] text-ash-gray">Next: {new Date(r.nextExpectedDate).toLocaleDateString("en", { month: "short", day: "numeric" })}</span>
+                      )}
+                    </div>
+
+                    {r.insights.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-ash-gray/20">
+                        {r.insights.slice(0, 1).map((insight, i) => (
+                          <p key={i} className="text-[10px] text-ash-gray leading-relaxed">{insight}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recurring.slice(0, 6).map((r, idx) => (
-              <div key={idx} className="p-4 bg-mist-gray rounded-cards">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-ink-black truncate">{r.normalizedDescription}</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                    r.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-[#8BC34A]/20 text-[#4a7c0f]"
-                  }`}>
-                    {r.frequency}
-                  </span>
-                </div>
-                <div className="text-lg font-mono font-medium text-forest">{formatCurrency(r.avgAmount)}</div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-[10px] text-ash-gray">{r.transactionCount}x transactions</span>
-                  {r.nextExpectedDate && (
-                    <span className="text-[10px] text-ash-gray">Next: {new Date(r.nextExpectedDate).toLocaleDateString("en", { month: "short", day: "numeric" })}</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Recent Transactions */}
       <div className="bg-paper-white border border-[#ececec] rounded-cards shadow-subtle overflow-hidden">

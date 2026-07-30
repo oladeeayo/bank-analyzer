@@ -17,6 +17,9 @@ export interface ParseResult {
     totalRows: number;
     parsedRows: number;
     dateRange?: { start: string; end: string };
+    detectedBank?: string;
+    detectedAccountNumber?: string;
+    detectedAccountName?: string;
   };
 }
 

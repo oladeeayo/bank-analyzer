@@ -6,14 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowUpTrayIcon, DocumentTextIcon, CheckCircleIcon, ExclamationCircleIcon, BuildingOffice2Icon, XMarkIcon, ClockIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { useUser } from "@/lib/hooks";
 
-interface Bank {
-  id: string;
-  bankName: string;
-  nickname: string | null;
-  accountNumber: string | null;
-  balance: number | null;
-}
-
 interface Statement {
   id: string;
   bankId: string;
@@ -29,6 +21,7 @@ interface Statement {
 
 interface UploadResult {
   statement: { id: string; month: number; year: number };
+  bank?: { id: string; bankName: string };
   transactionCount: number;
   errorCount: number;
   errors: string[];
@@ -46,9 +39,7 @@ const statusConfig: Record<string, { label: string; icon: any; className: string
 
 export default function UploadPage() {
   const { user, loading: userLoading } = useUser();
-  const [banks, setBanks] = useState<Bank[]>([]);
   const [statements, setStatements] = useState<Statement[]>([]);
-  const [selectedBank, setSelectedBank] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
@@ -61,21 +52,11 @@ export default function UploadPage() {
 
   useEffect(() => {
     if (user) {
-      fetchBanks();
       fetchStatements();
     }
   }, [user]);
 
   if (userLoading || !user) return <div role="status" aria-live="polite" className="flex items-center justify-center h-64"><div className="flex items-center gap-3"><div className="w-5 h-5 border-2 border-forest border-t-transparent rounded-full animate-spin" /><span className="text-ash-gray">Loading...</span></div></div>;
-
-  const fetchBanks = async () => {
-    try {
-      const res = await fetch(`/api/banks?userId=${user?.id || ""}`);
-      if (res.ok) setBanks(await res.json());
-    } catch (err) {
-      console.error("Failed to fetch banks:", err);
-    }
-  };
 
   const fetchStatements = async () => {
     try {
@@ -102,8 +83,8 @@ export default function UploadPage() {
   };
 
   const handleUpload = async (forceOverwrite = false) => {
-    if (!file || !selectedBank) {
-      setError("Please select a bank and a file");
+    if (!file) {
+      setError("Please select a file");
       return;
     }
     setUploading(true);
@@ -112,7 +93,6 @@ export default function UploadPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("bankId", selectedBank);
       formData.append("userId", user.id);
       if (forceOverwrite) formData.append("overwrite", "true");
       const res = await fetch("/api/statements/upload", { method: "POST", body: formData });
@@ -166,19 +146,6 @@ export default function UploadPage() {
               <h2 className="font-semibold text-ink-black">Import New Statement</h2>
             </div>
             <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-ink-black mb-2 block">Select Bank</label>
-                <select
-                  value={selectedBank}
-                  onChange={(e) => setSelectedBank(e.target.value)}
-                  className="w-full bg-mist-gray border border-[#ececec] text-ink-black rounded-inputs px-4 py-3 focus:ring-2 focus:ring-lime focus:outline-none text-sm"
-                >
-                  <option value="">Choose a bank</option>
-                  {banks.map((bank) => (
-                    <option key={bank.id} value={bank.id}>{bank.nickname || bank.bankName}</option>
-                  ))}
-                </select>
-              </div>
               <div
                 className={`border-2 border-dashed rounded-cards p-10 text-center transition-colors ${dragActive ? "border-lime bg-lime-vibrant/5" : "border-[#ececec] hover:border-forest/30"}`}
                 onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
@@ -204,7 +171,7 @@ export default function UploadPage() {
                 <span className="px-2 py-0.5 bg-mist-gray rounded text-[10px]">CSV</span>
                 <span className="px-2 py-0.5 bg-mist-gray rounded text-[10px]">XLSX</span>
                 <span className="px-2 py-0.5 bg-mist-gray rounded text-[10px]">PDF</span>
-                — All major Nigerian bank formats supported
+                — Bank auto-detected from your statement
               </div>
               {error && (
                 <div className="bg-peach-light/40 border border-peach-light text-red-600 px-4 py-3 rounded-inputs text-sm flex items-center gap-2">
@@ -216,11 +183,12 @@ export default function UploadPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <CheckCircleIcon className="h-4 w-4" /><span className="font-medium">Upload successful!</span>
                   </div>
+                  {result.bank && <div className="mb-1">Bank: {result.bank.bankName}</div>}
                   <div>{result.transactionCount} transactions imported</div>
                   {result.errorCount > 0 && <div className="text-amber-700 mt-1">{result.errorCount} rows had errors during parsing</div>}
                 </div>
               )}
-              <Button onClick={() => handleUpload(false)} disabled={!file || !selectedBank || uploading} className="w-full">
+              <Button onClick={() => handleUpload(false)} disabled={!file || uploading} className="w-full">
                 {uploading ? "Processing..." : "Upload Statement"}
               </Button>
             </div>
