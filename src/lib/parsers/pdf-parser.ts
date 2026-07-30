@@ -256,6 +256,11 @@ function parseGTBankRows(rows: string[][]): ParseResult {
   }
   console.log(`[GTBank] Column map:`, colMap);
 
+  // Debug: log first 5 rows after header
+  for (let i = headerIdx + 1; i < Math.min(headerIdx + 6, rows.length); i++) {
+    console.log(`[GTBank] Row ${i} (${rows[i].length} cells): ${rows[i].join(" | ")}`);
+  }
+
   for (let i = headerIdx + 1; i < rows.length; i++) {
     try {
       const row = rows[i];
