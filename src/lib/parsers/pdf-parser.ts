@@ -68,6 +68,13 @@ function parseDate(dateStr: string, dateFormat?: "MM/DD/YYYY" | "DD/MM/YYYY"): D
     if (monthIdx !== undefined) return new Date(parseInt(match[3]), monthIdx, parseInt(match[1]));
   }
 
+  // DD-Mon-YYYY (e.g., 01-Jan-2026)
+  match = clean.match(/(\d{1,2})[\/\-](\w{3})[\/\-](\d{4})/);
+  if (match) {
+    const monthIdx = months[match[2].toLowerCase()];
+    if (monthIdx !== undefined) return new Date(parseInt(match[3]), monthIdx, parseInt(match[1]));
+  }
+
   return new Date(clean);
 }
 
@@ -262,7 +269,7 @@ function parseGenericRows(rows: string[][]): ParseResult {
   const transactions: ParsedTransaction[] = [];
   const errors: string[] = [];
 
-  const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w{3}\s+\d{4}|\d{1,2}\s+\w{3}\s+\d{2})/;
+  const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w{3}\s+\d{4}|\d{1,2}\s+\w{3}\s+\d{2}|\d{1,2}[\/\-]\w{3}[\/\-]\d{2,4}|\d{1,2}[\/\-]\w{3,9}[\/\-]\d{2,4})/;
 
   for (let i = 0; i < rows.length; i++) {
     try {
