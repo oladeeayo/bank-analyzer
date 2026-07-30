@@ -34,6 +34,7 @@ export async function GET(
       where: {
         bankId: { in: bankIds },
         merchantId,
+        isSelfTransfer: false,
       },
       include: {
         category: { select: { name: true, icon: true, color: true } },
