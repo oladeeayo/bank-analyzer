@@ -309,12 +309,12 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
       </div>
 
       {/* Spending Velocity */}
-      <div className="bg-paper-white border border-[#ececec] p-4 sm:p-5 rounded-cards">
-        <div className="mb-3">
-          <h3 className="font-signifier text-base sm:text-lg text-ink-black">Spending Velocity</h3>
-          <p className="text-[11px] text-ash-gray mt-0.5">{monthlySpending.length} months of data</p>
+      <div className="bg-paper-white border border-[#ececec] p-3 sm:p-5 rounded-cards">
+        <div className="mb-2">
+          <h3 className="font-signifier text-sm sm:text-lg text-ink-black">Spending Velocity</h3>
+          <p className="text-[10px] text-ash-gray mt-0.5">{monthlySpending.length} months of data</p>
         </div>
-        <div className="h-40 sm:h-52">
+        <div className="h-32 sm:h-52">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} barCategoryGap="20%" barGap={4}>
@@ -335,37 +335,35 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
       </div>
 
       {/* Transaction Intensity Heatmap */}
-      <div className="bg-paper-white border border-[#ececec] p-4 sm:p-5 rounded-cards">
-        <div className="mb-3">
-          <h3 className="font-signifier text-base sm:text-lg text-ink-black">Transaction Intensity</h3>
-          <p className="text-[11px] text-ash-gray mt-0.5">When you transact most</p>
+      <div className="bg-paper-white border border-[#ececec] p-3 sm:p-5 rounded-cards">
+        <div className="mb-2">
+          <h3 className="font-signifier text-sm sm:text-lg text-ink-black">Transaction Intensity</h3>
+          <p className="text-[10px] text-ash-gray mt-0.5">When you transact most</p>
         </div>
-        <div className="overflow-x-auto -mx-1">
-          <div className="min-w-[400px] px-1">
+        <div className="overflow-x-auto">
+          <div className="min-w-[320px]">
             {/* Hour labels */}
-            <div className="flex mb-1">
-              <div className="w-10 shrink-0" />
+            <div className="flex mb-0.5">
+              <div className="w-8 shrink-0" />
               {HOURS.map((h) => (
                 <div key={h} className="flex-1 text-center">
                   {hourLabels.includes(h) ? (
-                    <span className="text-[8px] text-ash-gray">{h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h-12}p`}</span>
-                  ) : (
-                    <span className="text-[8px] text-transparent">.</span>
-                  )}
+                    <span className="text-[7px] text-ash-gray">{h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h-12}p`}</span>
+                  ) : null}
                 </div>
               ))}
             </div>
             {/* Grid */}
             {DAYS.map((day) => (
-              <div key={day} className="flex items-center gap-0.5 mb-0.5">
-                <span className="w-10 text-[10px] text-ash-gray shrink-0 text-right pr-1.5">{day}</span>
+              <div key={day} className="flex items-center gap-px mb-px">
+                <span className="w-8 text-[8px] text-ash-gray shrink-0 text-right pr-1">{day}</span>
                 {HOURS.map((h) => {
                   const count = intensityGrid.get(`${day}-${h}`) || 0;
                   const intensity = count > 0 ? count / maxIntensity : 0;
                   return (
                     <div
                       key={h}
-                      className="flex-1 aspect-square rounded-[3px] transition-colors"
+                      className="flex-1 aspect-square rounded-[2px] transition-colors"
                       style={{
                         backgroundColor: count === 0
                           ? "#f5f5f5"
@@ -378,89 +376,89 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
               </div>
             ))}
             {/* Legend */}
-            <div className="flex items-center justify-end gap-1.5 mt-2">
-              <span className="text-[9px] text-ash-gray">Less</span>
+            <div className="flex items-center justify-end gap-1 mt-1.5">
+              <span className="text-[7px] text-ash-gray">Less</span>
               {[0.15, 0.35, 0.55, 0.75, 1].map((o) => (
-                <div key={o} className="w-3 h-3 rounded-[2px]" style={{ backgroundColor: `rgba(0, 53, 39, ${o})` }} />
+                <div key={o} className="w-2 h-2 rounded-[1px]" style={{ backgroundColor: `rgba(0, 53, 39, ${o})` }} />
               ))}
-              <span className="text-[9px] text-ash-gray">More</span>
+              <span className="text-[7px] text-ash-gray">More</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Insight Cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
-          <div className="w-7 h-7 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
-            <CalendarDaysIcon className="h-3.5 w-3.5 text-forest" />
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="bg-paper-white border border-[#ececec] p-2.5 sm:p-4 rounded-cards">
+          <div className="w-6 h-6 bg-forest/5 rounded flex items-center justify-center mb-1.5">
+            <CalendarDaysIcon className="h-3 w-3 text-forest" />
           </div>
-          <h4 className="text-[11px] sm:text-xs font-semibold text-ink-black mb-0.5">Peak Day</h4>
-          <p className="text-[10px] sm:text-[11px] text-slate-gray leading-relaxed">
+          <h4 className="text-[10px] sm:text-xs font-semibold text-ink-black mb-0.5">Peak Day</h4>
+          <p className="text-[9px] sm:text-[11px] text-slate-gray leading-relaxed">
             {peakDay ? `${peakDay.day}s` : "Not enough data."}
           </p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
-          <div className="w-7 h-7 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
-            <ArrowPathIcon className="h-3.5 w-3.5 text-forest" />
+        <div className="bg-paper-white border border-[#ececec] p-2.5 sm:p-4 rounded-cards">
+          <div className="w-6 h-6 bg-forest/5 rounded flex items-center justify-center mb-1.5">
+            <ArrowPathIcon className="h-3 w-3 text-forest" />
           </div>
-          <h4 className="text-[11px] sm:text-xs font-semibold text-ink-black mb-0.5">Frequency</h4>
-          <p className="text-[10px] sm:text-[11px] text-slate-gray leading-relaxed">
+          <h4 className="text-[10px] sm:text-xs font-semibold text-ink-black mb-0.5">Frequency</h4>
+          <p className="text-[9px] sm:text-[11px] text-slate-gray leading-relaxed">
             {avgDaysBetween > 0 ? `Every ~${Math.round(avgDaysBetween)} days` : "Not enough data."}
           </p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
-          <div className="w-7 h-7 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
-            <BanknotesIcon className="h-3.5 w-3.5 text-forest" />
+        <div className="bg-paper-white border border-[#ececec] p-2.5 sm:p-4 rounded-cards">
+          <div className="w-6 h-6 bg-forest/5 rounded flex items-center justify-center mb-1.5">
+            <BanknotesIcon className="h-3 w-3 text-forest" />
           </div>
-          <h4 className="text-[11px] sm:text-xs font-semibold text-ink-black mb-0.5">Avg. Transaction</h4>
-          <p className="text-[10px] sm:text-[11px] text-slate-gray leading-relaxed">
+          <h4 className="text-[10px] sm:text-xs font-semibold text-ink-black mb-0.5">Avg. Txn</h4>
+          <p className="text-[9px] sm:text-[11px] text-slate-gray leading-relaxed">
             {txnTimes > 0 ? formatCurrency((totalSpent + totalReceived) / txnTimes) : "No data."}
           </p>
         </div>
-        <div className="bg-paper-white border border-[#ececec] p-3 sm:p-4 rounded-cards">
-          <div className="w-7 h-7 bg-forest/5 rounded-lg flex items-center justify-center mb-2">
-            <ArrowTrendingUpIcon className="h-3.5 w-3.5 text-forest" />
+        <div className="bg-paper-white border border-[#ececec] p-2.5 sm:p-4 rounded-cards">
+          <div className="w-6 h-6 bg-forest/5 rounded flex items-center justify-center mb-1.5">
+            <ArrowTrendingUpIcon className="h-3 w-3 text-forest" />
           </div>
-          <h4 className="text-[11px] sm:text-xs font-semibold text-ink-black mb-0.5">Net Flow</h4>
-          <p className="text-[10px] sm:text-[11px] text-slate-gray leading-relaxed">
-            {netAmount >= 0 ? `You received ${formatCurrency(netAmount)} more` : `You sent ${formatCurrency(Math.abs(netAmount))} more`}
+          <h4 className="text-[10px] sm:text-xs font-semibold text-ink-black mb-0.5">Net Flow</h4>
+          <p className="text-[9px] sm:text-[11px] text-slate-gray leading-relaxed">
+            {netAmount >= 0 ? `+${formatCurrency(netAmount)}` : `-${formatCurrency(Math.abs(netAmount))}`}
           </p>
         </div>
       </div>
 
       {/* Activity History */}
       <div className="bg-paper-white border border-[#ececec] rounded-cards overflow-hidden">
-        <div className="px-4 sm:px-5 pb-3 border-b border-[#ececec]">
-          <h3 className="font-signifier text-base sm:text-lg text-ink-black">Activity History</h3>
+        <div className="px-3 sm:px-5 pb-2 border-b border-[#ececec]">
+          <h3 className="font-signifier text-sm sm:text-lg text-ink-black">Activity History</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[420px]">
+          <table className="w-full min-w-[350px]">
             <thead>
               <tr className="bg-mist-gray">
-                <th className="text-left text-[9px] sm:text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-3 sm:px-4 py-2">Date</th>
-                <th className="text-left text-[9px] sm:text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-3 sm:px-4 py-2">Description</th>
-                <th className="text-right text-[9px] sm:text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-3 sm:px-4 py-2">Amount</th>
+                <th className="text-left text-[8px] sm:text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-2 sm:px-4 py-1.5">Date</th>
+                <th className="text-left text-[8px] sm:text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-2 sm:px-4 py-1.5">Description</th>
+                <th className="text-right text-[8px] sm:text-[10px] font-semibold text-ash-gray uppercase tracking-wider px-2 sm:px-4 py-1.5">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#ececec]">
               {recentTransactions.map((tx) => (
                 <tr key={tx.id} className="hover:bg-mist-gray/50 transition-colors">
-                  <td className="px-3 sm:px-4 py-2.5 text-[11px] text-ash-gray whitespace-nowrap">
+                  <td className="px-2 sm:px-4 py-2 text-[10px] sm:text-[11px] text-ash-gray whitespace-nowrap">
                     {new Date(tx.date).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}
                   </td>
-                  <td className="px-3 sm:px-4 py-2.5 text-[11px] text-ink-black truncate max-w-[200px]">
+                  <td className="px-2 sm:px-4 py-2 text-[10px] sm:text-[11px] text-ink-black truncate max-w-[160px]">
                     {tx.category?.icon && <span className="mr-1">{tx.category.icon}</span>}
                     {tx.description}
                   </td>
-                  <td className={`px-3 sm:px-4 py-2.5 text-[11px] font-mono font-medium text-right whitespace-nowrap ${tx.type === "credit" ? "text-forest" : "text-error"}`}>
+                  <td className={`px-2 sm:px-4 py-2 text-[10px] sm:text-[11px] font-mono font-medium text-right whitespace-nowrap ${tx.type === "credit" ? "text-forest" : "text-error"}`}>
                     {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
                   </td>
                 </tr>
               ))}
               {recentTransactions.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-6 text-center text-ash-gray text-xs">No transactions</td>
+                  <td colSpan={3} className="py-4 text-center text-ash-gray text-[10px]">No transactions</td>
                 </tr>
               )}
             </tbody>

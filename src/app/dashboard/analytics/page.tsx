@@ -157,11 +157,11 @@ export default function AnalyticsPage() {
     });
   };
 
-  const VISIBLE_CATS = 6;
+  const VISIBLE_CATS = 10;
   const hiddenCount = donutSegments.length - VISIBLE_CATS;
-  const VISIBLE_MERCHANTS = 6;
+  const VISIBLE_MERCHANTS = 10;
   const hiddenMerchantCount = merchantRanking.length - VISIBLE_MERCHANTS;
-  const VISIBLE_BREAKDOWN = 8;
+  const VISIBLE_BREAKDOWN = 12;
 
   const maxMonthly = monthlyChart.length > 0 ? Math.max(...monthlyChart.map(m => Math.max(m.credits, m.debits))) : 0;
 
