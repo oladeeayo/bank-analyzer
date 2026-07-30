@@ -262,7 +262,7 @@ function parseGenericRows(rows: string[][]): ParseResult {
   const transactions: ParsedTransaction[] = [];
   const errors: string[] = [];
 
-  const datePattern = /(\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4}|\d{2}\s+\w{3}\s+\d{4})/;
+  const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w{3}\s+\d{4}|\d{1,2}\s+\w{3}\s+\d{2})/;
 
   for (let i = 0; i < rows.length; i++) {
     try {
@@ -282,17 +282,58 @@ function parseGenericRows(rows: string[][]): ParseResult {
         }
       }
 
-      for (const cell of row) {
-        if (AMOUNT_PATTERN.test(cell) && !datePattern.test(cell)) {
-          const num = Math.abs(parseFloat(cell.replace(/,/g, "")));
-          if (num > 0 && amount === 0) {
-            amount = num;
-            type = cell.startsWith("-") || (!cell.startsWith("+")) ? "debit" : "credit";
-          }
-        } else if (!datePattern.test(cell) && cell.length > 2 && !cell.match(/^[\d,]+\.?\d*$/)) {
-          if (!description) description = cell;
-          else description += " " + cell;
+      // Collect numeric cells that could be amounts
+      const numericCells: { cell: string; num: number; index: number }[] = [];
+      for (let j = 0; j < row.length; j++) {
+        const cell = row[j];
+        const cleaned = cell.replace(/[^0-9.,\-+]/g, "").replace(/,/g, "");
+        const num = parseFloat(cleaned);
+        if (!isNaN(num) && cleaned.length > 0 && !datePattern.test(cell)) {
+          numericCells.push({ cell, num: Math.abs(num), index: j });
         }
+      }
+
+      // Find description (non-numeric, non-date cell with length > 2)
+      for (const cell of row) {
+        const trimmed = cell.trim();
+        if (!datePattern.test(cell) && trimmed.length > 2 && !trimmed.match(/^[\d,.\-+]+$/) && trimmed !== "") {
+          if (!description) description = trimmed;
+          else description += " " + trimmed;
+        }
+      }
+
+      // Determine amount and type from numeric cells
+      if (numericCells.length >= 2) {
+        // Likely separate debit/credit columns
+        const nonZero = numericCells.filter(c => c.num > 0);
+        if (nonZero.length === 1) {
+          amount = nonZero[0].num;
+          // Check if it's a credit (positive) or debit (negative or has negative sign)
+          type = nonZero[0].cell.trim().startsWith("-") ? "debit" : "credit";
+        } else if (nonZero.length === 2) {
+          // Two non-zero values: first is usually debit, second is credit
+          // Check which column the non-zero value is in
+          const hasDebit = nonZero[0].num > 0;
+          const hasCredit = nonZero[1].num > 0;
+          if (hasDebit && hasCredit) {
+            // Both present - shouldn't happen for a single row
+            amount = nonZero[0].num;
+            type = "debit";
+          } else if (hasDebit) {
+            amount = nonZero[0].num;
+            type = "debit";
+          } else {
+            amount = nonZero[1].num;
+            type = "credit";
+          }
+        } else {
+          // More than 2 non-zero numeric cells - use the first one
+          amount = nonZero[0].num;
+          type = nonZero[0].cell.trim().startsWith("-") ? "debit" : "credit";
+        }
+      } else if (numericCells.length === 1) {
+        amount = numericCells[0].num;
+        type = numericCells[0].cell.trim().startsWith("-") ? "debit" : "credit";
       }
 
       if (!dateStr || !description) continue;

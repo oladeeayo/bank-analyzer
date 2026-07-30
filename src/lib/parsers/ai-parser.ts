@@ -2,39 +2,38 @@ import { ParseResult, ParsedTransaction } from "./types";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-const EXTRACTION_PROMPT = `You are a Nigerian bank statement parser. Extract all transactions from the raw text below.
+const EXTRACTION_PROMPT = `You are a Nigerian bank statement parser. Your ONLY job is to extract EXACTLY what you see in the raw text below.
 
-For each row, identify:
-1. Date (in DD/MM/YYYY or YYYY-MM-DD format)
-2. Description / Narration (the transaction details)
-3. Debit amount (money going out, withdrawal)
-4. Credit amount (money coming in, deposit)
-5. Balance (running balance after transaction, if available)
-6. Reference / Transaction ID (if available)
+CRITICAL RULES:
+- Only extract data that is EXPLICITLY present in the text. Do NOT generate, fabricate, or guess any data.
+- If you cannot find any transaction data in the text, return an empty transactions array: {"transactions": []}
+- Do NOT use sample data, placeholder data, or invented examples.
+- Every transaction MUST come from an actual line in the provided text.
+- If the text contains metadata (account info, balances, headers), skip those and only extract transaction rows.
 
-RULES:
-- Clean currency symbols (N, #, NGN, ₦, $, comma separators) from amounts
-- Convert all amounts to plain numbers
-- Dates must be output as YYYY-MM-DD
-- Merge multi-line descriptions into a single line
-- Skip summary rows, totals, page headers/footers, and metadata
-- A single amount column with negative sign = debit, positive = credit
-- If a row has both debit AND credit amounts, use the non-zero one
-- If balance is present, use it for validation: balance[n] should equal balance[n-1] + credit - debit
+For each transaction row you find, extract:
+1. Date (as YYYY-MM-DD)
+2. Description / Narration (exactly as written in the statement)
+3. Amount (the actual number, cleaned of currency symbols)
+4. Type: "debit" (money out) or "credit" (money in)
+5. Balance (if present)
+6. Reference (if present)
 
-Output ONLY valid JSON in this exact format:
+Output ONLY valid JSON:
 {
   "transactions": [
     {
       "date": "YYYY-MM-DD",
-      "description": "clean description text",
+      "description": "exact text from statement",
       "amount": 15000.00,
       "type": "debit",
       "balance": 250000.00,
-      "reference": "optional ref"
+      "reference": "ref if present"
     }
   ]
 }
+
+If there are NO transactions in the text, output: {"transactions": []}
 
 Raw statement data:
 `;
@@ -49,6 +48,24 @@ async function callGemini(prompt: string): Promise<string> {
   const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
   const result = await model.generateContent(prompt);
   return result.response.text();
+}
+
+function isValidDate(dateStr: string): boolean {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  return !isNaN(date.getTime()) && date.getFullYear() >= 2000 && date.getFullYear() <= 2030;
+}
+
+function isGenericDescription(desc: string): boolean {
+  const genericPatterns = [
+    /^(opening balance|closing balance)$/i,
+    /^(transfer to|transfer from)\s+\w+$/i,
+    /^(salary credit|salary payment)$/i,
+    /^(pos purchase|pos purchase \w+)$/i,
+    /^(airtime purchase|data purchase|recharge)$/i,
+    /^open$/i,
+  ];
+  return genericPatterns.some(p => p.test(desc.trim()));
 }
 
 function parseAIResponse(text: string): ParsedTransaction[] {
@@ -83,13 +100,54 @@ export async function parseWithAI(
     const response = await callGemini(prompt);
     const parsed = parseAIResponse(response);
 
+    // Validate each transaction
     for (const tx of parsed) {
       if (!tx.date || !tx.description || tx.amount === 0) {
         errors.push(`Skipped row: missing date/description/amount`);
         continue;
       }
+      if (!isValidDate(tx.date)) {
+        errors.push(`Skipped row: invalid date "${tx.date}"`);
+        continue;
+      }
+      if (tx.description.length < 3) {
+        errors.push(`Skipped row: description too short "${tx.description}"`);
+        continue;
+      }
       transactions.push(tx);
     }
+
+    // Validate uniqueness - filter out obvious duplicates
+    const seen = new Set<string>();
+    const unique: ParsedTransaction[] = [];
+    for (const tx of transactions) {
+      const key = `${tx.date}_${tx.amount}_${tx.type}_${tx.description.substring(0, 30)}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(tx);
+      }
+    }
+
+    // Filter out rows where all dates are the same (fake data indicator)
+    if (unique.length > 3) {
+      const dates = new Set(unique.map(t => t.date));
+      if (dates.size === 1) {
+        errors.push("AI returned transactions with identical dates - likely fabricated data. Discarding all.");
+        return { transactions: [], errors, metadata: { fileName, fileType: "ai-fallback", totalRows: 0, parsedRows: 0 } };
+      }
+    }
+
+    // Replace with unique set
+    return {
+      transactions: unique,
+      errors,
+      metadata: {
+        fileName,
+        fileType: "ai-fallback",
+        totalRows: unique.length,
+        parsedRows: unique.length,
+      },
+    };
   } catch (err: any) {
     errors.push(`AI parse error: ${err?.message || err}`);
   }
