@@ -26,10 +26,26 @@ export async function POST(request: NextRequest) {
 
     const classification = classifyPdf(buffer);
     const processed = processPdf(buffer);
-    const rawText = extractText(buffer);
+    
+    // Try multiple extraction methods
+    let rawText = "";
+    try {
+      rawText = extractText(buffer);
+    } catch (e) {
+      console.error("[TestPDFInspector] extractText failed:", e);
+    }
+    
+    // If extractText returns empty, try using the markdown and strip formatting
+    if (!rawText || rawText.trim().length === 0) {
+      console.log("[TestPDFInspector] extractText empty, using markdown as fallback");
+      rawText = processed.markdown || "";
+    }
     
     // Apply text cleanup: fix character spacing and normalize whitespace
     const text = normalizeWhitespace(fixCharacterSpacing(rawText));
+    
+    console.log(`[TestPDFInspector] Raw text length: ${rawText.length}`);
+    console.log(`[TestPDFInspector] Cleaned text length: ${text.length}`);
 
     let markdownResult: any = null;
     try {
@@ -65,7 +81,7 @@ export async function POST(request: NextRequest) {
         pagesWithTables: processed.pagesWithTables,
         pagesWithColumns: processed.pagesWithColumns,
       },
-      rawText: rawText.substring(0, 10000), // For debugging
+      rawText: rawText, // Full raw text for debugging
       text: text,
       textLength: text.length,
       textTransactionCount: textTransactions,
