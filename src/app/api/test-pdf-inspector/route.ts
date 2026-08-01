@@ -5,6 +5,7 @@ import {
   extractText,
   extractPagesMarkdown,
 } from "@firecrawl/pdf-inspector";
+import { fixCharacterSpacing, normalizeWhitespace } from "@/lib/utils/text-cleanup";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,10 @@ export async function POST(request: NextRequest) {
 
     const classification = classifyPdf(buffer);
     const processed = processPdf(buffer);
-    const text = extractText(buffer);
+    const rawText = extractText(buffer);
+    
+    // Apply text cleanup: fix character spacing and normalize whitespace
+    const text = normalizeWhitespace(fixCharacterSpacing(rawText));
 
     let markdownResult: any = null;
     try {
