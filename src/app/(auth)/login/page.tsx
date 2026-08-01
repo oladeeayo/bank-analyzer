@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +10,13 @@ import { signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState(searchParams.get("email") || "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const accountExistsMsg = searchParams.get("msg") === "account_exists";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +54,12 @@ export default function LoginPage() {
           <h1 className="text-[22px] font-semibold text-center text-gray-900 mb-12">
             Log in or sign up
           </h1>
+
+          {accountExistsMsg && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2.5 rounded-xl text-sm mb-6">
+              An account already exists with this email. Please log in.
+            </div>
+          )}
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-xl text-sm mb-6">
@@ -140,6 +149,13 @@ export default function LoginPage() {
             and{" "}
             <Link href="#" className="underline hover:text-gray-600">
               Privacy Policy
+            </Link>
+          </p>
+
+          <p className="text-center text-[13px] text-gray-500 mt-5">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="font-medium text-gray-900 hover:underline">
+              Sign up
             </Link>
           </p>
         </div>

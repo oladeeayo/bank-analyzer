@@ -31,7 +31,12 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok || data.error) {
-        setError(data.error?.message || data.message || "Registration failed");
+        const msg = data.error?.message || data.message || "";
+        if (msg.toLowerCase().includes("already exists")) {
+          router.push(`/login?email=${encodeURIComponent(email)}&msg=account_exists`);
+          return;
+        }
+        setError(msg || "Registration failed");
         setLoading(false);
         return;
       }
@@ -177,6 +182,13 @@ export default function RegisterPage() {
             and{" "}
             <Link href="#" className="underline hover:text-gray-600">
               Privacy Policy
+            </Link>
+          </p>
+
+          <p className="text-center text-[13px] text-gray-500 mt-5">
+            Already have an account?{" "}
+            <Link href="/login" className="font-medium text-gray-900 hover:underline">
+              Log in
             </Link>
           </p>
         </div>

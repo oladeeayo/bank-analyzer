@@ -73,12 +73,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Statement not found" }, { status: 404 });
     }
 
+    const bankId = statement.bankId;
+
     await db.statement.delete({ where: { id } });
 
     // Clean up associated upload logs for this bank and filename
     await db.uploadLog.deleteMany({
-      where: { bankId: statement.bankId, filename: statement.filename },
+      where: { bankId, filename: statement.filename },
     });
+
+    // If the bank has no more statements, delete it too
+    const remainingStatements = await db.statement.count({ where: { bankId } });
+    if (remainingStatements === 0) {
+      await db.bank.delete({ where: { id: bankId } });
+    }
 
     return NextResponse.json({
       success: true,
