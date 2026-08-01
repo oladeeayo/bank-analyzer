@@ -34,6 +34,22 @@ export async function POST(request: NextRequest) {
       console.error("[TestPDFInspector] extractPagesMarkdown failed:", e);
     }
 
+    // Log extraction stats
+    console.log(`[TestPDFInspector] File: ${file.name}`);
+    console.log(`[TestPDFInspector] Pages: ${classification.pageCount}`);
+    console.log(`[TestPDFInspector] Full text length: ${text.length}`);
+    console.log(`[TestPDFInspector] Markdown pages: ${markdownResult?.pages?.length || 0}`);
+    
+    if (markdownResult?.pages) {
+      markdownResult.pages.forEach((p: any) => {
+        console.log(`[TestPDFInspector] Page ${p.page}: ${p.markdown.length} chars, ${p.markdown.split('\n').length} lines`);
+      });
+    }
+
+    // Count transactions in text (rough count by date pattern)
+    const textTransactions = (text.match(/\d{2}\/\d{2}\/\d{4}/g) || []).length;
+    console.log(`[TestPDFInspector] Transactions in text (approx): ${textTransactions}`);
+
     return NextResponse.json({
       fileName: file.name,
       fileSize: buffer.length,
@@ -47,6 +63,7 @@ export async function POST(request: NextRequest) {
       },
       text: text,
       textLength: text.length,
+      textTransactionCount: textTransactions,
       markdownPages: markdownResult
         ? {
             pages: markdownResult.pages.map((p: any) => ({
