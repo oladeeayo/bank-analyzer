@@ -11,12 +11,18 @@ export function fixCharacterSpacing(text: string): string {
 }
 
 function fixLineSpacing(line: string): string {
-  // If line is mostly single characters separated by spaces, merge them
-  const words = line.split(/(\s{2,})/); // Split on 2+ spaces (word boundaries)
+  const trimmed = line.trim();
+  if (trimmed.length === 0) return line;
 
+  // Check if entire line is character-level spaced
+  if (isCharacterLevelText(trimmed)) {
+    return mergeCharacterLevelText(trimmed);
+  }
+
+  // Otherwise, process segments separated by 2+ spaces
+  const words = trimmed.split(/(\s{2,})/);
   return words
     .map((segment) => {
-      // If segment has lots of single chars with single spaces, it's likely char-level
       if (isCharacterLevelText(segment)) {
         return mergeCharacterLevelText(segment);
       }
@@ -31,15 +37,20 @@ function isCharacterLevelText(text: string): boolean {
 
   // Count single-letter "words" (characters between spaces)
   const tokens = trimmed.split(/\s+/);
-  const singleCharTokens = tokens.filter((t) => t.length === 1 && /[A-Za-z0-9₦.,\-/:]/.test(t));
+  if (tokens.length < 3) return false;
 
-  // If more than 70% of tokens are single characters, it's likely char-level
-  return singleCharTokens.length / tokens.length > 0.7 && tokens.length > 5;
+  const singleCharTokens = tokens.filter(
+    (t) => t.length === 1 && /[A-Za-z0-9₦.,\-/:()]/.test(t)
+  );
+
+  // If more than 60% of tokens are single characters, it's likely char-level
+  return singleCharTokens.length / tokens.length > 0.6;
 }
 
 function mergeCharacterLevelText(text: string): string {
-  // Remove single spaces between single characters but preserve intentional spaces
-  return text.replace(/(?<=[A-Za-z0-9₦.,\-/:]) (?=[A-Za-z0-9₦.,\-/:])/g, "");
+  // Remove ALL single spaces between alphanumeric/symbol characters
+  // This aggressively merges "O L A D A Y O" → "OLADAYO"
+  return text.replace(/(?<=[A-Za-z0-9₦.,\-/:().]) (?=[A-Za-z0-9₦.,\-/:().])/g, "");
 }
 
 /**
@@ -49,7 +60,10 @@ function mergeCharacterLevelText(text: string): string {
 export function normalizeWhitespace(text: string): string {
   return text
     .split("\n")
-    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .map((line) => {
+      // Collapse multiple spaces but preserve single spaces in words
+      return line.replace(/[ \t]{2,}/g, " ").trim();
+    })
     .join("\n")
     .replace(/\n{3,}/g, "\n\n");
 }

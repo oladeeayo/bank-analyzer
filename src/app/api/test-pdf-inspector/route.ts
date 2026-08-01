@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
         pagesWithTables: processed.pagesWithTables,
         pagesWithColumns: processed.pagesWithColumns,
       },
+      rawText: rawText.substring(0, 10000), // For debugging
       text: text,
       textLength: text.length,
       textTransactionCount: textTransactions,
