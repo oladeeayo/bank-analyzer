@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ merchantId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
@@ -13,7 +13,7 @@ export async function GET(
       return NextResponse.json({ error: "userId is required" }, { status: 400 });
     }
 
-    const { merchantId } = await params;
+    const { id: merchantId } = await params;
 
     const userBanks = await db.bank.findMany({
       where: { userId },
@@ -106,12 +106,11 @@ export async function GET(
       avgDaysBetween = gaps.reduce((s, g) => s + g, 0) / gaps.length;
     }
 
-    // Transaction intensity: day of week x hour of day
     const intensityDetailMap = new Map<string, { count: number; credits: number; debits: number }>();
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dayAbbr = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     for (const tx of transactions) {
       const d = new Date(tx.date);
-      const day = dayNames[d.getDay()];
+      const day = dayAbbr[d.getDay()];
       const hour = d.getHours();
       const key = `${day}-${hour}`;
       const existing = intensityDetailMap.get(key) || { count: 0, credits: 0, debits: 0 };
