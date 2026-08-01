@@ -1,14 +1,57 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ArrowUpTrayIcon,
   DocumentTextIcon,
   ExclamationCircleIcon,
+  ClipboardDocumentIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 
 type Tab = "classification" | "text" | "markdown" | "markdownPages" | "positions" | "raw";
+
+function CopyButton({ text, label }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [text]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors bg-mist-gray hover:bg-[#e5e5e5] text-ink-black"
+    >
+      {copied ? (
+        <>
+          <CheckIcon className="h-3.5 w-3.5 text-green-600" />
+          Copied!
+        </>
+      ) : (
+        <>
+          <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+          {label || "Copy"}
+        </>
+      )}
+    </button>
+  );
+}
 
 export default function TestPDFInspectorPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -200,9 +243,12 @@ export default function TestPDFInspectorPage() {
 
             {activeTab === "text" && (
               <div>
-                <p className="text-xs text-ash-gray mb-3">
-                  Plain text extraction ({result.textLength.toLocaleString()} characters)
-                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-ash-gray">
+                    Plain text extraction ({result.textLength.toLocaleString()} characters)
+                  </p>
+                  <CopyButton text={result.text} label="Copy All" />
+                </div>
                 <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[700px] text-xs font-mono text-ink-black whitespace-pre-wrap">
                   {result.text}
                 </pre>
@@ -211,9 +257,12 @@ export default function TestPDFInspectorPage() {
 
             {activeTab === "markdown" && (
               <div>
-                <p className="text-xs text-ash-gray mb-3">
-                  Full markdown conversion ({result.processed.processingTimeMs}ms)
-                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-ash-gray">
+                    Full markdown conversion ({result.processed.processingTimeMs}ms)
+                  </p>
+                  <CopyButton text={result.processed.markdown || ""} label="Copy Markdown" />
+                </div>
                 <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[600px] text-xs font-mono text-ink-black whitespace-pre-wrap">
                   {result.processed.markdown}
                 </pre>
@@ -228,18 +277,21 @@ export default function TestPDFInspectorPage() {
                 {result.markdownPages ? (
                   result.markdownPages.pages.map((page: any) => (
                     <div key={page.page} className="border border-[#ececec] rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <h3 className="text-sm font-medium text-ink-black">
-                          Page {page.page + 1}
-                        </h3>
-                        {page.needsOcr && (
-                          <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
-                            Needs OCR
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-medium text-ink-black">
+                            Page {page.page + 1}
+                          </h3>
+                          {page.needsOcr && (
+                            <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                              Needs OCR
+                            </span>
+                          )}
+                          <span className="text-[10px] text-ash-gray">
+                            {page.markdown.length.toLocaleString()} chars
                           </span>
-                        )}
-                        <span className="text-[10px] text-ash-gray">
-                          {page.markdown.length.toLocaleString()} chars
-                        </span>
+                        </div>
+                        <CopyButton text={page.markdown} label="Copy Page" />
                       </div>
                       <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[500px] text-xs font-mono text-ink-black whitespace-pre-wrap">
                         {page.markdown}
@@ -254,9 +306,15 @@ export default function TestPDFInspectorPage() {
 
             {activeTab === "positions" && (
               <div>
-                <p className="text-xs text-ash-gray mb-3">
-                  Text items with X/Y positions (page 1, first 100 items)
-                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-ash-gray">
+                    Text items with X/Y positions (page 1, first 100 items)
+                  </p>
+                  <CopyButton
+                    text={result.textWithPositions ? JSON.stringify(result.textWithPositions, null, 2) : ""}
+                    label="Copy JSON"
+                  />
+                </div>
                 {result.textWithPositions ? (
                   <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[600px] text-xs font-mono text-ink-black whitespace-pre-wrap">
                     {JSON.stringify(result.textWithPositions, null, 2)}
@@ -269,7 +327,13 @@ export default function TestPDFInspectorPage() {
 
             {activeTab === "raw" && (
               <div>
-                <p className="text-xs text-ash-gray mb-3">Full API response</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-ash-gray">Full API response</p>
+                  <CopyButton
+                    text={JSON.stringify(result, null, 2)}
+                    label="Copy JSON"
+                  />
+                </div>
                 <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[600px] text-xs font-mono text-ink-black">
                   {JSON.stringify(result, null, 2)}
                 </pre>
