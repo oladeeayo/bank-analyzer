@@ -8,7 +8,7 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 
-type Tab = "classification" | "text" | "markdown" | "positions" | "tables" | "raw";
+type Tab = "classification" | "text" | "markdown" | "raw";
 
 export default function TestPDFInspectorPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -56,8 +56,6 @@ export default function TestPDFInspectorPage() {
     { id: "classification", label: "Classification" },
     { id: "text", label: "Plain Text" },
     { id: "markdown", label: "Markdown" },
-    { id: "positions", label: "Text Positions" },
-    { id: "tables", label: "Tables" },
     { id: "raw", label: "Raw JSON" },
   ];
 
@@ -186,6 +184,15 @@ export default function TestPDFInspectorPage() {
                     {result.textLength.toLocaleString()} characters extracted
                   </p>
                 </div>
+
+                {result.processed.pagesWithTables.length > 0 && (
+                  <div className="p-4 bg-mist-gray rounded-xl">
+                    <h3 className="font-medium text-ink-black mb-1">Tables Detected</h3>
+                    <p className="text-sm text-ash-gray">
+                      Pages: {result.processed.pagesWithTables.join(", ")}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -201,56 +208,13 @@ export default function TestPDFInspectorPage() {
             )}
 
             {activeTab === "markdown" && (
-              <div className="space-y-4">
-                <p className="text-xs text-ash-gray">
-                  Markdown extraction (first 2,000 chars per page)
+              <div>
+                <p className="text-xs text-ash-gray mb-3">
+                  Markdown conversion ({result.processed.processingTimeMs}ms)
                 </p>
-                {result.markdown.map((page: string, i: number) => (
-                  <div key={i}>
-                    <h3 className="text-sm font-medium text-ink-black mb-2">
-                      Page {i + 1}
-                    </h3>
-                    <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[400px] text-xs font-mono text-ink-black whitespace-pre-wrap">
-                      {page}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {activeTab === "positions" && (
-              <div className="space-y-4">
-                <p className="text-xs text-ash-gray">
-                  Text with X/Y positions (first 3 pages)
-                </p>
-                {result.textWithPositions.map((pageData: any, i: number) => (
-                  <div key={i}>
-                    <h3 className="text-sm font-medium text-ink-black mb-2">
-                      Page {pageData.page + 1}
-                    </h3>
-                    <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[400px] text-xs font-mono text-ink-black whitespace-pre-wrap">
-                      {JSON.stringify(pageData.items, null, 2)}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {activeTab === "tables" && (
-              <div className="space-y-4">
-                <p className="text-xs text-ash-gray">
-                  Table structure extraction (first 3 pages)
-                </p>
-                {result.tablesWithStructure.map((pageData: any, i: number) => (
-                  <div key={i}>
-                    <h3 className="text-sm font-medium text-ink-black mb-2">
-                      Page {pageData.page + 1}
-                    </h3>
-                    <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[400px] text-xs font-mono text-ink-black whitespace-pre-wrap">
-                      {JSON.stringify(pageData.tables, null, 2)}
-                    </pre>
-                  </div>
-                ))}
+                <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[600px] text-xs font-mono text-ink-black whitespace-pre-wrap">
+                  {result.processed.markdown}
+                </pre>
               </div>
             )}
 
