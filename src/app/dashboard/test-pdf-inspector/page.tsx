@@ -8,7 +8,7 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 
-type Tab = "classification" | "text" | "markdown" | "raw";
+type Tab = "classification" | "text" | "markdown" | "markdownPages" | "positions" | "raw";
 
 export default function TestPDFInspectorPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -55,7 +55,9 @@ export default function TestPDFInspectorPage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: "classification", label: "Classification" },
     { id: "text", label: "Plain Text" },
-    { id: "markdown", label: "Markdown" },
+    { id: "markdown", label: "Full Markdown" },
+    { id: "markdownPages", label: "Markdown Per Page" },
+    { id: "positions", label: "Text Positions" },
     { id: "raw", label: "Raw JSON" },
   ];
 
@@ -210,11 +212,55 @@ export default function TestPDFInspectorPage() {
             {activeTab === "markdown" && (
               <div>
                 <p className="text-xs text-ash-gray mb-3">
-                  Markdown conversion ({result.processed.processingTimeMs}ms)
+                  Full markdown conversion ({result.processed.processingTimeMs}ms)
                 </p>
                 <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[600px] text-xs font-mono text-ink-black whitespace-pre-wrap">
                   {result.processed.markdown}
                 </pre>
+              </div>
+            )}
+
+            {activeTab === "markdownPages" && (
+              <div className="space-y-4">
+                <p className="text-xs text-ash-gray">
+                  Per-page markdown with OCR flags
+                </p>
+                {result.markdownPages ? (
+                  result.markdownPages.pages.map((page: any) => (
+                    <div key={page.page}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-sm font-medium text-ink-black">
+                          Page {page.page + 1}
+                        </h3>
+                        {page.needsOcr && (
+                          <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                            Needs OCR
+                          </span>
+                        )}
+                      </div>
+                      <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[400px] text-xs font-mono text-ink-black whitespace-pre-wrap">
+                        {page.markdown}
+                      </pre>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-ash-gray">Not available</p>
+                )}
+              </div>
+            )}
+
+            {activeTab === "positions" && (
+              <div>
+                <p className="text-xs text-ash-gray mb-3">
+                  Text items with X/Y positions (page 1, first 100 items)
+                </p>
+                {result.textWithPositions ? (
+                  <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[600px] text-xs font-mono text-ink-black whitespace-pre-wrap">
+                    {JSON.stringify(result.textWithPositions, null, 2)}
+                  </pre>
+                ) : (
+                  <p className="text-sm text-ash-gray">Not available</p>
+                )}
               </div>
             )}
 
