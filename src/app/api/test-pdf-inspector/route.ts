@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         pagesWithTables: processed.pagesWithTables,
         pagesWithColumns: processed.pagesWithColumns,
       },
-      text: text.substring(0, 5000),
+      text: text,
       textLength: text.length,
       markdownPages: markdownResult
         ? {
