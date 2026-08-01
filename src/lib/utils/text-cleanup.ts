@@ -3,8 +3,14 @@
  * Examples: "A c c o u n t" → "Account", "O L A D A Y O" → "OLADAYO"
  */
 export function fixCharacterSpacing(text: string): string {
+  // First, strip markdown table formatting
+  let cleaned = text
+    .replace(/\|/g, " ")  // Remove pipe characters
+    .replace(/---+/g, " ") // Remove table separator lines
+    .replace(/#{1,6}\s/g, ""); // Remove markdown headers
+
   // Split into lines and process each
-  return text
+  return cleaned
     .split("\n")
     .map((line) => fixLineSpacing(line))
     .join("\n");
@@ -12,45 +18,43 @@ export function fixCharacterSpacing(text: string): string {
 
 function fixLineSpacing(line: string): string {
   const trimmed = line.trim();
-  if (trimmed.length === 0) return line;
+  if (trimmed.length === 0) return "";
 
-  // Check if entire line is character-level spaced
-  if (isCharacterLevelText(trimmed)) {
+  // Check if line has character-level spacing (most characters are single letters)
+  if (hasCharacterLevelSpacing(trimmed)) {
     return mergeCharacterLevelText(trimmed);
   }
 
-  // Otherwise, process segments separated by 2+ spaces
-  const words = trimmed.split(/(\s{2,})/);
-  return words
-    .map((segment) => {
-      if (isCharacterLevelText(segment)) {
-        return mergeCharacterLevelText(segment);
-      }
-      return segment;
-    })
-    .join("");
+  return trimmed;
 }
 
-function isCharacterLevelText(text: string): boolean {
-  const trimmed = text.trim();
-  if (trimmed.length < 3) return false;
+function hasCharacterLevelSpacing(text: string): boolean {
+  const tokens = text.split(/\s+/);
+  if (tokens.length < 5) return false;
 
-  // Count single-letter "words" (characters between spaces)
-  const tokens = trimmed.split(/\s+/);
-  if (tokens.length < 3) return false;
-
+  // Count single-character tokens (including numbers, naira sign, punctuation)
   const singleCharTokens = tokens.filter(
-    (t) => t.length === 1 && /[A-Za-z0-9₦.,\-/:()]/.test(t)
+    (t) => t.length === 1 && /[A-Za-z0-9₦.,\-/:().]/.test(t)
   );
 
-  // If more than 60% of tokens are single characters, it's likely char-level
-  return singleCharTokens.length / tokens.length > 0.6;
+  // If more than 50% are single characters, it's character-level
+  return singleCharTokens.length / tokens.length > 0.5;
 }
 
 function mergeCharacterLevelText(text: string): string {
   // Remove ALL single spaces between alphanumeric/symbol characters
   // This aggressively merges "O L A D A Y O" → "OLADAYO"
-  return text.replace(/(?<=[A-Za-z0-9₦.,\-/:().]) (?=[A-Za-z0-9₦.,\-/:().])/g, "");
+  // Also handles "0 2 /0 2 /2 6" → "02/02/26"
+  let result = text.replace(/(?<=[A-Za-z0-9₦.,\-/:().]) (?=[A-Za-z0-9₦.,\-/:().])/g, "");
+  
+  // Keep trying until no more merges possible
+  let previous;
+  do {
+    previous = result;
+    result = result.replace(/(?<=[A-Za-z0-9₦.,\-/:().]) (?=[A-Za-z0-9₦.,\-/:().])/g, "");
+  } while (result !== previous);
+  
+  return result;
 }
 
 /**
