@@ -18,7 +18,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{__html: "if(localStorage.getItem('theme)==='dark'||(!localStorage.getItem('theme)&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')"}} />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#003527" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <script dangerouslySetInnerHTML={{__html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js')})}`}} />
+      </head>
       <body className={`${inter.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} font-sohne antialiased`}>
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-forest focus:text-white focus:px-4 focus:py-2 focus:rounded-buttons focus:text-sm focus:font-medium">
+          Skip to content
+        </a>
         {children}
       </body>
     </html>

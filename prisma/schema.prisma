@@ -179,6 +179,8 @@ model Transaction {
   isSelfTransfer        Boolean   @default(false)
   transferToBankId      String?
   isRecurring           Boolean   @default(false)
+  notes                 String?
+  tags                  String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 

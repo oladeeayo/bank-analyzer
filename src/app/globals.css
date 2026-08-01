@@ -177,6 +177,17 @@ html {
   scroll-behavior: smooth;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 .btn-lift {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -194,6 +205,47 @@ html {
 .card-lift:hover {
   transform: translateY(-3px);
 }
+
+/* Dark mode */
+.dark {
+  --background: 150 20% 5%;
+  --foreground: 150 10% 90%;
+  --card: 150 20% 8%;
+  --card-foreground: 150 10% 90%;
+  --popover: 150 20% 8%;
+  --popover-foreground: 150 10% 90%;
+  --primary: 152 100% 50%;
+  --primary-foreground: 0 0% 5%;
+  --secondary: 80 100% 30%;
+  --secondary-foreground: 0 0% 5%;
+  --muted: 150 10% 15%;
+  --muted-foreground: 150 5% 55%;
+  --accent: 30 100% 15%;
+  --accent-foreground: 30 80% 80%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 150 10% 18%;
+  --input: 150 10% 18%;
+  --ring: 152 100% 50%;
+}
+
+.dark body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.dark .bg-paper-white { background-color: #1a1d21; }
+.dark .bg-mist-gray { background-color: #252830; }
+.dark .text-ink-black { color: #e8e8ea; }
+.dark .text-ash-gray { color: #8a8d96; }
+.dark .text-slate-gray { color: #a0a3ab; }
+.dark .border-\[\#ececec\] { border-color: #2a2d35; }
+.dark .bg-forest { background-color: #004d3a; }
+.dark .text-forest { color: #95d3ba; }
+.dark .bg-error\/10 { background-color: rgba(186, 26, 26, 0.2); }
+.dark .bg-lime-vibrant\/20 { background-color: rgba(172, 248, 71, 0.15); }
+.dark .bg-forest\/5 { background-color: rgba(0, 53, 39, 0.3); }
+.dark .bg-forest\/10 { background-color: rgba(0, 53, 39, 0.4); }
 
 /* Floating product artifact */
 .floating-artifact {

@@ -18,23 +18,45 @@ import {
   XMarkIcon,
   DocumentTextIcon,
   ShoppingBagIcon,
+  MoonIcon,
+  SunIcon,
+  CalendarDaysIcon,
+  ArrowDownTrayIcon,
+  TrophyIcon,
 } from "@heroicons/react/24/outline";
+import { useEffect, useState } from "react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
   { name: "Transactions", href: "/dashboard/transactions", icon: ArrowsRightLeftIcon },
-  { name: "Merchants", href: "/dashboard/merchants", icon: ShoppingBagIcon },
-  { name: "Report", href: "/dashboard/report", icon: DocumentTextIcon },
-  { name: "Bank Accounts", href: "/dashboard/upload", icon: BuildingOffice2Icon },
-  { name: "Budgets", href: "/dashboard/budgets", icon: WalletIcon },
+  { name: "Upload", href: "/dashboard/upload", icon: BuildingOffice2Icon },
   { name: "Analytics", href: "/dashboard/analytics", icon: ChartPieIcon },
+  { name: "Calendar", href: "/dashboard/calendar", icon: CalendarDaysIcon },
+  { name: "Budgets", href: "/dashboard/budgets", icon: WalletIcon },
   { name: "Goals", href: "/dashboard/goals", icon: FlagIcon },
+  { name: "Merchants", href: "/dashboard/merchants", icon: ShoppingBagIcon },
+  { name: "Challenges", href: "/dashboard/challenges", icon: TrophyIcon },
+  { name: "Report", href: "/dashboard/report", icon: DocumentTextIcon },
+  { name: "Export", href: "/dashboard/export", icon: ArrowDownTrayIcon },
   { name: "Categories", href: "/dashboard/settings/categories", icon: FolderIcon },
 ];
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains("dark");
+    setDarkMode(isDark);
+  }, []);
+
+  const toggleDarkMode = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -99,6 +121,13 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           <Cog6ToothIcon className="h-5 w-5 shrink-0" />
           Settings
         </Link>
+        <button
+          onClick={toggleDarkMode}
+          className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest hover:bg-mist-gray transition-all active:scale-[0.97]"
+        >
+          {darkMode ? <SunIcon className="h-5 w-5 shrink-0" /> : <MoonIcon className="h-5 w-5 shrink-0" />}
+          {darkMode ? "Light Mode" : "Dark Mode"}
+        </button>
         <button
           onClick={handleSignOut}
           className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest hover:bg-mist-gray transition-all active:scale-[0.97]"

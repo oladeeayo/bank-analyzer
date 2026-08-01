@@ -273,7 +273,24 @@ export default function CategoriesPage() {
   };
 
   if (userLoading || loading) {
-    return <div className="flex items-center justify-center h-64 text-ash-gray">Loading categories...</div>;
+    return (
+      <div className="space-y-6 max-w-3xl animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-7 w-36 bg-mist-gray rounded-cards" />
+            <div className="h-4 w-56 bg-mist-gray rounded-cards" />
+          </div>
+          <div className="h-9 w-32 bg-mist-gray rounded-xl" />
+        </div>
+        <div className="bg-paper-white border border-[#ececec] rounded-cards p-4">
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-10 bg-mist-gray rounded-cards" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

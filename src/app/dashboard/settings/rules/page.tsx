@@ -496,7 +496,11 @@ function RulesPage() {
 
       <div className="space-y-2">
         {loading ? (
-          <div className="text-center py-8 text-ash-gray">Loading rules...</div>
+          <div className="space-y-2 animate-pulse">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-24 bg-mist-gray rounded-cards" />
+            ))}
+          </div>
         ) : sortedRules.length === 0 ? (
           <div className="text-center py-12 text-ash-gray">
             <BoltIcon className="h-12 w-12 mx-auto mb-3 opacity-30" />

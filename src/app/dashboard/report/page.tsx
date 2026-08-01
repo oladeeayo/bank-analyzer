@@ -49,6 +49,9 @@ export default function ReportPage() {
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [quarter, setQuarter] = useState(Math.ceil((new Date().getMonth() + 1) / 3));
 
+  const currentYear = new Date().getFullYear();
+  const availableYears = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i);
+
   const generateReport = async () => {
     if (!user) return;
     setGenerating(true);
@@ -114,7 +117,7 @@ export default function ReportPage() {
         <div className="flex flex-wrap items-center gap-3">
           <select value={year} onChange={(e) => setYear(parseInt(e.target.value))}
             className="bg-mist-gray border border-[#ececec] text-ink-black rounded-inputs px-3 sm:px-4 py-2 text-sm">
-            {[2023, 2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
+            {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
           {period === "monthly" && (
             <select value={month} onChange={(e) => setMonth(parseInt(e.target.value))}

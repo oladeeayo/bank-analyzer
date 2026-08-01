@@ -34,7 +34,8 @@ interface AnalyticsData {
 const DONUT_COLORS = ["#003527", "#416900", "#8BC34A", "#C5E1A5", "#DCF5B0", "#ACF847", "#E8F5E9", "#66BB6A"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const availableYears = [2023, 2024, 2025, 2026, 2027];
+const currentYear = new Date().getFullYear();
+const availableYears = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i);
 
 const HOURS = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -128,7 +129,25 @@ export default function AnalyticsPage() {
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-ash-gray">Loading analytics...</div>;
+  if (loading) return (
+    <div className="space-y-8 animate-pulse">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="h-7 w-48 bg-mist-gray rounded-cards" />
+          <div className="h-4 w-32 bg-mist-gray rounded-cards" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-24 bg-mist-gray rounded-cards" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 h-80 bg-mist-gray rounded-cards" />
+        <div className="h-80 bg-mist-gray rounded-cards" />
+      </div>
+    </div>
+  );
   if (!data) return <div className="text-center py-16 text-ash-gray">No data available. Upload statements to see analytics.</div>;
 
   const { summary, categoryBreakdown, merchantRanking, dailySpending, dailyCredits, monthlyChart } = data;
@@ -169,7 +188,7 @@ export default function AnalyticsPage() {
     { title: "Highest Spending Day", value: sortedDays.length > 0 ? formatCurrency(Math.max(...sortedDays.map(d => dailySpending[d]))) : "—", detail: `${sortedDays.length} days with spending`, color: "text-forest" },
     { title: "Most Visited Merchant", value: merchantRanking[0]?.name || "—", detail: `${merchantRanking[0]?.count || 0} visits`, color: "text-forest" },
     { title: "Largest Transaction", value: summary.biggestExpense ? formatCurrency(summary.biggestExpense.amount) : "—", detail: summary.biggestExpense?.description || "No data", color: "text-error" },
-    { title: "Savings Rate", value: `${summary.savingsRate.toFixed(1)}%`, detail: summary.savingsRate > 20 ? "Great job!" : "Consider saving more", color: summary.savingsRate > 20 ? "text-forest" : "text-amber-700" },
+    { title: "Savings Rate", value: `${summary.savingsRate.toFixed(1)}%`, detail: summary.savingsRate > 20 ? "Great job!" : "Consider saving more", color: summary.savingsRate > 20 ? "text-forest" : "text-pending" },
   ];
 
   const periodOptions = [
@@ -279,7 +298,7 @@ export default function AnalyticsPage() {
             </h2>
             <div className="flex items-center gap-4 text-[11px]">
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#003527]" /> Income</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#8BC34A]" /> Expense</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-lime-bright" /> Expense</span>
             </div>
           </div>
 
@@ -316,7 +335,7 @@ export default function AnalyticsPage() {
                           <div key={i} className="flex-1 flex justify-center self-start" style={{ height: `${pct}%` }}>
                             <div
                               onClick={() => setSelectedBar(isSelected ? null : { label: `${MONTH_NAMES[m.month - 1]} ${m.year}`, income: m.credits, expense: m.debits, net: m.credits - m.debits })}
-                              className={`w-full max-w-[52px] rounded-b-sm transition-all cursor-pointer ${isSelected ? "bg-[#8BC34A] ring-2 ring-[#8BC34A]/30 scale-105" : "bg-[#8BC34A] hover:bg-[#8BC34A]/80"}`}
+                              className={`w-full max-w-[52px] rounded-b-sm transition-all cursor-pointer ${isSelected ? "bg-lime-bright ring-2 ring-[#8BC34A]/30 scale-105" : "bg-lime-bright hover:bg-lime-bright/80"}`}
                             />
                           </div>
                         );
@@ -391,7 +410,7 @@ export default function AnalyticsPage() {
                                 const income = dailyCredits[dateStr] || 0;
                                 setSelectedBar(isSelected ? null : { label: dateStr, income, expense, net: income - expense });
                               }}
-                              className={`w-full max-w-[28px] rounded-b-sm transition-all cursor-pointer ${isSelected ? "bg-[#8BC34A] ring-2 ring-[#8BC34A]/30 scale-110" : "bg-[#8BC34A] hover:bg-[#8BC34A]/80"}`}
+                              className={`w-full max-w-[28px] rounded-b-sm transition-all cursor-pointer ${isSelected ? "bg-lime-bright ring-2 ring-[#8BC34A]/30 scale-110" : "bg-lime-bright hover:bg-lime-bright/80"}`}
                             />
                           </div>
                         );
@@ -472,8 +491,8 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="h-6 w-px bg-[#ececec]" />
                     <div>
-                      <p className="text-[9px] text-[#4a7c0f] uppercase">Received</p>
-                      <p className="text-xs font-mono font-medium text-[#4a7c0f]">{formatCurrency(selectedHeatCell.credits)}</p>
+                      <p className="text-[9px] text-lime uppercase">Received</p>
+                      <p className="text-xs font-mono font-medium text-lime">{formatCurrency(selectedHeatCell.credits)}</p>
                     </div>
                     <button onClick={() => setSelectedHeatCell(null)} className="ml-auto text-ash-gray hover:text-ink-black">
                       <XMarkIcon className="h-3.5 w-3.5" />
@@ -609,9 +628,9 @@ export default function AnalyticsPage() {
                   <p className="text-[10px] uppercase text-forest/60">Inflow (Credit)</p>
                   <p className="text-base sm:text-xl font-mono font-medium text-forest">{formatCurrency(drilldownData.totalCredits)}</p>
                 </div>
-                <div className="p-2 sm:p-4 bg-[#8BC34A]/10 rounded-lg">
-                  <p className="text-[10px] uppercase text-[#4a7c0f]/60">Outflow (Debit)</p>
-                  <p className="text-base sm:text-xl font-mono font-medium text-[#4a7c0f]">{formatCurrency(drilldownData.totalDebits)}</p>
+                <div className="p-2 sm:p-4 bg-lime-bright/10 rounded-lg">
+                  <p className="text-[10px] uppercase text-lime/60">Outflow (Debit)</p>
+                  <p className="text-base sm:text-xl font-mono font-medium text-lime">{formatCurrency(drilldownData.totalDebits)}</p>
                 </div>
                 <div className="p-2 sm:p-4 bg-mist-gray rounded-lg">
                   <p className="text-[10px] uppercase text-ash-gray">Net</p>
@@ -636,11 +655,11 @@ export default function AnalyticsPage() {
                         <td className="py-1.5 sm:py-2 text-ash-gray text-xs sm:text-sm">{formatDate(tx.date)}</td>
                         <td className="py-1.5 sm:py-2 text-ink-black truncate max-w-[200px] text-xs sm:text-sm">{tx.normalizedDescription || tx.description}</td>
                         <td className="py-1.5 sm:py-2">
-                          <span className={`text-[10px] px-2 py-0.5 rounded ${tx.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-[#8BC34A]/20 text-[#4a7c0f]"}`}>
+                          <span className={`text-[10px] px-2 py-0.5 rounded ${tx.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-lime-bright/20 text-lime"}`}>
                             {tx.type.toUpperCase()}
                           </span>
                         </td>
-                        <td className={`py-1.5 sm:py-2 text-right font-mono text-xs sm:text-sm ${tx.type === "credit" ? "text-forest" : "text-[#4a7c0f]"}`}>
+                        <td className={`py-1.5 sm:py-2 text-right font-mono text-xs sm:text-sm ${tx.type === "credit" ? "text-forest" : "text-lime"}`}>
                           {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
                         </td>
                       </tr>

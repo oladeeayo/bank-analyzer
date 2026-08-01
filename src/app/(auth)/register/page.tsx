@@ -61,12 +61,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#a3a3a3] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-surface-low p-4">
       <div className="w-full max-w-[440px]">
-        <div className="bg-white rounded-3xl shadow-2xl p-10 relative">
+        <div className="bg-paper-white rounded-elevated shadow-elevated p-10 relative">
           <button
             onClick={() => router.push("/")}
-            className="absolute top-6 right-6 text-gray-400 hover:text-gray-700 transition-colors"
+            className="absolute top-6 right-6 text-ash-gray hover:text-ink-black transition-colors"
+            aria-label="Close"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -74,78 +75,85 @@ export default function RegisterPage() {
             </svg>
           </button>
 
-          <h1 className="text-[22px] font-semibold text-center text-gray-900 mb-12">
-            Log in or sign up
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div className="w-10 h-10 bg-forest rounded-buttons flex items-center justify-center text-white">
+              <span className="font-bold text-lg">C</span>
+            </div>
+            <span className="font-signifier text-2xl text-forest">CONYEST</span>
+          </div>
+
+          <h1 className="font-signifier text-[22px] text-center text-ink-black mb-8">
+            Create your account
           </h1>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-xl text-sm mb-6">
+            <div className="bg-error-container border border-error/20 text-error px-4 py-2.5 rounded-inputs text-sm mb-6">
               {error}
             </div>
           )}
 
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-900 block">
-              Email address
-            </Label>
-            <form onSubmit={handleSubmit} className="relative">
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="20" height="16" x="2" y="4" rx="2" />
-                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-              </svg>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="name" className="text-sm font-medium text-ink-black block mb-2.5">
+                Name
+              </Label>
               <Input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                className="h-11 rounded-inputs border-[#ececec] bg-paper-white text-ink-black placeholder:text-smoke-gray focus-visible:ring-2 focus-visible:ring-lime-vibrant/50 text-[15px]"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="email" className="text-sm font-medium text-ink-black block mb-2.5">
+                Email address
+              </Label>
+              <Input
+                id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="pl-12 pr-24 h-14 rounded-2xl border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-gray-900/10 focus-visible:border-gray-300 text-[15px]"
+                className="h-11 rounded-inputs border-[#ececec] bg-paper-white text-ink-black placeholder:text-smoke-gray focus-visible:ring-2 focus-visible:ring-lime-vibrant/50 text-[15px]"
                 required
               />
-              <button
-                type="submit"
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-5 text-[15px] font-medium text-gray-400 hover:text-gray-900 transition-colors rounded-xl"
-              >
-                Continue
-              </button>
-            </form>
-
-            <div className="pt-3 space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-gray-900 block mb-2.5">
-                  Name
-                </Label>
-                <Input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  className="h-14 rounded-2xl border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-gray-900/10 focus-visible:border-gray-300 text-[15px]"
-                  required
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-900 block mb-2.5">
-                  Password
-                </Label>
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a password"
-                  className="h-14 rounded-2xl border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-gray-900/10 focus-visible:border-gray-300 text-[15px]"
-                  required
-                  minLength={8}
-                />
-              </div>
             </div>
-          </div>
+
+            <div>
+              <Label htmlFor="password" className="text-sm font-medium text-ink-black block mb-2.5">
+                Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create a password"
+                className="h-11 rounded-inputs border-[#ececec] bg-paper-white text-ink-black placeholder:text-smoke-gray focus-visible:ring-2 focus-visible:ring-lime-vibrant/50 text-[15px]"
+                required
+                minLength={8}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-11"
+              disabled={loading}
+            >
+              {loading ? "Creating account..." : "Create account"}
+            </Button>
+          </form>
 
           <div className="relative my-7">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
+              <div className="w-full border-t border-[#ececec]" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-3 text-gray-400">or</span>
+              <span className="bg-paper-white px-3 text-ash-gray">or</span>
             </div>
           </div>
 
@@ -153,7 +161,7 @@ export default function RegisterPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full h-14 rounded-2xl border-gray-200 text-gray-900 hover:bg-gray-50 font-normal text-[15px]"
+              className="w-full h-11"
               onClick={async () => {
                 const { error } = await signIn.social({
                   provider: "google",
@@ -174,20 +182,20 @@ export default function RegisterPage() {
             </Button>
           </div>
 
-          <p className="text-center text-[13px] text-gray-400 mt-8 leading-relaxed">
+          <p className="text-center text-[13px] text-ash-gray mt-8 leading-relaxed">
             By signing up I agree to the{" "}
-            <Link href="#" className="underline hover:text-gray-600">
+            <Link href="#" className="underline hover:text-slate-gray">
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link href="#" className="underline hover:text-gray-600">
+            <Link href="#" className="underline hover:text-slate-gray">
               Privacy Policy
             </Link>
           </p>
 
-          <p className="text-center text-[13px] text-gray-500 mt-5">
+          <p className="text-center text-[13px] text-smoke-gray mt-5">
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-gray-900 hover:underline">
+            <Link href="/login" className="font-medium text-ink-black hover:underline">
               Log in
             </Link>
           </p>

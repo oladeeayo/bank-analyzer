@@ -21,6 +21,8 @@ interface Transaction {
   reference: string | null;
   merchantId: string | null;
   categoryId: string | null;
+  notes: string | null;
+  tags: string | null;
   bank: { bankName: string; nickname: string | null };
   merchant: { id: string; displayName: string; icon: string; color: string } | null;
   category: { id: string; name: string; icon: string; color: string } | null;
@@ -84,6 +86,9 @@ export default function TransactionsPage() {
   const [categorySearch, setCategorySearch] = useState("");
   const [selectedParentForPicker, setSelectedParentForPicker] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<Array<{ txId: string; prevCategoryId: string | null; prevMerchantId: string | null; prevNormalizedDesc: string | null }>>([]);
+  const [txNotes, setTxNotes] = useState("");
+  const [txTags, setTxTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
   const [ruleForm, setRuleForm] = useState({
     normalizedMerchant: "",
     categoryId: "",
@@ -209,7 +214,18 @@ export default function TransactionsPage() {
     }
   };
 
-  if (userLoading || !user) return <div className="flex items-center justify-center h-64"><div className="text-ash-gray">Loading...</div></div>;
+  if (userLoading || !user) return (
+    <div className="space-y-6 animate-pulse">
+      <div className="h-7 w-48 bg-mist-gray rounded-cards" />
+      <div className="bg-paper-white border border-[#ececec] rounded-cards p-4">
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-10 bg-mist-gray rounded-cards" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   const handleSave = async () => {
     if (!selectedTx) return;
@@ -398,6 +414,13 @@ export default function TransactionsPage() {
     setSimilarFilterType("all");
     setSimilarFilterOp("all");
     setSimilarFilterAmount("");
+    setTxNotes(tx.notes || "");
+    try {
+      setTxTags(tx.tags ? JSON.parse(tx.tags) : []);
+    } catch {
+      setTxTags([]);
+    }
+    setTagInput("");
     findSimilarTransactions(tx);
   };
 
@@ -594,7 +617,13 @@ export default function TransactionsPage() {
               </thead>
               <tbody className="divide-y divide-[#ececec]">
                 {loading ? (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-ash-gray text-sm">Loading...</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-4">
+                    <div className="space-y-3 animate-pulse">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="h-10 bg-mist-gray rounded-cards" />
+                      ))}
+                    </div>
+                  </td></tr>
                 ) : transactions.length === 0 ? (
                   <tr><td colSpan={7} className="px-4 py-8 text-center text-ash-gray text-sm">No transactions found</td></tr>
                 ) : (
@@ -971,6 +1000,94 @@ export default function TransactionsPage() {
                   />
                   Mark as Internal Transfer
                 </label>
+              </div>
+
+              {/* Notes & Tags */}
+              <div>
+                <Label className="text-xs font-semibold text-ink-black mb-1 block">Notes</Label>
+                <textarea
+                  value={txNotes}
+                  onChange={(e) => setTxNotes(e.target.value)}
+                  onBlur={async () => {
+                    if (!selectedTx) return;
+                    try {
+                      await fetch(`/api/transactions/${selectedTx.id}/notes`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ notes: txNotes }),
+                      });
+                      setSelectedTx(prev => prev ? { ...prev, notes: txNotes } : prev);
+                    } catch (err) {
+                      console.error("Failed to save notes:", err);
+                    }
+                  }}
+                  placeholder="Add notes about this transaction..."
+                  rows={3}
+                  className="bg-paper-white border border-[#ececec] rounded-lg text-sm w-full p-2 resize-none"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs font-semibold text-ink-black mb-1 block">Tags</Label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {txTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-lime-vibrant/20 text-forest text-xs rounded-full"
+                    >
+                      {tag}
+                      <button
+                        onClick={async () => {
+                          const newTags = txTags.filter(t => t !== tag);
+                          setTxTags(newTags);
+                          if (selectedTx) {
+                            try {
+                              await fetch(`/api/transactions/${selectedTx.id}/notes`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ tags: newTags }),
+                              });
+                              setSelectedTx(prev => prev ? { ...prev, tags: JSON.stringify(newTags) } : prev);
+                            } catch (err) {
+                              console.error("Failed to save tags:", err);
+                            }
+                          }
+                        }}
+                        className="text-forest/60 hover:text-forest"
+                      >
+                        <XMarkIcon className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <div className="flex items-center gap-1">
+                    <input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={async (e) => {
+                        if (e.key === "Enter" && tagInput.trim()) {
+                          e.preventDefault();
+                          const newTags = [...txTags, tagInput.trim()];
+                          setTxTags(newTags);
+                          setTagInput("");
+                          if (selectedTx) {
+                            try {
+                              await fetch(`/api/transactions/${selectedTx.id}/notes`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ tags: newTags }),
+                              });
+                              setSelectedTx(prev => prev ? { ...prev, tags: JSON.stringify(newTags) } : prev);
+                            } catch (err) {
+                              console.error("Failed to save tags:", err);
+                            }
+                          }
+                        }
+                      }}
+                      placeholder="Add tag..."
+                      className="bg-transparent border-none text-xs p-0 w-20 focus:outline-none placeholder:text-ash-gray"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Similar Transactions */}

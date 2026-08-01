@@ -7,6 +7,11 @@ import {
   ArrowTrendingDownIcon,
   ArrowUpRightIcon,
   ArrowDownRightIcon,
+  ExclamationCircleIcon,
+  ShieldCheckIcon,
+  CalendarDaysIcon,
+  BellAlertIcon,
+  BuildingOffice2Icon,
 } from "@heroicons/react/24/outline";
 import { useUser } from "@/lib/hooks";
 import {
@@ -76,7 +81,8 @@ interface RecurringPattern {
 
 const CHART_COLORS = ["#003527", "#416900", "#95d3ba", "#acf847", "#91db2a"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const availableYears = [2023, 2024, 2025, 2026, 2027];
+const currentYear = new Date().getFullYear();
+const availableYears = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i);
 
 export default function DashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -84,6 +90,7 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [recurring, setRecurring] = useState<RecurringPattern[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState("monthly");
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
@@ -103,15 +110,20 @@ export default function DashboardPage() {
 
   const fetchDashboard = async () => {
     setLoading(true);
+    setError(null);
     try {
       let url = `/api/analytics?userId=${user!.id}&period=${period}`;
       if (period === "monthly") url += `&month=${month}&year=${year}`;
       else if (period === "quarterly") url += `&quarter=${quarter}&year=${year}`;
       else if (period === "yearly") url += `&year=${year}`;
       const res = await fetch(url);
-      if (res.ok) setData(await res.json());
+      if (res.ok) {
+        setData(await res.json());
+      } else {
+        setError("Failed to load dashboard data. Please try again.");
+      }
     } catch (err) {
-      console.error("Failed to fetch dashboard:", err);
+      setError("Unable to connect. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -156,16 +168,34 @@ export default function DashboardPage() {
   if (!data) {
     return (
       <div className="text-center py-16">
-        <h2 className="font-signifier text-[36px] text-ink-black mb-4">Welcome to CONYEST</h2>
-        <p className="text-slate-gray mb-8">
-          Get started by adding your banks and uploading your first statement.
-        </p>
-        <a
-          href="/dashboard/banks"
-          className="inline-flex items-center px-6 py-3 bg-forest text-white rounded-buttons font-medium hover:opacity-90 transition-all"
-        >
-          Add Your First Bank
-        </a>
+        {error ? (
+          <>
+            <div className="w-16 h-16 bg-error-container rounded-full flex items-center justify-center mx-auto mb-6">
+              <ExclamationCircleIcon className="h-8 w-8 text-error" />
+            </div>
+            <h2 className="font-signifier text-[28px] text-ink-black mb-3">Something went wrong</h2>
+            <p className="text-slate-gray mb-6 max-w-md mx-auto">{error}</p>
+            <button
+              onClick={fetchDashboard}
+              className="inline-flex items-center px-6 py-3 bg-forest text-white rounded-buttons font-medium hover:bg-forest-container transition-all"
+            >
+              Try Again
+            </button>
+          </>
+        ) : (
+          <>
+            <h2 className="font-signifier text-[36px] text-ink-black mb-4">Welcome to CONYEST</h2>
+            <p className="text-slate-gray mb-8">
+              Get started by adding your banks and uploading your first statement.
+            </p>
+            <a
+              href="/dashboard/banks"
+              className="inline-flex items-center px-6 py-3 bg-forest text-white rounded-buttons font-medium hover:opacity-90 transition-all"
+            >
+              Add Your First Bank
+            </a>
+          </>
+        )}
       </div>
     );
   }
@@ -219,6 +249,7 @@ export default function DashboardPage() {
             <button
               key={p.value}
               onClick={() => setPeriod(p.value)}
+              aria-pressed={period === p.value}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all active:scale-[0.96] ${
                 period === p.value
                   ? "bg-forest text-lime-vibrant"
@@ -324,6 +355,143 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Financial Health Score, Forecast & Alerts */}
+      {(() => {
+        // Financial Health Score calculation
+        const savingsRateScore = summary.savingsRate > 20 ? 40 : summary.savingsRate >= 10 ? (summary.savingsRate / 20) * 40 : 0;
+        const incomeStabilityScore = summary.totalIncome > 0 ? 30 : 0;
+        const budgetAdherenceScore = 15; // no budget data available, give 50%
+        const healthScore = Math.round(savingsRateScore + incomeStabilityScore + budgetAdherenceScore);
+
+        let scoreLabel = "Needs Attention";
+        let scoreColor = "text-error";
+        let scoreBg = "bg-error/10";
+        if (healthScore >= 80) { scoreLabel = "Excellent"; scoreColor = "text-forest"; scoreBg = "bg-forest/10"; }
+        else if (healthScore >= 60) { scoreLabel = "Good"; scoreColor = "text-[#7cb342]"; scoreBg = "bg-[#7cb342]/10"; }
+        else if (healthScore >= 40) { scoreLabel = "Fair"; scoreColor = "text-[#f59e0b]"; scoreBg = "bg-[#f59e0b]/10"; }
+
+        // Spending Forecast
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const projectedSpend = summary.averageDailySpend * daysInMonth;
+        const lastMonthDebits = monthlyChart.length >= 2 ? monthlyChart[monthlyChart.length - 2]?.debits : null;
+
+        // Spending Alerts
+        const alerts: { type: "warning" | "error" | "info"; message: string }[] = [];
+        const dailyValues = Object.values(dailySpending);
+        const avgDaily = summary.averageDailySpend;
+        if (dailyValues.length > 0) {
+          const maxDaily = Math.max(...dailyValues);
+          if (maxDaily > avgDaily * 2 && avgDaily > 0) {
+            alerts.push({ type: "warning", message: `Unusual spending spike detected — ₦${formatCurrency(Math.round(maxDaily))} in a single day (${(maxDaily / avgDaily).toFixed(1)}× your average)` });
+          }
+        }
+        if (summary.savingsRate < 10) {
+          alerts.push({ type: "error", message: `Savings rate is below 10% (${summary.savingsRate.toFixed(1)}%). Consider reducing discretionary spending.` });
+        }
+
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Financial Health Score */}
+            <div className="bg-paper-white border border-[#ececec] p-5 sm:p-6 rounded-cards shadow-subtle flex flex-col justify-between">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`p-2 rounded-lg ${scoreBg}`}>
+                  <ShieldCheckIcon className={`h-5 w-5 ${scoreColor}`} />
+                </div>
+                <div>
+                  <h2 className="font-signifier text-xl text-ink-black">Financial Health</h2>
+                  <p className="text-xs text-ash-gray mt-0.5">Score based on savings, income &amp; budget</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-5">
+                <div className="relative w-20 h-20 shrink-0">
+                  <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="34" stroke="#ececec" strokeWidth="6" fill="none" />
+                    <circle cx="40" cy="40" r="34" stroke="currentColor" strokeWidth="6" fill="none"
+                      strokeDasharray={`${2 * Math.PI * 34}`}
+                      strokeDashoffset={`${2 * Math.PI * 34 * (1 - healthScore / 100)}`}
+                      strokeLinecap="round"
+                      className={scoreColor}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className={`text-2xl font-mono font-semibold ${scoreColor}`}>{healthScore}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className={`text-sm font-semibold ${scoreColor}`}>{scoreLabel}</span>
+                  <p className="text-xs text-ash-gray mt-1 leading-relaxed">
+                    Savings {summary.savingsRate.toFixed(1)}% · Income {summary.totalIncome > 0 ? "stable" : "none"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Spending Forecast */}
+            <div className="bg-paper-white border border-[#ececec] p-5 sm:p-6 rounded-cards shadow-subtle flex flex-col justify-between">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-lg bg-forest/10">
+                  <CalendarDaysIcon className="h-5 w-5 text-forest" />
+                </div>
+                <div>
+                  <h2 className="font-signifier text-xl text-ink-black">Spending Forecast</h2>
+                  <p className="text-xs text-ash-gray mt-0.5">Projected end-of-month spend</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-ink-black leading-relaxed">
+                  At your current daily spend of <span className="font-mono font-medium text-forest">{formatCurrency(Math.round(summary.averageDailySpend))}</span>,
+                  you&apos;re projected to spend <span className="font-mono font-medium text-forest">{formatCurrency(Math.round(projectedSpend))}</span> this month.
+                </p>
+                {lastMonthDebits !== null && (
+                  <div className="mt-3 flex items-center gap-2">
+                    {projectedSpend > lastMonthDebits ? (
+                      <ArrowTrendingUpIcon className="h-3.5 w-3.5 text-error" />
+                    ) : (
+                      <ArrowTrendingDownIcon className="h-3.5 w-3.5 text-forest" />
+                    )}
+                    <span className="text-xs text-ash-gray">
+                      {projectedSpend > lastMonthDebits ? "+" : ""}
+                      {(((projectedSpend - lastMonthDebits) / lastMonthDebits) * 100).toFixed(1)}% vs last month
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Spending Alerts */}
+            <div className="bg-paper-white border border-[#ececec] p-5 sm:p-6 rounded-cards shadow-subtle flex flex-col justify-between">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-lg bg-[#f59e0b]/10">
+                  <BellAlertIcon className="h-5 w-5 text-[#f59e0b]" />
+                </div>
+                <div>
+                  <h2 className="font-signifier text-xl text-ink-black">Spending Alerts</h2>
+                  <p className="text-xs text-ash-gray mt-0.5">Anomalies &amp; warnings</p>
+                </div>
+              </div>
+              <div>
+                {alerts.length > 0 ? (
+                  <ul className="space-y-2.5">
+                    {alerts.map((alert, i) => (
+                      <li key={i} className="flex items-start gap-2.5">
+                        <ExclamationCircleIcon className={`h-4 w-4 mt-0.5 shrink-0 ${alert.type === "error" ? "text-error" : "text-[#f59e0b]"}`} />
+                        <span className="text-xs text-ink-black leading-relaxed">{alert.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-2 h-2 rounded-full bg-forest animate-pulse" />
+                    <span className="text-sm text-ash-gray">All clear — no spending alerts.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Middle Section: Cashflow Chart + Category Donut */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Cashflow Chart */}
@@ -427,6 +595,115 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Bank Comparison */}
+      {(() => {
+        const banks = data.bankComparison || [];
+        if (banks.length <= 1) {
+          return (
+            <div className="bg-paper-white border border-[#ececec] p-4 sm:p-6 rounded-cards shadow-subtle">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-lg bg-mist-gray">
+                  <BuildingOffice2Icon className="h-5 w-5 text-ash-gray" />
+                </div>
+                <div>
+                  <h2 className="font-signifier text-xl text-ink-black">Bank Comparison</h2>
+                  <p className="text-xs text-ash-gray mt-0.5">Income vs expenses by bank</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-center h-32 text-ash-gray text-sm">
+                Connect multiple banks to see comparison
+              </div>
+            </div>
+          );
+        }
+
+        const maxValue = Math.max(...banks.flatMap(b => [b.income, b.expenses]));
+        const totalIncome = banks.reduce((sum, b) => sum + b.income, 0);
+        const totalExpenses = banks.reduce((sum, b) => sum + b.expenses, 0);
+        const highestIncomeBank = banks.reduce((max, b) => b.income > max.income ? b : max, banks[0]);
+        const highestExpensesBank = banks.reduce((max, b) => b.expenses > max.expenses ? b : max, banks[0]);
+
+        return (
+          <div className="bg-paper-white border border-[#ececec] p-4 sm:p-6 rounded-cards shadow-subtle">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-forest/10">
+                <BuildingOffice2Icon className="h-5 w-5 text-forest" />
+              </div>
+              <div>
+                <h2 className="font-signifier text-xl text-ink-black">Bank Comparison</h2>
+                <p className="text-xs text-ash-gray mt-0.5">Income vs expenses by bank</p>
+              </div>
+            </div>
+
+            {/* Bar Chart */}
+            <div className="space-y-4 mb-6">
+              {banks.map((bank, idx) => {
+                const incomeWidth = maxValue > 0 ? (bank.income / maxValue) * 100 : 0;
+                const expensesWidth = maxValue > 0 ? (bank.expenses / maxValue) * 100 : 0;
+                return (
+                  <div key={idx}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-medium text-ink-black">{bank.name}</span>
+                      <span className="text-xs text-ash-gray">
+                        Net: <span className={`font-mono font-medium ${bank.income - bank.expenses >= 0 ? "text-forest" : "text-error"}`}>
+                          {formatCurrency(bank.income - bank.expenses)}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] text-ash-gray w-12 text-right">Income</span>
+                        <div className="flex-1 bg-mist-gray rounded-full h-3 overflow-hidden">
+                          <div
+                            className="bg-forest h-full rounded-full transition-all"
+                            style={{ width: `${incomeWidth}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-mono font-medium text-forest w-24 text-right">{formatCurrency(bank.income)}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] text-ash-gray w-12 text-right">Expense</span>
+                        <div className="flex-1 bg-mist-gray rounded-full h-3 overflow-hidden">
+                          <div
+                            className="bg-error h-full rounded-full transition-all"
+                            style={{ width: `${expensesWidth}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-mono font-medium text-error w-24 text-right">{formatCurrency(bank.expenses)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Summary Stats */}
+            <div className="border-t border-[#ececec] pt-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-mist-gray rounded-cards p-3">
+                  <p className="text-[10px] text-ash-gray uppercase tracking-wide mb-0.5">Total Income</p>
+                  <p className="text-sm font-mono font-medium text-forest">{formatCurrency(totalIncome)}</p>
+                </div>
+                <div className="bg-mist-gray rounded-cards p-3">
+                  <p className="text-[10px] text-ash-gray uppercase tracking-wide mb-0.5">Total Expenses</p>
+                  <p className="text-sm font-mono font-medium text-error">{formatCurrency(totalExpenses)}</p>
+                </div>
+                <div className="bg-mist-gray rounded-cards p-3">
+                  <p className="text-[10px] text-ash-gray uppercase tracking-wide mb-0.5">Highest Income</p>
+                  <p className="text-sm font-medium text-ink-black truncate">{highestIncomeBank.name}</p>
+                  <p className="text-xs font-mono text-forest">{formatCurrency(highestIncomeBank.income)}</p>
+                </div>
+                <div className="bg-mist-gray rounded-cards p-3">
+                  <p className="text-[10px] text-ash-gray uppercase tracking-wide mb-0.5">Highest Expenses</p>
+                  <p className="text-sm font-medium text-ink-black truncate">{highestExpensesBank.name}</p>
+                  <p className="text-xs font-mono text-error">{formatCurrency(highestExpensesBank.expenses)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Recurring Transactions */}
       {recurring.length > 0 && (() => {
@@ -536,19 +813,18 @@ export default function DashboardPage() {
             <p className="text-xs text-ash-gray mt-1">Latest transactions</p>
           </div>
           <a href="/dashboard/transactions" className="text-sm text-forest font-semibold hover:underline">
-            View All →
+            View All
           </a>
         </div>
 
-        <div className="overflow-x-auto hide-scrollbar">
-          <table className="w-full min-w-[600px]">
+        <div className="overflow-x-auto">
+          <table className="w-full">
             <thead>
               <tr className="bg-mist-gray">
                 <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-6 py-3">Merchant</th>
-                <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-6 py-3">Category</th>
+                <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-6 py-3 hidden sm:table-cell">Category</th>
                 <th className="text-left text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-6 py-3">Date</th>
                 <th className="text-right text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-6 py-3">Amount</th>
-                <th className="text-center text-[11px] font-semibold text-ash-gray uppercase tracking-wider px-6 py-3">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#ececec]">
@@ -556,21 +832,21 @@ export default function DashboardPage() {
                 <tr key={tx.id} className="hover:bg-mist-gray/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tx.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-error/10 text-error"}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.type === "credit" ? "bg-lime-vibrant/20 text-forest" : "bg-error/10 text-error"}`}>
                         {tx.type === "credit" ? (
                           <ArrowUpRightIcon className="h-4 w-4" />
                         ) : (
                           <ArrowDownRightIcon className="h-4 w-4" />
                         )}
                       </div>
-                      <span className="text-sm font-semibold text-ink-black">
+                      <span className="text-sm font-semibold text-ink-black truncate max-w-[150px] sm:max-w-none">
                         {tx.normalizedDescription || tx.description}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 hidden sm:table-cell">
                     <span className="text-sm text-slate-gray">
-                      {tx.category?.icon} {tx.category?.name || "—"}
+                      {tx.category?.icon} {tx.category?.name || "\u2014"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -581,20 +857,11 @@ export default function DashboardPage() {
                       {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`inline-flex px-3 py-1 rounded-buttons text-[10px] font-semibold uppercase ${
-                      tx.type === "credit"
-                        ? "bg-lime-vibrant/20 text-forest"
-                        : "bg-error-container text-error"
-                    }`}>
-                      {tx.type === "credit" ? "Credit" : "Debit"}
-                    </span>
-                  </td>
                 </tr>
               ))}
               {transactions.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-ash-gray text-sm">
+                  <td colSpan={4} className="py-8 text-center text-ash-gray text-sm">
                     No recent transactions
                   </td>
                 </tr>

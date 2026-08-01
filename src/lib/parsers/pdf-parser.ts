@@ -301,43 +301,76 @@ function parseGTBankRows(rows: string[][]): ParseResult {
       }
       if (!dateStr) continue;
 
-      // Find debit/credit columns dynamically based on which cells have amounts
-      const amountCells: { val: number; col: number }[] = [];
+      // Collect all numeric cells in this row (excluding date column)
+      const numericCells: { val: number; col: number; raw: string }[] = [];
       for (let j = 0; j < row.length; j++) {
         if (j === dateColIdx) continue;
         const cleaned = row[j].replace(/[^0-9.]/g, "");
         const val = parseFloat(cleaned);
         if (!isNaN(val) && val > 0 && !datePattern.test(row[j])) {
-          amountCells.push({ val, col: j });
+          numericCells.push({ val, col: j, raw: row[j] });
         }
       }
 
-      // Find remarks - last cell that contains text (not a number or date)
+      // Detect balance column: rightmost column with consistently large values, or use colMap
+      let balanceCol = colMap.balance;
+      if (balanceCol === undefined && numericCells.length >= 2) {
+        // Heuristic: the column with the largest value across all aggregated rows is likely balance
+        // For a single row, the rightmost numeric cell is often the balance
+        const rightmost = numericCells[numericCells.length - 1];
+        balanceCol = rightmost.col;
+      }
+
+      let debit = 0, credit = 0;
+      if (colMap.debit !== undefined && colMap.credit !== undefined) {
+        // Use header-mapped columns for precise extraction
+        const debitCleaned = (row[colMap.debit] || "").replace(/[^0-9.]/g, "");
+        const creditCleaned = (row[colMap.credit] || "").replace(/[^0-9.]/g, "");
+        const debitVal = parseFloat(debitCleaned);
+        const creditVal = parseFloat(creditCleaned);
+        if (!isNaN(debitVal) && debitVal > 0) debit = debitVal;
+        if (!isNaN(creditVal) && creditVal > 0) credit = creditVal;
+      } else {
+        // Fallback: find numeric cells excluding date and balance columns
+        const skipCols = new Set<number>();
+        if (dateColIdx >= 0) skipCols.add(dateColIdx);
+        if (balanceCol !== undefined) skipCols.add(balanceCol);
+
+        const amountCells = numericCells.filter(c => !skipCols.has(c.col));
+
+        if (amountCells.length >= 2) {
+          debit = amountCells[0].val;
+          credit = amountCells[1].val;
+        } else if (amountCells.length === 1) {
+          const header = headerRow.join(" ").toLowerCase();
+          if (header.indexOf("debit") < header.indexOf("credit")) {
+            debit = amountCells[0].val;
+          } else {
+            credit = amountCells[0].val;
+          }
+        }
+      }
+
+      // Sanity check: amounts over 1 billion are likely balance values, not transaction amounts
+      if (debit > 1_000_000_000) debit = 0;
+      if (credit > 1_000_000_000) credit = 0;
+
       let remarks = "";
-      for (let j = row.length - 1; j >= 0; j--) {
-        const cell = row[j].trim();
-        if (cell && !datePattern.test(cell) && !/^\d+[\.,]?\d*$/.test(cell) && cell.length > 3) {
-          remarks = cell;
-          break;
+      if (colMap.remarks !== undefined && row[colMap.remarks]) {
+        remarks = row[colMap.remarks].trim();
+      } else {
+        // Fallback: find a text cell that isn't a number, date, or amount
+        for (let j = 0; j < row.length; j++) {
+          const cell = row[j].trim();
+          if (cell && !datePattern.test(cell) && !/^\d+[\.,]?\d*$/.test(cell) && cell.length > 3) {
+            remarks = cell;
+            break;
+          }
         }
       }
 
       const description = cleanNarration(remarks);
       if (!description) continue;
-
-      let debit = 0, credit = 0;
-      if (amountCells.length >= 2) {
-        debit = amountCells[0].val;
-        credit = amountCells[1].val;
-      } else if (amountCells.length === 1) {
-        // Single amount - check if it's in a credit or debit position
-        const header = headerRow.join(" ").toLowerCase();
-        if (header.indexOf("debit") < header.indexOf("credit")) {
-          debit = amountCells[0].val;
-        } else {
-          credit = amountCells[0].val;
-        }
-      }
 
       const amount = debit > 0 ? debit : credit;
       const type: "debit" | "credit" = debit > 0 ? "debit" : "credit";

@@ -202,8 +202,8 @@ export default function HomePage() {
             <div>
               <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">Support</p>
               <div className="space-y-2">
-                <Link href="/privacy" className="block text-xs text-white/50 hover:text-white transition-colors">Privacy</Link>
-                <Link href="/terms" className="block text-xs text-white/50 hover:text-white transition-colors">Terms</Link>
+                <Link href="#" className="block text-xs text-white/50 hover:text-white transition-colors">Privacy</Link>
+                <Link href="#" className="block text-xs text-white/50 hover:text-white transition-colors">Terms</Link>
               </div>
             </div>
           </div>

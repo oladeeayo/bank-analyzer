@@ -106,8 +106,19 @@ export default function MerchantsPage() {
 
   if (userLoading || !user) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-5 h-5 border-2 border-forest border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 animate-pulse">
+        <div className="h-7 w-48 bg-mist-gray rounded-cards" />
+        <div className="h-12 w-full bg-mist-gray rounded-inputs" />
+        <div className="grid grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-20 bg-mist-gray rounded-cards" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-32 bg-mist-gray rounded-cards" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -157,8 +168,10 @@ export default function MerchantsPage() {
 
       {/* Merchant List */}
       {loading ? (
-        <div className="flex items-center justify-center h-40">
-          <div className="w-5 h-5 border-2 border-forest border-t-transparent rounded-full animate-spin" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-32 bg-mist-gray rounded-cards" />
+          ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-ash-gray text-sm">
@@ -360,8 +373,8 @@ function MerchantDetailContent({ data }: { data: MerchantAnalytics }) {
             </div>
             <div className="h-6 w-px bg-[#ececec]" />
             <div>
-              <p className="text-[9px] text-[#4a7c0f] uppercase">Received</p>
-              <p className="text-xs font-mono font-medium text-[#4a7c0f]">{formatCurrency(selectedCell.credits)}</p>
+              <p className="text-[9px] text-lime uppercase">Received</p>
+              <p className="text-xs font-mono font-medium text-lime">{formatCurrency(selectedCell.credits)}</p>
             </div>
             <button onClick={() => setSelectedCell(null)} className="ml-auto text-ash-gray hover:text-ink-black">
               <XMarkIcon className="h-3.5 w-3.5" />

@@ -348,43 +348,90 @@ export default function UploadPage() {
           <Button onClick={openBankModal}>Add Your First Bank</Button>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {banks.map((bank, idx) => (
-            <div
-              key={bank.id}
-              className={`rounded-cards p-6 relative overflow-hidden group ${
-                idx === 0
-                  ? "bg-gradient-to-br from-forest to-forest-container shadow-elevated text-white"
-                  : "bg-paper-white border border-[#ececec] text-ink-black hover:shadow-subtle transition-shadow"
-              }`}
-            >
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <p className={`text-sm mb-1 ${idx === 0 ? "text-white/60" : "text-ash-gray"}`}>{bank.nickname || bank.bankName}</p>
-                    <p className="text-2xl font-mono font-medium">{formatCurrency(bank.openingBalance)}</p>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {banks.map((bank, idx) => {
+            const lastStmt = statements
+              .filter((s) => s.bankId === bank.id && (s.status === "completed" || s.status === "uploaded"))
+              .sort((a, b) => b.year - a.year || b.month - a.month)[0];
+            const lastStmtText = lastStmt
+              ? `${String(lastStmt.month).padStart(2, "0")} ${MONTH_NAMES[lastStmt.month]} ${lastStmt.year}`
+              : null;
+
+            return (
+              <div
+                key={bank.id}
+                className={`rounded-cards p-6 relative overflow-hidden group ${
+                  idx === 0
+                    ? "bg-gradient-to-br from-forest to-forest-container shadow-elevated text-white"
+                    : "bg-paper-white border border-[#ececec] text-ink-black hover:shadow-subtle transition-shadow"
+                }`}
+              >
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-8">
+                    <p className={`text-[13px] font-medium ${idx === 0 ? "text-white/80" : "text-ash-gray"}`}>
+                      {bank.nickname || bank.bankName}
+                    </p>
+                    <div className={`p-2.5 rounded-[14px] ${idx === 0 ? "bg-white/15 backdrop-blur-md" : "bg-mist-gray"}`}>
+                      <BuildingOffice2Icon className={`h-5 w-5 ${idx === 0 ? "text-lime-vibrant" : "text-forest"}`} />
+                    </div>
                   </div>
-                  <div className={`p-2 rounded-lg ${idx === 0 ? "bg-white/20 backdrop-blur-md" : "bg-mist-gray"}`}>
-                    <BuildingOffice2Icon className={`h-5 w-5 ${idx === 0 ? "text-lime-vibrant" : "text-forest"}`} />
+
+                  <p className="text-[28px] leading-tight font-mono font-medium tracking-tight mb-1">
+                    {formatCurrency(bank.openingBalance)}
+                  </p>
+
+                  <p className={`text-xs font-mono mb-6 ${idx === 0 ? "text-white/50" : "text-ash-gray"}`}>
+                    {bank.accountNumber || "No account number"}
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    {lastStmtText ? (
+                      <span
+                        className={`text-[10px] font-medium px-2.5 py-1 rounded-full ${
+                          idx === 0 ? "bg-lime-vibrant/20 text-lime-vibrant" : "bg-lime-vibrant/15 text-forest"
+                        }`}
+                      >
+                        Last statement: {lastStmtText}
+                      </span>
+                    ) : (
+                      <span
+                        className={`text-[10px] font-medium px-2.5 py-1 rounded-full ${
+                          idx === 0 ? "bg-white/15 text-white/70" : "bg-error-container text-error"
+                        }`}
+                      >
+                        Syncing Required
+                      </span>
+                    )}
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleDeleteBank(bank.id)}
+                        className={`text-[11px] font-medium hover:underline ${idx === 0 ? "text-white/50" : "text-ash-gray hover:text-error"}`}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className={`text-xs font-mono ${idx === 0 ? "text-white/60" : "text-ash-gray"}`}>
-                      {bank.accountNumber ? bank.accountNumber : "No account number"}
-                    </p>
-                    <p className={`text-[10px] mt-1 px-2 py-0.5 rounded inline-block ${idx === 0 ? "bg-lime-vibrant/20 text-lime-vibrant" : "bg-lime-vibrant/20 text-forest"}`}>
-                      {bank._count.statements} statements uploaded
-                    </p>
-                  </div>
-                  <button onClick={() => handleDeleteBank(bank.id)} className={`text-xs font-semibold hover:underline ${idx === 0 ? "text-white/60" : "text-error"}`}>
-                    Remove
-                  </button>
+
+                {/* Decorative corner element */}
+                <div
+                  className={`absolute -bottom-8 -right-8 w-32 h-32 rounded-full blur-2xl opacity-40 ${
+                    idx === 0 ? "bg-white/10" : "bg-lime-vibrant/20"
+                  }`}
+                />
+                <div
+                  className={`absolute bottom-3 right-3 flex gap-0.5 ${
+                    idx === 0 ? "text-white/20" : "text-ash-gray/20"
+                  }`}
+                >
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className={`rounded-sm ${idx === 0 ? "bg-white/15" : "bg-ink-black/5"}`} style={{ width: 4 + i * 2, height: 12 + i * 4 }} />
+                  ))}
                 </div>
               </div>
-              <div className={`absolute -bottom-10 -right-10 w-40 h-40 rounded-full blur-3xl ${idx === 0 ? "bg-white/5" : "bg-lime-vibrant/5"}`} />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -574,7 +621,7 @@ export default function UploadPage() {
             </button>
 
             <div className="flex flex-col items-center">
-              <div className="w-20 h-20 rounded-[20px] bg-gradient-to-br from-purple-400 via-orange-300 to-orange-400 flex items-center justify-center mb-6 shadow-lg">
+              <div className="w-20 h-20 rounded-[20px] bg-forest flex items-center justify-center mb-6 shadow-lg">
                 <div className="flex flex-col gap-1.5">
                   <div className="w-2 h-2 bg-white rounded-full" />
                   <div className="w-2 h-2 bg-white rounded-full" />
@@ -585,17 +632,17 @@ export default function UploadPage() {
               <h2 className="text-xl font-semibold text-ink-black mb-4">Processing your statement</h2>
 
               <div className="w-full h-1.5 bg-mist-gray rounded-full overflow-hidden mb-2">
-                <div className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-500 ease-out" style={{ width: `${processingProgress}%` }} />
+                <div className="h-full bg-forest rounded-full transition-all duration-500 ease-out" style={{ width: `${processingProgress}%` }} />
               </div>
 
-              <p className="text-sm font-medium text-purple-600 mb-6">{processingProgress}% completed</p>
+              <p className="text-sm font-medium text-forest mb-6">{processingProgress}% completed</p>
 
               <div className="w-full space-y-3">
                 {processingSteps.map((step, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div
                       className={`w-2.5 h-2.5 rounded-full shrink-0 transition-colors duration-300 ${
-                        step.status === "completed" ? "bg-purple-500" : step.status === "active" ? "bg-purple-500" : "bg-mist-gray"
+                        step.status === "completed" ? "bg-forest" : step.status === "active" ? "bg-forest" : "bg-mist-gray"
                       }`}
                     />
                     <span className={`text-sm transition-colors duration-300 ${step.status === "pending" ? "text-ash-gray" : "text-ink-black"}`}>{step.label}</span>

@@ -28,8 +28,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3 sm:gap-6">
             {/* Search - hidden on very small screens */}
             <div className="hidden sm:block relative">
+              <label htmlFor="search-transactions" className="sr-only">Search transactions</label>
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-smoke-gray" />
               <input
+                id="search-transactions"
                 type="text"
                 placeholder="Search transactions..."
                 className="bg-mist-gray border-none rounded-buttons pl-10 pr-4 py-2 w-48 lg:w-64 text-sm text-ink-black placeholder:text-smoke-gray focus:outline-none focus:ring-2 focus:ring-lime-vibrant/50 transition-[box-shadow,width]"
@@ -57,7 +59,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-8 overflow-auto">
+        <main id="main-content" className="flex-1 p-4 sm:p-8 overflow-auto">
           {children}
         </main>
       </div>

@@ -25,7 +25,7 @@ export const BANK_FORMAT_TO_NAME: Record<string, string> = {
 };
 
 const KNOWN_BANK_NAMES = [
-  "GTBank", "GTB", "Guaranty Trust Bank",
+  "GTBank", "GTB", "GTCo", "Guaranty Trust Bank",
   "Access Bank", "Access",
   "UBA", "United Bank for Africa",
   "OPay", "OPay Nigeria",
