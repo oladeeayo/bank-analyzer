@@ -201,9 +201,9 @@ export default function TestPDFInspectorPage() {
             {activeTab === "text" && (
               <div>
                 <p className="text-xs text-ash-gray mb-3">
-                  Plain text extraction (first 5,000 characters)
+                  Plain text extraction ({result.textLength.toLocaleString()} characters)
                 </p>
-                <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[600px] text-xs font-mono text-ink-black whitespace-pre-wrap">
+                <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[700px] text-xs font-mono text-ink-black whitespace-pre-wrap">
                   {result.text}
                 </pre>
               </div>
@@ -221,14 +221,14 @@ export default function TestPDFInspectorPage() {
             )}
 
             {activeTab === "markdownPages" && (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <p className="text-xs text-ash-gray">
                   Per-page markdown with OCR flags
                 </p>
                 {result.markdownPages ? (
                   result.markdownPages.pages.map((page: any) => (
-                    <div key={page.page}>
-                      <div className="flex items-center gap-2 mb-2">
+                    <div key={page.page} className="border border-[#ececec] rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
                         <h3 className="text-sm font-medium text-ink-black">
                           Page {page.page + 1}
                         </h3>
@@ -237,8 +237,11 @@ export default function TestPDFInspectorPage() {
                             Needs OCR
                           </span>
                         )}
+                        <span className="text-[10px] text-ash-gray">
+                          {page.markdown.length.toLocaleString()} chars
+                        </span>
                       </div>
-                      <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[400px] text-xs font-mono text-ink-black whitespace-pre-wrap">
+                      <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[500px] text-xs font-mono text-ink-black whitespace-pre-wrap">
                         {page.markdown}
                       </pre>
                     </div>
