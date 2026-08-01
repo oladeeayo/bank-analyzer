@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-01T16:21:00.000Z",
+  "title": "Design System: CONYEST",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Forest Green",
+        "canonical": "#003527",
+        "tonalRamp": ["#001a12", "#00261c", "#003527", "#064e3b", "#0a6b52", "#128c6a", "#1aad82", "#26ce9a", "#95d3ba"]
+      },
+      "primary-container": {
+        "role": "primary",
+        "displayName": "Forest Container",
+        "canonical": "#064e3b",
+        "tonalRamp": ["#021a12", "#042d20", "#064e3b", "#0a6b52", "#128c6a", "#1aad82", "#26ce9a", "#95d3ba", "#c8e8da"]
+      },
+      "accent-vibrant": {
+        "role": "accent",
+        "displayName": "Lime Vibrant",
+        "canonical": "#acf847",
+        "tonalRamp": ["#3a5512", "#5a7a1a", "#7a9f24", "#91b52e", "#a8cc3a", "#acf847", "#c4fa72", "#dcfca0", "#f0fdd4"]
+      },
+      "accent": {
+        "role": "accent",
+        "displayName": "Lime",
+        "canonical": "#416900",
+        "tonalRamp": ["#1a2b00", "#2a4200", "#416900", "#558800", "#6aa700", "#80c600", "#96e500", "#acf847", "#d4fc9a"]
+      },
+      "ink-black": {
+        "role": "neutral",
+        "displayName": "Ink Black",
+        "canonical": "#17191c",
+        "tonalRamp": ["#000000", "#0a0b0d", "#17191c", "#25272b", "#35383d", "#55585e", "#777b86", "#979799", "#d0d0d2"]
+      },
+      "paper-white": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#d0d0d2", "#e0e0e2", "#f0f0f2", "#f5f5f7", "#fafafb", "#fcfcfe", "#ffffff", "#ffffff", "#ffffff"]
+      },
+      "mist-gray": {
+        "role": "neutral",
+        "displayName": "Mist Gray",
+        "canonical": "#f2f2f3",
+        "tonalRamp": ["#c8c8ca", "#d8d8da", "#e8e8ea", "#f0f0f2", "#f2f2f3", "#f5f5f6", "#f8f8f9", "#fbfbfc", "#fefeff"]
+      },
+      "slate-gray": {
+        "role": "neutral",
+        "displayName": "Slate Gray",
+        "canonical": "#777b86",
+        "tonalRamp": ["#35383d", "#45484e", "#55585e", "#65686e", "#777b86", "#878b96", "#979bA6", "#a7abb6", "#d0d2d8"]
+      },
+      "ash-gray": {
+        "role": "neutral",
+        "displayName": "Ash Gray",
+        "canonical": "#979799",
+        "tonalRamp": ["#55585e", "#65686e", "#75787e", "#85888e", "#979799", "#a7a9ad", "#b7b9bd", "#c7c9cd", "#e8e8ea"]
+      },
+      "error": {
+        "role": "semantic",
+        "displayName": "Error Red",
+        "canonical": "#ba1a1a",
+        "tonalRamp": ["#4a0a0a", "#6a0e0e", "#8a1212", "#ba1a1a", "#d42828", "#e83838", "#f05050", "#ff7070", "#ffd0d0"]
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Success Green",
+        "canonical": "#416900",
+        "tonalRamp": ["#1a2b00", "#2a4200", "#416900", "#558800", "#6aa700", "#80c600", "#96e500", "#acf847", "#d4fc9a"]
+      },
+      "pending": {
+        "role": "semantic",
+        "displayName": "Pending Amber",
+        "canonical": "#b45309",
+        "tonalRamp": ["#4a2200", "#6a3300", "#8a4400", "#b45309", "#d06510", "#e87818", "#f09028", "#f8a840", "#fce0a0"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero headlines on landing page and major section headers. Source Serif 4, editorial warmth."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All descriptive text, form labels, paragraph copy. Inter, clinical precision."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Currency values, transaction amounts, any number that changes. JetBrains Mono with tabular-nums."
+      }
+    },
+    "shadows": [
+      {
+        "name": "subtle",
+        "value": "oklab(0 0 0 / 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.08) 0px 4px 24px 0px",
+        "purpose": "Rest state for cards and surfaces. 1px border shadow plus soft ambient glow."
+      },
+      {
+        "name": "subtle-2",
+        "value": "oklab(0 0 0 / 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 8px 40px 0px",
+        "purpose": "Hover state for cards and interactive surfaces. Stronger ambient shadow."
+      },
+      {
+        "name": "elevated",
+        "value": "rgba(4, 23, 43, 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 20px 25px -5px, rgba(0, 0, 0, 0.1) 0px 8px 10px -6px",
+        "purpose": "Hero metric cards and floating elements. Double-layered shadow for prominence."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Default easing for state transitions, reveal animations, and hover effects."
+      },
+      {
+        "name": "ease-bounce",
+        "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "purpose": "Subtle bounce for scale-on-press feedback."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main call-to-action button. Forest background, pill-shaped, tactile press feedback.",
+      "html": "<button class=\"ds-btn-primary\">Get Started Free</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; background: #003527; color: #ffffff; padding: 8px 32px; border-radius: 9999px; font-family: Inter, system-ui, sans-serif; font-size: 14px; font-weight: 500; border: none; cursor: pointer; transition: background 0.2s, transform 0.15s; } .ds-btn-primary:hover { background: #064e3b; transform: translateY(-1px); } .ds-btn-primary:active { transform: scale(0.96); } .ds-btn-primary:focus-visible { outline: 2px solid rgba(172, 248, 71, 0.5); outline-offset: 2px; }"
+    },
+    {
+      "name": "Success Button",
+      "kind": "button",
+      "refersTo": "button-success",
+      "description": "CTA on dark backgrounds. Lime-vibrant background, forest text, high contrast.",
+      "html": "<button class=\"ds-btn-success\">Get Started Free</button>",
+      "css": ".ds-btn-success { display: inline-flex; align-items: center; justify-content: center; background: #acf847; color: #003527; padding: 8px 32px; border-radius: 9999px; font-family: Inter, system-ui, sans-serif; font-size: 14px; font-weight: 500; border: none; cursor: pointer; transition: filter 0.2s, transform 0.15s; } .ds-btn-success:hover { filter: brightness(0.95); transform: translateY(-1px); } .ds-btn-success:active { transform: scale(0.96); } .ds-btn-success:focus-visible { outline: 2px solid rgba(172, 248, 71, 0.5); outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action. White background, ink-black text, subtle border.",
+      "html": "<button class=\"ds-btn-outline\">Sign In</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; background: #ffffff; color: #17191c; padding: 8px 32px; border-radius: 9999px; font-family: Inter, system-ui, sans-serif; font-size: 14px; font-weight: 500; border: 1px solid #ececec; cursor: pointer; transition: background 0.2s, transform 0.15s; } .ds-btn-outline:hover { background: #f2f2f3; transform: translateY(-1px); } .ds-btn-outline:active { transform: scale(0.96); } .ds-btn-outline:focus-visible { outline: 2px solid rgba(172, 248, 71, 0.5); outline-offset: 2px; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Standard content container. White background, 24px radius, subtle shadow, lifts on hover.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\"><h3 class=\"ds-card-title\">Cash Flow</h3><p class=\"ds-card-description\">Monthly overview</p></div><div class=\"ds-card-content\">Chart content here</div></div>",
+      "css": ".ds-card { background: #ffffff; border: 1px solid #ececec; border-radius: 24px; padding: 24px; box-shadow: oklab(0 0 0 / 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.08) 0px 4px 24px 0px; transition: transform 0.3s, box-shadow 0.3s; } .ds-card:hover { transform: translateY(-3px); box-shadow: oklab(0 0 0 / 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 8px 40px 0px; } .ds-card-header { margin-bottom: 16px; } .ds-card-title { font-family: 'Source Serif 4', Georgia, serif; font-size: 20px; font-weight: 400; color: #17191c; margin: 0; } .ds-card-description { font-size: 12px; color: #979799; margin: 4px 0 0; } .ds-card-content { font-size: 14px; color: #17191c; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Text input. Clean border, 16px radius, focus ring on interaction.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"name@example.com\" />",
+      "css": ".ds-input { display: flex; width: 100%; height: 36px; padding: 4px 12px; border: 1px solid #ececec; border-radius: 16px; background: transparent; font-family: Inter, system-ui, sans-serif; font-size: 14px; color: #17191c; transition: border-color 0.2s, box-shadow 0.2s; } .ds-input::placeholder { color: #777b86; } .ds-input:focus { outline: none; border-color: #003527; box-shadow: 0 0 0 1px #003527; } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Navigation Item",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Sidebar navigation link. Pill-shaped, lime-vibrant active state, icon + label.",
+      "html": "<a class=\"ds-nav-item ds-nav-active\" href=\"/dashboard\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6\"/></svg>Dashboard</a>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 9999px; font-family: Inter, system-ui, sans-serif; font-size: 14px; font-weight: 500; color: #777b86; text-decoration: none; transition: background 0.2s, color 0.2s, transform 0.15s; } .ds-nav-item:hover { background: #f2f2f3; color: #003527; } .ds-nav-item:active { transform: scale(0.97); } .ds-nav-active { background: #acf847; color: #003527; font-weight: 600; } .ds-nav-active:hover { background: #acf847; } .ds-nav-icon { width: 20px; height: 20px; flex-shrink: 0; }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Status indicator pill. Small, uppercase, used for credit/debit labels.",
+      "html": "<span class=\"ds-badge ds-badge-credit\">Credit</span>",
+      "css": ".ds-badge { display: inline-flex; padding: 2px 8px; border-radius: 9999px; font-family: Inter, system-ui, sans-serif; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; } .ds-badge-credit { background: rgba(172, 248, 71, 0.2); color: #003527; } .ds-badge-debit { background: #ffdad6; color: #ba1a1a; } .ds-badge-neutral { background: #f2f2f3; color: #777b86; }"
+    },
+    {
+      "name": "Metric Card",
+      "kind": "card",
+      "refersTo": "metric-card",
+      "description": "Dashboard hero metric. Forest background for balance, white for others. Mono-spaced values.",
+      "html": "<div class=\"ds-metric-card ds-metric-primary\"><p class=\"ds-metric-label\">Current Balance</p><h3 class=\"ds-metric-value\">₦1,234,567</h3><span class=\"ds-metric-badge\">+12.5%</span></div>",
+      "css": ".ds-metric-card { padding: 20px 24px; border-radius: 24px; height: 160px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; } .ds-metric-primary { background: #003527; color: #ffffff; box-shadow: rgba(4, 23, 43, 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 20px 25px -5px, rgba(0, 0, 0, 0.1) 0px 8px 10px -6px; } .ds-metric-secondary { background: #ffffff; border: 1px solid #ececec; color: #17191c; box-shadow: oklab(0 0 0 / 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.08) 0px 4px 24px 0px; } .ds-metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 4px; opacity: 0.6; } .ds-metric-value { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 500; font-variant-numeric: tabular-nums; margin: 0; } .ds-metric-badge { display: inline-flex; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 600; background: rgba(172, 248, 71, 0.2); color: #acf847; align-self: flex-start; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Sharp Edge",
+    "overview": "CONYEST is data made legible. The design speaks with the precision of a financial instrument — clean lines, purposeful color, and a layout that lets numbers breathe. The forest green carries trust and institutional weight; the neon lime cuts through with energy at moments of action and success. This is not a playful finance app — it is a sharp, confident tool for people who take their money seriously.\n\nThe aesthetic lives in the tension between grounded and electric. Dark forest surfaces anchor the dashboard, while lime accents draw the eye to what matters: a positive cash flow, a savings milestone, an active navigation state. Typography alternates between the editorial warmth of Source Serif for headlines and the clinical clarity of Inter for data-dense surfaces. The result feels both human and precise — a ledger you actually want to read.",
+    "keyCharacteristics": [
+      "Balanced duality: forest green for trust, neon lime for action and delight",
+      "Pill-shaped buttons with tactile press feedback (scale 0.96)",
+      "Hybrid elevation: subtle shadows at rest, lifted on hover",
+      "Serif display type paired with a clean sans-serif body",
+      "Data-forward: mono-spaced numbers, generous whitespace around figures",
+      "Nigerian banking context: bank logos, NGN currency, local channel terminology"
+    ],
+    "rules": [
+      {
+        "name": "The Balanced Duality Rule",
+        "body": "Forest green is the voice of trust; neon lime is the voice of action. Never use lime for passive elements or forest for call-to-action highlights. Their rarity relative to each other is the point — lime earns attention by appearing only where it matters.",
+        "section": "colors"
+      },
+      {
+        "name": "The One-Surface Rule",
+        "body": "Cards and surfaces are always paper-white or surface-lowest. The dashboard background is the only place where tinted surfaces appear. Never use colored backgrounds on cards except for semantic status (error containers, success containers).",
+        "section": "colors"
+      },
+      {
+        "name": "The Numbers Rule",
+        "body": "All currency and numerical data uses JetBrains Mono with tabular-nums. This prevents layout shift when values update and gives financial data the precision it deserves.",
+        "section": "typography"
+      },
+      {
+        "name": "The Serif Headline Rule",
+        "body": "All major section headings use Source Serif 4. Inter is for data and body copy only. This separation keeps the editorial voice distinct from the data voice.",
+        "section": "typography"
+      },
+      {
+        "name": "The Lift Rule",
+        "body": "Cards lift on hover with a -3px translateY and a shadow transition. Buttons lift -1px. This is the primary tactile feedback — no scale animation on cards, only translate and shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Border Rule",
+        "body": "Every shadowed surface also carries a 1px border (#ececec). The border provides structure at rest when the shadow is too subtle to see; the shadow provides depth on hover. Never use shadow without border, or border without shadow on cards.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Concentric Radius Rule",
+        "body": "Outer radius = inner radius + padding. A card with 24px radius containing a button with 9999px radius is fine — the pill breaks the constraint intentionally. But a 16px-radius card containing a 16px-radius inner element must have the inner element at 8px (24 - 16 = 8px padding).",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do use JetBrains Mono for all currency and numerical data. Tabular-nums prevents layout shift.",
+      "Do use Source Serif 4 for all major section headings. Keep the editorial voice distinct from data.",
+      "Do use lime-vibrant (#acf847) only for active states, success indicators, and CTAs on dark backgrounds. Its power comes from restraint.",
+      "Do keep card backgrounds paper-white. Colored backgrounds on cards are reserved for semantic status only.",
+      "Do use the pill shape (9999px) for all buttons and badges consistently.",
+      "Do maintain 16px between related items, 24px between groups, 32px between sections."
+    ],
+    "donts": [
+      "Don't use lime for passive elements like labels, descriptions, or secondary text. It is an action color.",
+      "Don't use forest green for call-to-action highlights. Forest is the anchor; lime is the spark.",
+      "Don't add shadows without borders on cards. The border provides structure at rest.",
+      "Don't use colored card backgrounds except for error/success containers.",
+      "Don't mix serif and sans-serif in the same text block. Serif for headlines, sans-serif for body.",
+      "Don't use font sizes below 11px for any readable text. Below that, use opacity or color to de-emphasize.",
+      "Don't use transition: all on any component. Specify exact properties (transform, box-shadow, background-color)."
+    ]
+  }
+}
