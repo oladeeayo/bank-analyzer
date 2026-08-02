@@ -20,11 +20,30 @@ function decodeText(text: string): string {
   }
 }
 
+function mergeCloseTexts(items: { x: number; text: string }[]): { x: number; text: string }[] {
+  if (items.length === 0) return [];
+  const sorted = [...items].sort((a, b) => a.x - b.x);
+  const merged: { x: number; text: string }[] = [{ x: sorted[0].x, text: sorted[0].text }];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = merged[merged.length - 1];
+    const prevEnd = prev.x + prev.text.length * 2.5;
+    const gap = sorted[i].x - prevEnd;
+
+    if (gap < 6) {
+      prev.text += sorted[i].text;
+    } else {
+      merged.push({ x: sorted[i].x, text: sorted[i].text });
+    }
+  }
+  return merged;
+}
+
 function extractTextLines(pdfData: any): TextLine[] {
   const allLines: TextLine[] = [];
 
   for (const page of pdfData.Pages || []) {
-    const yMap: Record<number, TextItem[]> = {};
+    const yMap: Record<number, { x: number; text: string }[]> = {};
 
     for (const textObj of page.Texts || []) {
       if (!textObj.R || textObj.R.length === 0) continue;
@@ -33,17 +52,16 @@ function extractTextLines(pdfData: any): TextLine[] {
 
       const y = Math.round(textObj.y * 10) / 10;
       const x = Math.round(textObj.x * 10) / 10;
-      const w = textObj.w || 0;
 
       if (!yMap[y]) yMap[y] = [];
-      yMap[y].push({ x, y, w, text: decoded });
+      yMap[y].push({ x, text: decoded });
     }
 
     const sortedYs = Object.keys(yMap).map(Number).sort((a, b) => a - b);
 
     for (const y of sortedYs) {
-      const items = yMap[y].sort((a, b) => a.x - b.x);
-      allLines.push({ y, items });
+      const merged = mergeCloseTexts(yMap[y]);
+      allLines.push({ y, items: merged.map(m => ({ x: m.x, y, w: 0, text: m.text })) });
     }
   }
 
@@ -143,9 +161,13 @@ function parseKudaRows(rows: string[][]): ParseResult {
   console.log(`[Kuda] Column map:`, colMap);
 
   const skipPatterns = [
-    /summary/i, /spend account/i, /money in.*money out/i, /type.*opening/i,
-    /opening balance/i, /closing balance/i, /all statements/i, /account.*date/i,
-    /kuda/i, /statement/i, /page \d/i, /account number/i,
+    /^summary$/i, /^spend account$/i, /^type$/i,
+    /^opening balance$/i, /^closing balance$/i, /^all statements$/i,
+    /^account number/i, /^account date$/i, /^account\b.*\bdate\b/i,
+    /^date\/time$/i, /^money in$/i, /^money out$/i,
+    /^to \/ from$/i, /^description$/i, /^balance$/i,
+    /^page \d/i, /Kuda MF Bank.*NDIC/i, /licensed by the Central Bank/i,
+    /RC796975/i, /Finsbury Pavement/i, /Kuda.*Technologies.*LTD/i,
   ];
 
   for (let i = headerIdx + 1; i < rows.length; i++) {
