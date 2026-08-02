@@ -43,17 +43,22 @@ export function cleanupBankText(text: string): string {
   cleaned = cleaned.replace(/KudaMFBank[\s\S]*$/gi, "");
   cleaned = cleaned.replace(/Technology[\s\S]*$/gi, "");
 
-  // Step 4: Combine date and time on same line
-  // Kuda outputs: "02/02/26\n14:50:32" → "02/02/26 14:50:32"
+  // Step 4: Remove "ServicesLimited" and similar noise
+  cleaned = cleaned.replace(/ServicesLimited/g, "");
+  cleaned = cleaned.replace(/DrigitalServicesLimited/g, "");
+  cleaned = cleaned.replace(/DigitalServicesLimited/g, "");
+  cleaned = cleaned.replace(/ServiceBank\(9psb\)/g, "");
+
+  // Step 5: Combine date and time on same line
   cleaned = cleaned.replace(/(\d{2}\/\d{2}\/\d{2})\n(\d{2}:\d{2}:\d{2})/g, "$1 $2");
 
-  // Step 5: Normalize whitespace
+  // Step 6: Normalize whitespace
   cleaned = cleaned
     .replace(/[ \t]{2,}/g, " ")     // Multiple spaces to single
     .replace(/^\s+$/gm, "")         // Empty lines
     .replace(/\n{3,}/g, "\n\n");    // Max 2 newlines
 
-  // Step 6: Add line breaks before dates for transaction separation
+  // Step 7: Add line breaks before dates for transaction separation
   cleaned = cleaned.replace(/(\d{2}\/\d{2}\/\d{2})/g, "\n$1");
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n"); // Clean up extra newlines
 
@@ -68,12 +73,10 @@ function hasCharacterLevelSpacing(text: string): boolean {
     (t) => t.length === 1 && /[A-Za-z0-9₦.,\-/:().]/.test(t)
   );
 
-  // If more than 40% are single characters, it's character-level
   return singleCharTokens.length / tokens.length > 0.4;
 }
 
 function mergeCharacterLevelText(text: string): string {
-  // Merge single characters separated by spaces
   let result = text;
   let previous;
   
