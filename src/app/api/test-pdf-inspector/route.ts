@@ -5,7 +5,7 @@ import {
   extractText,
   extractPagesMarkdown,
 } from "@firecrawl/pdf-inspector";
-import { fixCharacterSpacing, normalizeWhitespace } from "@/lib/utils/text-cleanup";
+import { cleanupBankText } from "@/lib/utils/text-cleanup";
 
 export const runtime = "nodejs";
 
@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
       rawText = processed.markdown || "";
     }
     
-    // Apply text cleanup: fix character spacing and normalize whitespace
-    const text = normalizeWhitespace(fixCharacterSpacing(rawText));
+    // Apply comprehensive bank text cleanup
+    const text = cleanupBankText(rawText);
     
     console.log(`[TestPDFInspector] Raw text length: ${rawText.length}`);
     console.log(`[TestPDFInspector] Cleaned text length: ${text.length}`);
@@ -66,8 +66,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Count transactions in text (rough count by date pattern)
-    const textTransactions = (text.match(/\d{2}\/\d{2}\/\d{4}/g) || []).length;
+    // Count transactions in text (multiple date formats)
+    const datePatterns = [
+      /\d{2}\/\d{2}\/\d{4}/g,    // DD/MM/YYYY
+      /\d{2}\/\d{2}\/\d{2}/g,    // DD/MM/YY
+      /\d{2}-[A-Za-z]{3}-\d{4}/g, // DD-Mon-YYYY
+      /\d{2}-[A-Za-z]{3}-\d{2}/g, // DD-Mon-YY
+    ];
+    let textTransactions = 0;
+    for (const pattern of datePatterns) {
+      const matches = text.match(pattern);
+      if (matches) textTransactions += matches.length;
+    }
     console.log(`[TestPDFInspector] Transactions in text (approx): ${textTransactions}`);
 
     return NextResponse.json({
