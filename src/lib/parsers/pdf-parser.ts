@@ -563,29 +563,50 @@ const AMOUNT_PATTERN = /^[+-]?[\d,]+\.?\d*$/;
 const PALMPAY_TIMESTAMP_REGEX = /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}\s+(?:AM|PM)/gi;
 
 function extractTextFromPDF2Json(pdfData: any): string {
-  const textItems: Array<{ y: number; x: number; text: string }> = [];
+  const lines: string[] = [];
   if (pdfData.Pages) {
     for (const page of pdfData.Pages) {
-      if (page.Texts) {
-        for (const text of page.Texts) {
-          if (text.R) {
-            for (const r of text.R) {
-              if (r.T) {
-                textItems.push({
-                  y: Math.round(text.y * 10) / 10,
-                  x: Math.round(text.x * 10) / 10,
-                  text: decodeURIComponent(r.T),
-                });
-              }
+      const textsByY: Record<number, { x: number; text: string }[]> = {};
+      for (const text of page.Texts) {
+        if (text.R) {
+          for (const r of text.R) {
+            if (r.T) {
+              const y = Math.round(text.y * 10) / 10;
+              const x = Math.round(text.x * 10) / 10;
+              const decoded = decodeURIComponent(r.T);
+              if (!textsByY[y]) textsByY[y] = [];
+              textsByY[y].push({ x, text: decoded });
             }
           }
         }
       }
+      const sortedYs = Object.keys(textsByY).map(Number).sort((a, b) => a - b);
+      for (const y of sortedYs) {
+        const merged = mergeCloseTexts(textsByY[y]);
+        lines.push(merged.map((m) => m.text).join(" "));
+      }
     }
   }
-  // Sort by y (top to bottom), then x (left to right) for proper reading order
-  textItems.sort((a, b) => a.y - b.y || a.x - b.x);
-  return textItems.map(t => t.text).join("\n");
+  return lines.join("\n");
+}
+
+function mergeCloseTexts(items: { x: number; text: string }[]): { x: number; text: string }[] {
+  if (items.length === 0) return [];
+  const sorted = [...items].sort((a, b) => a.x - b.x);
+  const merged: { x: number; text: string }[] = [{ x: sorted[0].x, text: sorted[0].text }];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = merged[merged.length - 1];
+    const prevEnd = prev.x + prev.text.length * 2.5;
+    const gap = sorted[i].x - prevEnd;
+
+    if (gap < 4) {
+      prev.text += sorted[i].text;
+    } else {
+      merged.push({ x: sorted[i].x, text: sorted[i].text });
+    }
+  }
+  return merged;
 }
 
 function extractTableRows(pdfData: any): string[][] {
@@ -612,7 +633,7 @@ function extractTableRows(pdfData: any): string[][] {
         .sort((a, b) => a - b);
 
       for (const y of sortedYs) {
-        const cells = textsByY[y].sort((a, b) => a.x - b.x);
+        const cells = mergeCloseTexts(textsByY[y]);
         if (cells.length > 0) {
           allRows.push(cells.map(c => c.text));
         }
