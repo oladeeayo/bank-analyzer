@@ -2,51 +2,54 @@
  * Comprehensive text cleanup for bank PDFs.
  * Handles character-level spacing (Kuda), markdown artifacts, and normalizes output.
  */
-export function cleanupBankText(text: string, bankHint?: string): string {
+export function cleanupBankText(text: string): string {
   if (!text || text.trim().length === 0) return "";
 
   let cleaned = text;
 
-  // Step 1: Strip markdown formatting
-  cleaned = stripMarkdown(cleaned);
-
-  // Step 2: Fix character-level spacing (Kuda, etc.)
-  cleaned = fixCharacterSpacing(cleaned);
-
-  // Step 3: Normalize whitespace
-  cleaned = normalizeWhitespace(cleaned);
-
-  // Step 4: Add transaction line breaks
-  cleaned = addTransactionBreaks(cleaned);
-
-  // Step 5: Remove bank footers/disclaimers
-  cleaned = removeBankFooters(cleaned);
-
-  return cleaned;
-}
-
-function stripMarkdown(text: string): string {
-  return text
+  // Step 1: Remove ALL markdown/table formatting aggressively
+  cleaned = cleaned
     .replace(/\|/g, " ")           // Remove pipe characters
     .replace(/---+/g, " ")         // Remove table separators
-    .replace(/#{1,6}\s/g, "")      // Remove markdown headers
+    .replace(/#{1,6}\s*/g, "")     // Remove markdown headers
     .replace(/\*\*/g, "")          // Remove bold markers
     .replace(/\*/g, "")            // Remove italic markers
-    .replace(/_/g, " ");           // Remove underscores
-}
+    .replace(/_{2,}/g, " ")        // Remove multiple underscores
+    .replace(/\n\s*\n/g, "\n");    // Remove empty lines
 
-function fixCharacterSpacing(text: string): string {
-  const lines = text.split("\n");
-  return lines.map((line) => {
+  // Step 2: Fix character-level spacing (Kuda style)
+  // First, merge characters within table cells (between pipes)
+  const lines = cleaned.split("\n");
+  const mergedLines = lines.map((line) => {
     const trimmed = line.trim();
     if (trimmed.length === 0) return "";
-
-    // Check if line has character-level spacing
+    
+    // If line has lots of single chars with spaces, merge them
     if (hasCharacterLevelSpacing(trimmed)) {
       return mergeCharacterLevelText(trimmed);
     }
     return trimmed;
-  }).join("\n");
+  });
+  cleaned = mergedLines.join("\n");
+
+  // Step 3: Remove Kuda bank footer/disclaimer
+  cleaned = cleaned.replace(/Kuda MF Bank.*?Technologies LTD\.?/gi, "");
+  cleaned = cleaned.replace(/All rights reserved.*?NDIC\)/gi, "");
+  cleaned = cleaned.replace(/licensed by the Central Bank.*?UK\.?/gi, "");
+  cleaned = cleaned.replace(/Kuda.*?Technologies.*?LTD/gi, "");
+
+  // Step 4: Normalize whitespace
+  cleaned = cleaned
+    .replace(/[ \t]{2,}/g, " ")     // Multiple spaces to single
+    .replace(/^\s+$/gm, "")         // Empty lines
+    .replace(/\n{3,}/g, "\n\n");    // Max 2 newlines
+
+  // Step 5: Add line breaks before dates for transaction separation
+  // Match DD/MM/YY or DD/MM/YYYY patterns
+  cleaned = cleaned.replace(/(\d{2}\/\d{2}\/\d{2,4})/g, "\n$1");
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n"); // Clean up extra newlines
+
+  return cleaned.trim();
 }
 
 function hasCharacterLevelSpacing(text: string): boolean {
@@ -57,11 +60,13 @@ function hasCharacterLevelSpacing(text: string): boolean {
     (t) => t.length === 1 && /[A-Za-z0-9₦.,\-/:().]/.test(t)
   );
 
-  return singleCharTokens.length / tokens.length > 0.5;
+  // If more than 40% are single characters, it's character-level
+  return singleCharTokens.length / tokens.length > 0.4;
 }
 
 function mergeCharacterLevelText(text: string): string {
   // Merge single characters separated by spaces
+  // This handles "O L A D A Y O" → "OLADAYO"
   let result = text;
   let previous;
   
@@ -69,63 +74,6 @@ function mergeCharacterLevelText(text: string): string {
     previous = result;
     result = result.replace(/(?<=[A-Za-z0-9₦.,\-/:().]) (?=[A-Za-z0-9₦.,\-/:().])/g, "");
   } while (result !== previous);
-  
-  return result;
-}
-
-function normalizeWhitespace(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => line.replace(/[ \t]{2,}/g, " ").trim())
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n");
-}
-
-function addTransactionBreaks(text: string): string {
-  // Add line breaks before transaction dates (DD/MM/YY or DD-Mon-YYYY patterns)
-  let result = text;
-  
-  // Match dates like 02/02/26, 02-Feb-2026, 02/02/2026
-  const datePattern = /(?<!^)(?=\b\d{2}[\/\-]\d{2}[\/\-]\d{2,4}\b)/gm;
-  result = result.replace(datePattern, "\n");
-  
-  // Also match "Page X" markers
-  result = result.replace(/(?<!^)(?=Page \d)/g, "\n");
-  
-  return result;
-}
-
-function removeBankFooters(text: string): string {
-  const footerPatterns = [
-    // Kuda
-    /Kuda MF Bank.*?Technologies LTD\.?/gi,
-    /All rights reserved\. All deposits are insured.*?NDIC\)/gi,
-    /licensed by the Central Bank.*?UK\.?/gi,
-    
-    // GTBank
-    /Guaranty Trust Bank.*?plc/gi,
-    
-    // Sterling
-    /Sterling Bank.*?plc/gi,
-    /For Further enquiries.*?sterlingbankng\.com/gi,
-    
-    // UBA
-    /United Bank for Africa.*?plc/gi,
-    /Africa's global bank/gi,
-    
-    // PalmPay
-    /PalmPay Limited.*?Nigeria/gi,
-    
-    // Generic
-    /All rights reserved\.?/gi,
-    /Customer service.*?helpline/gi,
-    /\d{3,4}-\d{3,4}-\d{3,4}/g, // Phone patterns
-  ];
-
-  let result = text;
-  for (const pattern of footerPatterns) {
-    result = result.replace(pattern, "");
-  }
   
   return result;
 }
