@@ -951,6 +951,7 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
 
           const bankFormat = detectBankFormat(text);
           console.log(`[PDFParser] Detected bank format: ${bankFormat}`);
+          console.log(`[PDFParser] First 500 chars of extracted text: ${text.substring(0, 500)}`);
 
           let result: ParseResult;
 

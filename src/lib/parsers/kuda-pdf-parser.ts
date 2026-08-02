@@ -25,10 +25,16 @@ function decodeText(text: string): string {
 function extractTextLines(pdfData: any): TextLine[] {
   const allLines: TextLine[] = [];
 
-  for (const page of pdfData.Pages || []) {
+  console.log(`[Kuda] Pages: ${(pdfData.Pages || []).length}`);
+
+  for (let pi = 0; pi < (pdfData.Pages || []).length; pi++) {
+    const page = pdfData.Pages[pi];
+    const texts = page.Texts || [];
+    console.log(`[Kuda] Page ${pi}: ${texts.length} text objects`);
+
     const yMap: Record<number, TextItem[]> = {};
 
-    for (const textObj of page.Texts || []) {
+    for (const textObj of texts) {
       if (!textObj.R || textObj.R.length === 0) continue;
       const decoded = decodeText(textObj.R[0].T || "").trim();
       if (!decoded) continue;
@@ -42,10 +48,17 @@ function extractTextLines(pdfData: any): TextLine[] {
     }
 
     const sortedYs = Object.keys(yMap).map(Number).sort((a, b) => a - b);
+    console.log(`[Kuda] Page ${pi}: ${sortedYs.length} unique Y positions`);
 
     for (const y of sortedYs) {
       const items = yMap[y].sort((a, b) => a.x - b.x);
       allLines.push({ y, items });
+    }
+
+    // Log first 10 lines for debugging
+    const startIdx = allLines.length - Object.keys(yMap).length;
+    for (let i = startIdx; i < Math.min(startIdx + 10, allLines.length); i++) {
+      console.log(`[Kuda] Line y=${allLines[i].y}: ${allLines[i].items.map(it => it.text).join(" | ")}`);
     }
   }
 

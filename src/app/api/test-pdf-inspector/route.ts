@@ -110,8 +110,8 @@ export async function POST(request: NextRequest) {
     let positions: TextToken[] = [];
     try {
       const positionsResult = extractTextWithPositions(buffer);
-      if (positionsResult?.tokens) {
-        positions = positionsResult.tokens.map((t: any) => ({
+      if (Array.isArray(positionsResult)) {
+        positions = positionsResult.map((t: any) => ({
           text: t.text,
           x: t.x,
           y: t.y,
