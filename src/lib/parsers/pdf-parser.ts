@@ -2,6 +2,7 @@
 const PDFParser = require("pdf2json");
 import { ParsedTransaction, ParseResult, BankFormat } from "./types";
 import { detectBankNameFromFormat, extractAccountNumber, extractAccountName } from "./bank-detection";
+import { parseKudaPDF } from "./kuda-pdf-parser";
 
 function detectBankFormat(text: string): BankFormat {
   const lower = text.toLowerCase();
@@ -953,7 +954,10 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
 
           let result: ParseResult;
 
-          if (bankFormat === "palmpay-pdf") {
+          if (bankFormat === "kuda-pdf") {
+            console.log(`[PDFParser] Using Kuda dedicated parser`);
+            result = await parseKudaPDF(buffer, fileName);
+          } else if (bankFormat === "palmpay-pdf") {
             console.log(`[PDFParser] Using PalmPay text-block parser`);
             result = parsePalmPayText(text);
           } else {
