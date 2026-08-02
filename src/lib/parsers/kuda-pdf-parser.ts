@@ -1,5 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const PDFParser = require("pdf2json");
 import { ParsedTransaction, ParseResult } from "./types";
 
 interface TextItem {
@@ -25,16 +23,10 @@ function decodeText(text: string): string {
 function extractTextLines(pdfData: any): TextLine[] {
   const allLines: TextLine[] = [];
 
-  console.log(`[Kuda] Pages: ${(pdfData.Pages || []).length}`);
-
-  for (let pi = 0; pi < (pdfData.Pages || []).length; pi++) {
-    const page = pdfData.Pages[pi];
-    const texts = page.Texts || [];
-    console.log(`[Kuda] Page ${pi}: ${texts.length} text objects`);
-
+  for (const page of pdfData.Pages || []) {
     const yMap: Record<number, TextItem[]> = {};
 
-    for (const textObj of texts) {
+    for (const textObj of page.Texts || []) {
       if (!textObj.R || textObj.R.length === 0) continue;
       const decoded = decodeText(textObj.R[0].T || "").trim();
       if (!decoded) continue;
@@ -48,17 +40,10 @@ function extractTextLines(pdfData: any): TextLine[] {
     }
 
     const sortedYs = Object.keys(yMap).map(Number).sort((a, b) => a - b);
-    console.log(`[Kuda] Page ${pi}: ${sortedYs.length} unique Y positions`);
 
     for (const y of sortedYs) {
       const items = yMap[y].sort((a, b) => a.x - b.x);
       allLines.push({ y, items });
-    }
-
-    // Log first 10 lines for debugging
-    const startIdx = allLines.length - Object.keys(yMap).length;
-    for (let i = startIdx; i < Math.min(startIdx + 10, allLines.length); i++) {
-      console.log(`[Kuda] Line y=${allLines[i].y}: ${allLines[i].items.map(it => it.text).join(" | ")}`);
     }
   }
 
@@ -132,7 +117,7 @@ function formatName(str: string): string {
     .trim();
 }
 
-export function parseKudaRows(rows: string[][]): ParseResult {
+function parseKudaRows(rows: string[][]): ParseResult {
   const transactions: ParsedTransaction[] = [];
   const errors: string[] = [];
   const datePattern = /(\d{2}\/\d{2}\/\d{2})/;
@@ -150,7 +135,6 @@ export function parseKudaRows(rows: string[][]): ParseResult {
   }
 
   if (headerIdx === -1) {
-    console.log("[Kuda] No header row found, using fallback column positions");
     headerIdx = 0;
     colMap = { date: 0, moneyIn: 1, moneyOut: 2, type: 3, toFrom: 4, description: 5, balance: 6 };
   }
@@ -158,7 +142,7 @@ export function parseKudaRows(rows: string[][]): ParseResult {
   console.log(`[Kuda] Header row ${headerIdx}: ${rows[headerIdx].join(" | ")}`);
   console.log(`[Kuda] Column map:`, colMap);
 
-  const skipRows = [
+  const skipPatterns = [
     /summary/i, /spend account/i, /money in.*money out/i, /type.*opening/i,
     /opening balance/i, /closing balance/i, /all statements/i, /account.*date/i,
     /kuda/i, /statement/i, /page \d/i, /account number/i,
@@ -170,7 +154,7 @@ export function parseKudaRows(rows: string[][]): ParseResult {
       const combined = row.join(" ");
 
       if (row.length < 3) continue;
-      if (skipRows.some((p) => p.test(combined))) continue;
+      if (skipPatterns.some((p) => p.test(combined))) continue;
 
       let dateStr = "";
       for (const cell of row) {
@@ -223,7 +207,6 @@ export function parseKudaRows(rows: string[][]): ParseResult {
       }
 
       description = formatName(description);
-
       if (!description || description.length < 2) continue;
 
       let txType = type;
@@ -281,56 +264,28 @@ function parseDateDDMMYY(dateStr: string): Date {
   return new Date(dateStr);
 }
 
-export async function parseKudaPDF(buffer: ArrayBuffer, fileName: string): Promise<ParseResult> {
-  return new Promise((resolve) => {
-    try {
-      const pdfParser = new PDFParser();
+export function parseKudaFromPdfData(pdfData: any, fileName: string): ParseResult {
+  console.log(`[KudaPDFParser] Pages: ${(pdfData.Pages || []).length}`);
 
-      pdfParser.on("pdfParser_dataError", (errData: any) => {
-        console.error("[KudaPDFParser] Error:", errData.parserError);
-        resolve({
-          transactions: [],
-          errors: [`PDF parse error: ${errData.parserError}`],
-          metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 },
-        });
-      });
+  const lines = extractTextLines(pdfData);
+  console.log(`[KudaPDFParser] Extracted ${lines.length} text lines`);
 
-      pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
-        try {
-          const lines = extractTextLines(pdfData);
-          console.log(`[KudaPDFParser] Extracted ${lines.length} text lines from PDF`);
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    console.log(`[KudaPDFParser] Line y=${lines[i].y}: ${lines[i].items.map(it => it.text).join(" | ")}`);
+  }
 
-          const rows = mergeMultilineTransactions(lines);
-          console.log(`[KudaPDFParser] Merged into ${rows.length} rows`);
+  const rows = mergeMultilineTransactions(lines);
+  console.log(`[KudaPDFParser] Merged into ${rows.length} rows`);
 
-          for (let i = 0; i < Math.min(rows.length, 5); i++) {
-            console.log(`[KudaPDFParser] Row ${i}: ${rows[i].join(" | ")}`);
-          }
+  for (let i = 0; i < Math.min(rows.length, 5); i++) {
+    console.log(`[KudaPDFParser] Row ${i}: ${rows[i].join(" | ")}`);
+  }
 
-          const result = parseKudaRows(rows);
-          result.metadata.fileName = fileName;
-          result.metadata.detectedBank = "Kuda Bank";
+  const result = parseKudaRows(rows);
+  result.metadata.fileName = fileName;
+  result.metadata.detectedBank = "Kuda Bank";
 
-          console.log(`[KudaPDFParser] Parsed ${result.transactions.length} transactions, ${result.errors.length} errors`);
+  console.log(`[KudaPDFParser] Parsed ${result.transactions.length} transactions, ${result.errors.length} errors`);
 
-          resolve(result);
-        } catch (err) {
-          console.error("[KudaPDFParser] Processing error:", err);
-          resolve({
-            transactions: [],
-            errors: [`Processing error: ${err}`],
-            metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 },
-          });
-        }
-      });
-
-      pdfParser.parseBuffer(Buffer.from(buffer));
-    } catch (error) {
-      resolve({
-        transactions: [],
-        errors: [`Init error: ${error}`],
-        metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 },
-      });
-    }
-  });
+  return result;
 }
