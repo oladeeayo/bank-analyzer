@@ -31,23 +31,29 @@ export function cleanupBankText(text: string): string {
   });
   cleaned = mergedLines.join("\n");
 
-  // Step 3: Remove Kuda bank footer/disclaimer (aggressive)
-  cleaned = cleaned.replace(/Kuda[\s\S]*?Technologies[\s\S]*?LTD\.?/gi, "");
-  cleaned = cleaned.replace(/KudaMFBank[\s\S]*?NDIC\)[\s\S]*?$/gi, "");
+  // Step 3: Remove Kuda bank footer/disclaimer (very aggressive)
+  cleaned = cleaned.replace(/Kuda[\s\S]*?LTD\.?/gi, "");
   cleaned = cleaned.replace(/licensed[\s\S]*?UK\.?/gi, "");
   cleaned = cleaned.replace(/All[\s\S]*?reserved\.?/gi, "");
   cleaned = cleaned.replace(/All[\s\S]*?NDIC\)/gi, "");
   cleaned = cleaned.replace(/RC796975[\s\S]*$/gi, "");
   cleaned = cleaned.replace(/131[\s\S]*?LTD\.?/gi, "");
   cleaned = cleaned.replace(/Finsbury[\s\S]*?UK\.?/gi, "");
+  cleaned = cleaned.replace(/Central[\s\S]*?Nigeria\.?/gi, "");
+  cleaned = cleaned.replace(/KudaMFBank[\s\S]*$/gi, "");
+  cleaned = cleaned.replace(/Technology[\s\S]*$/gi, "");
 
-  // Step 4: Normalize whitespace
+  // Step 4: Combine date and time on same line
+  // Kuda outputs: "02/02/26\n14:50:32" → "02/02/26 14:50:32"
+  cleaned = cleaned.replace(/(\d{2}\/\d{2}\/\d{2})\n(\d{2}:\d{2}:\d{2})/g, "$1 $2");
+
+  // Step 5: Normalize whitespace
   cleaned = cleaned
     .replace(/[ \t]{2,}/g, " ")     // Multiple spaces to single
     .replace(/^\s+$/gm, "")         // Empty lines
     .replace(/\n{3,}/g, "\n\n");    // Max 2 newlines
 
-  // Step 5: Add line breaks before dates for transaction separation
+  // Step 6: Add line breaks before dates for transaction separation
   cleaned = cleaned.replace(/(\d{2}\/\d{2}\/\d{2})/g, "\n$1");
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n"); // Clean up extra newlines
 
