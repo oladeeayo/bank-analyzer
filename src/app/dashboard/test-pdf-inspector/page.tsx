@@ -10,7 +10,7 @@ import {
   CheckIcon,
 } from "@heroicons/react/24/outline";
 
-type Tab = "classification" | "rawText" | "reconstructed" | "text" | "markdown" | "markdownPages" | "positions" | "raw";
+type Tab = "classification" | "rawText" | "text" | "markdown" | "markdownPages" | "positions" | "raw";
 
 function CopyButton({ text, label }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
@@ -98,7 +98,6 @@ export default function TestPDFInspectorPage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: "classification", label: "Classification" },
     { id: "rawText", label: "Raw Text" },
-    { id: "reconstructed", label: "Reconstructed" },
     { id: "text", label: "Cleaned Text" },
     { id: "markdown", label: "Full Markdown" },
     { id: "markdownPages", label: "Markdown Per Page" },
@@ -253,20 +252,6 @@ export default function TestPDFInspectorPage() {
                 </div>
                 <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[700px] text-xs font-mono text-ink-black whitespace-pre-wrap">
                   {result.rawText || "No raw text available"}
-                </pre>
-              </div>
-            )}
-
-            {activeTab === "reconstructed" && (
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-ash-gray">
-                    Reconstructed from positions ({(result.reconstructedText || "").length.toLocaleString()} characters, {(result.positionsCount || 0)} tokens)
-                  </p>
-                  <CopyButton text={result.reconstructedText || ""} label="Copy Reconstructed" />
-                </div>
-                <pre className="bg-mist-gray p-4 rounded-xl overflow-auto max-h-[700px] text-xs font-mono text-ink-black whitespace-pre-wrap">
-                  {result.reconstructedText || "No reconstructed text available"}
                 </pre>
               </div>
             )}

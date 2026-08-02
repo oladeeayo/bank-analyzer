@@ -4,7 +4,6 @@ import {
   processPdf,
   extractText,
   extractPagesMarkdown,
-  extractTextWithPositions,
 } from "@firecrawl/pdf-inspector";
 import { cleanupBankText } from "@/lib/utils/text-cleanup";
 
@@ -28,7 +27,7 @@ export async function POST(request: NextRequest) {
     const classification = classifyPdf(buffer);
     const processed = processPdf(buffer);
     
-    // Try multiple extraction methods
+    // Try extractText first
     let rawText = "";
     try {
       rawText = extractText(buffer);
@@ -36,27 +35,19 @@ export async function POST(request: NextRequest) {
       console.error("[TestPDFInspector] extractText failed:", e);
     }
     
-    // If extractText returns empty, try using the markdown
-    if (!rawText || rawText.trim().length === 0) {
-      console.log("[TestPDFInspector] extractText empty, using markdown as fallback");
-      rawText = processed.markdown || "";
-    }
-    
-    // Also try textWithPositions for better reconstruction
-    let textWithPositions: any[] = [];
-    let reconstructedText = "";
+    // Get markdown (which has all the data for Kuda)
+    let markdownText = "";
     try {
-      const allPages = Array.from({ length: classification.pageCount }, (_, i) => i);
-      textWithPositions = extractTextWithPositions(buffer, allPages);
-      
-      // Reconstruct text from positions: sort by Y then X
-      reconstructedText = reconstructFromPositions(textWithPositions);
+      const markdownResult = extractPagesMarkdown(buffer);
+      if (markdownResult?.pages) {
+        markdownText = markdownResult.pages.map((p: any) => p.markdown).join("\n\n");
+      }
     } catch (e) {
-      console.error("[TestPDFInspector] extractTextWithPositions failed:", e);
+      console.error("[TestPDFInspector] extractPagesMarkdown failed:", e);
     }
     
-    // Use the best text source: try reconstructed first, then raw, then markdown
-    const bestRawText = reconstructedText.length > 100 ? reconstructedText : rawText;
+    // Use the best text source: prefer extractText if it has data, otherwise use markdown
+    const bestRawText = (rawText && rawText.length > 100) ? rawText : markdownText;
     
     // Apply comprehensive bank text cleanup
     const text = cleanupBankText(bestRawText);
@@ -64,15 +55,8 @@ export async function POST(request: NextRequest) {
     console.log(`[TestPDFInspector] File: ${file.name}`);
     console.log(`[TestPDFInspector] Pages: ${classification.pageCount}`);
     console.log(`[TestPDFInspector] Raw text length: ${rawText.length}`);
-    console.log(`[TestPDFInspector] Reconstructed text length: ${reconstructedText.length}`);
+    console.log(`[TestPDFInspector] Markdown text length: ${markdownText.length}`);
     console.log(`[TestPDFInspector] Cleaned text length: ${text.length}`);
-
-    let markdownResult: any = null;
-    try {
-      markdownResult = extractPagesMarkdown(buffer);
-    } catch (e) {
-      console.error("[TestPDFInspector] extractPagesMarkdown failed:", e);
-    }
 
     // Count transactions in text (multiple date formats)
     const datePatterns = [
@@ -88,6 +72,13 @@ export async function POST(request: NextRequest) {
     }
     console.log(`[TestPDFInspector] Transactions in text (approx): ${textTransactions}`);
 
+    let markdownResult: any = null;
+    try {
+      markdownResult = extractPagesMarkdown(buffer);
+    } catch (e) {
+      console.error("[TestPDFInspector] extractPagesMarkdown failed:", e);
+    }
+
     return NextResponse.json({
       fileName: file.name,
       fileSize: buffer.length,
@@ -100,11 +91,9 @@ export async function POST(request: NextRequest) {
         pagesWithColumns: processed.pagesWithColumns,
       },
       rawText: rawText,
-      reconstructedText: reconstructedText,
       text: text,
       textLength: text.length,
       textTransactionCount: textTransactions,
-      positionsCount: textWithPositions.length,
       markdownPages: markdownResult
         ? {
             pages: markdownResult.pages.map((p: any) => ({
@@ -124,59 +113,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-/**
- * Reconstruct text from position data by sorting Y then X coordinates.
- * This handles character-level PDFs like Kuda better.
- */
-function reconstructFromPositions(positions: any[]): string {
-  if (!positions || positions.length === 0) return "";
-
-  // Group by page
-  const byPage = new Map<number, any[]>();
-  for (const item of positions) {
-    const page = item.page || 0;
-    if (!byPage.has(page)) byPage.set(page, []);
-    byPage.get(page)!.push(item);
-  }
-
-  const lines: string[] = [];
-
-  for (const [page, items] of byPage) {
-    // Sort by Y (top to bottom), then X (left to right)
-    const sorted = items.sort((a, b) => {
-      const yDiff = (a.y || 0) - (b.y || 0);
-      if (Math.abs(yDiff) > 3) return yDiff; // Different lines (3px threshold)
-      return (a.x || 0) - (b.x || 0); // Same line, sort by X
-    });
-
-    let currentY = -1000;
-    let lineParts: string[] = [];
-
-    for (const item of sorted) {
-      const y = item.y || 0;
-      
-      // If Y changed significantly, it's a new line
-      if (Math.abs(y - currentY) > 3) {
-        if (lineParts.length > 0) {
-          lines.push(lineParts.join(""));
-        }
-        lineParts = [];
-        currentY = y;
-      }
-      
-      const text = item.text || "";
-      if (text.trim()) {
-        lineParts.push(text);
-      }
-    }
-    
-    // Don't forget the last line
-    if (lineParts.length > 0) {
-      lines.push(lineParts.join(""));
-    }
-  }
-
-  return lines.join("\n");
 }
