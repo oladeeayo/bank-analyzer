@@ -18,7 +18,6 @@ export function cleanupBankText(text: string): string {
     .replace(/\n\s*\n/g, "\n");    // Remove empty lines
 
   // Step 2: Fix character-level spacing (Kuda style)
-  // First, merge characters within table cells (between pipes)
   const lines = cleaned.split("\n");
   const mergedLines = lines.map((line) => {
     const trimmed = line.trim();
@@ -32,11 +31,15 @@ export function cleanupBankText(text: string): string {
   });
   cleaned = mergedLines.join("\n");
 
-  // Step 3: Remove Kuda bank footer/disclaimer
-  cleaned = cleaned.replace(/Kuda MF Bank.*?Technologies LTD\.?/gi, "");
-  cleaned = cleaned.replace(/All rights reserved.*?NDIC\)/gi, "");
-  cleaned = cleaned.replace(/licensed by the Central Bank.*?UK\.?/gi, "");
-  cleaned = cleaned.replace(/Kuda.*?Technologies.*?LTD/gi, "");
+  // Step 3: Remove Kuda bank footer/disclaimer (aggressive)
+  cleaned = cleaned.replace(/Kuda[\s\S]*?Technologies[\s\S]*?LTD\.?/gi, "");
+  cleaned = cleaned.replace(/KudaMFBank[\s\S]*?NDIC\)[\s\S]*?$/gi, "");
+  cleaned = cleaned.replace(/licensed[\s\S]*?UK\.?/gi, "");
+  cleaned = cleaned.replace(/All[\s\S]*?reserved\.?/gi, "");
+  cleaned = cleaned.replace(/All[\s\S]*?NDIC\)/gi, "");
+  cleaned = cleaned.replace(/RC796975[\s\S]*$/gi, "");
+  cleaned = cleaned.replace(/131[\s\S]*?LTD\.?/gi, "");
+  cleaned = cleaned.replace(/Finsbury[\s\S]*?UK\.?/gi, "");
 
   // Step 4: Normalize whitespace
   cleaned = cleaned
@@ -45,8 +48,7 @@ export function cleanupBankText(text: string): string {
     .replace(/\n{3,}/g, "\n\n");    // Max 2 newlines
 
   // Step 5: Add line breaks before dates for transaction separation
-  // Match DD/MM/YY or DD/MM/YYYY patterns
-  cleaned = cleaned.replace(/(\d{2}\/\d{2}\/\d{2,4})/g, "\n$1");
+  cleaned = cleaned.replace(/(\d{2}\/\d{2}\/\d{2})/g, "\n$1");
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n"); // Clean up extra newlines
 
   return cleaned.trim();
@@ -66,7 +68,6 @@ function hasCharacterLevelSpacing(text: string): boolean {
 
 function mergeCharacterLevelText(text: string): string {
   // Merge single characters separated by spaces
-  // This handles "O L A D A Y O" → "OLADAYO"
   let result = text;
   let previous;
   
