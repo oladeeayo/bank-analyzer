@@ -4,6 +4,24 @@ import { ParsedTransaction, ParseResult, BankFormat } from "./types";
 import { detectBankNameFromFormat, extractAccountNumber, extractAccountName } from "./bank-detection";
 import { parseKudaFromPdfData } from "./kuda-pdf-parser";
 
+export interface PDF2JsonTextItem {
+  T?: string;
+}
+
+export interface PDF2JsonText {
+  x: number;
+  y: number;
+  R?: PDF2JsonTextItem[];
+}
+
+export interface PDF2JsonPage {
+  Texts?: PDF2JsonText[];
+}
+
+export interface PDF2JsonData {
+  Pages?: PDF2JsonPage[];
+}
+
 function detectBankFormat(text: string): BankFormat {
   const lower = text.toLowerCase();
   if (lower.includes("gtbank") || lower.includes("gtb") || lower.includes("gtco") || lower.includes("guaranty trust")) return "gtbank-pdf";
@@ -22,7 +40,8 @@ function detectBankFormat(text: string): BankFormat {
   return "generic-pdf";
 }
 
-const BRANCH_BLACKLIST = ['ILESA', 'E-CHANNELS', 'HEAD OFFICE', 'MAIN BRANCH', 'LAGOS', 'ABUJA', 'PORT HARCOURT', 'ORE', 'IBADAN'];
+const SPECIFIC_BRANCH_TERMS = ['E-CHANNELS', 'HEAD OFFICE', 'MAIN BRANCH'];
+const CITY_BRANCH_NAMES = ['ILESA', 'LAGOS', 'ABUJA', 'PORT HARCOURT', 'ORE', 'IBADAN'];
 
 function cleanNarration(text: string): string {
   let cleaned = text.replace(/\n/g, ' ').replace(/\r/g, '');
@@ -125,14 +144,22 @@ function cleanNarration(text: string): string {
   cleaned = cleaned.replace(/^(OneBank Transfer|Transfer|TRF)\s+(from|FROM)\s+.+?\s+(to|TO)\s+/i, "");
   cleaned = cleaned.replace(/^[\s\-]+|[\s\-]+$/g, "");
 
-  for (const branch of BRANCH_BLACKLIST) {
-    const regex = new RegExp(`\\b${branch}\\b`, 'gi');
+  for (const term of SPECIFIC_BRANCH_TERMS) {
+    const regex = new RegExp(`\\b${term}\\b`, 'gi');
     cleaned = cleaned.replace(regex, '');
   }
+
+  // Only strip city names if explicitly tagged as branch markers (e.g. "BRANCH LAGOS" or "LAGOS BRANCH")
+  for (const city of CITY_BRANCH_NAMES) {
+    const prefixedRegex = new RegExp(`(?:BRANCH|BR|LOC:)\\s+\\b${city}\\b`, 'gi');
+    const suffixedRegex = new RegExp(`\\b${city}\\b\\s+(?:BRANCH|OFFICE)`, 'gi');
+    cleaned = cleaned.replace(prefixedRegex, '').replace(suffixedRegex, '');
+  }
+
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
 
-  if (cleaned.length > 60) cleaned = cleaned.substring(0, 60).trim();
-  return cleaned || text.substring(0, 60).trim();
+  if (cleaned.length > 150) cleaned = cleaned.substring(0, 150).trim();
+  return cleaned || text.substring(0, 150).trim();
 }
 
 const UBA_BLACKLIST = ['OPENING BALANCE', 'CLOSING BALANCE', 'Africa\'s global bank', 'United Bank for Africa', 'OLADIPUPO', 'OLADAYO', 'ACCOUNT STATEMENT'];
@@ -151,7 +178,7 @@ function parseUBARows(rows: string[][]): ParseResult {
     }
   }
   if (headerIdx === -1) headerIdx = 0;
-  const headerRow = rows[headerIdx];
+  const headerRow = rows[headerIdx] || [];
   console.log(`[UBA] Header row ${headerIdx}: ${headerRow.join(" | ")}`);
 
   for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -243,7 +270,7 @@ function parseGTBankRows(rows: string[][]): ParseResult {
     }
   }
   if (headerIdx === -1) headerIdx = 0;
-  const headerRow = rows[headerIdx];
+  const headerRow = rows[headerIdx] || [];
 
   // Map column indices by header names
   const colMap: Record<string, number> = {};
@@ -410,7 +437,7 @@ function parseSterlingRows(rows: string[][]): ParseResult {
     console.log("[Sterling] No header row found, using row 0 as header");
     headerIdx = 0;
   }
-  const headerRow = rows[headerIdx];
+  const headerRow = rows[headerIdx] || [];
   console.log(`[Sterling] Header row ${headerIdx}: ${headerRow.join(" | ")}`);
 
   for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -562,10 +589,11 @@ const AMOUNT_PATTERN = /^[+-]?[\d,]+\.?\d*$/;
 
 const PALMPAY_TIMESTAMP_REGEX = /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}\s+(?:AM|PM)/gi;
 
-function extractTextFromPDF2Json(pdfData: any): string {
+function extractTextFromPDF2Json(pdfData: PDF2JsonData): string {
   const lines: string[] = [];
   if (pdfData.Pages) {
     for (const page of pdfData.Pages) {
+      if (!page.Texts) continue;
       const textsByY: Record<number, { x: number; text: string }[]> = {};
       for (const text of page.Texts) {
         if (text.R) {
@@ -609,7 +637,7 @@ function mergeCloseTexts(items: { x: number; text: string }[]): { x: number; tex
   return merged;
 }
 
-function extractTableRows(pdfData: any): string[][] {
+function extractTableRows(pdfData: PDF2JsonData): string[][] {
   const allRows: string[][] = [];
 
   if (pdfData.Pages) {
