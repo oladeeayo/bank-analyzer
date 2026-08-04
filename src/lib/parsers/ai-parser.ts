@@ -96,25 +96,38 @@ export async function parseWithAI(
 
   try {
     const bankHint = hint?.bankName ? `Bank: ${hint.bankName}\n\n` : "";
-    const prompt = EXTRACTION_PROMPT + bankHint + rawContent.slice(0, 30000);
-    const response = await callGemini(prompt);
-    const parsed = parseAIResponse(response);
+    const CHUNK_SIZE = 25000;
+    const chunks: string[] = [];
 
-    // Validate each transaction
-    for (const tx of parsed) {
-      if (!tx.date || !tx.description || tx.amount === 0) {
-        errors.push(`Skipped row: missing date/description/amount`);
-        continue;
+    if (rawContent.length <= CHUNK_SIZE) {
+      chunks.push(rawContent);
+    } else {
+      for (let i = 0; i < rawContent.length; i += CHUNK_SIZE) {
+        chunks.push(rawContent.slice(i, i + CHUNK_SIZE));
       }
-      if (!isValidDate(tx.date)) {
-        errors.push(`Skipped row: invalid date "${tx.date}"`);
-        continue;
+    }
+
+    for (const chunk of chunks) {
+      const prompt = EXTRACTION_PROMPT + bankHint + chunk;
+      const response = await callGemini(prompt);
+      const parsed = parseAIResponse(response);
+
+      // Validate each transaction
+      for (const tx of parsed) {
+        if (!tx.date || !tx.description || tx.amount === 0) {
+          errors.push(`Skipped row: missing date/description/amount`);
+          continue;
+        }
+        if (!isValidDate(tx.date)) {
+          errors.push(`Skipped row: invalid date "${tx.date}"`);
+          continue;
+        }
+        if (tx.description.length < 3) {
+          errors.push(`Skipped row: description too short "${tx.description}"`);
+          continue;
+        }
+        transactions.push(tx);
       }
-      if (tx.description.length < 3) {
-        errors.push(`Skipped row: description too short "${tx.description}"`);
-        continue;
-      }
-      transactions.push(tx);
     }
 
     // Validate uniqueness - filter out obvious duplicates

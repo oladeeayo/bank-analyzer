@@ -224,22 +224,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── AI Narration Extraction (for ALL transactions) ──────────────────
+    // ── AI Narration Extraction (for ALL transactions in chunks of 50) ──
     const rawNarrations = result.transactions.map((tx, idx) => ({
       index: String(idx),
       rawText: tx.narration || tx.description || '',
     }));
 
     if (rawNarrations.length > 0) {
-      console.log(`[Upload] AI extraction for ${rawNarrations.length} transactions`);
-      const aiResults = await extractMerchantFromNarration(rawNarrations);
+      console.log(`[Upload] AI extraction for ${rawNarrations.length} transactions in batches of 50`);
+      const BATCH_SIZE = 50;
+      const aiResults: Record<string, string> = {};
+
+      for (let i = 0; i < rawNarrations.length; i += BATCH_SIZE) {
+        const batch = rawNarrations.slice(i, i + BATCH_SIZE);
+        try {
+          const batchResults = await extractMerchantFromNarration(batch);
+          Object.assign(aiResults, batchResults);
+        } catch (batchErr) {
+          console.error(`[Upload] AI narration extraction error in batch ${i / BATCH_SIZE}:`, batchErr);
+        }
+      }
+
       console.log(`[Upload] AI returned ${Object.keys(aiResults).length} results`);
 
-      for (const tx of result.transactions) {
-        const idx = result.transactions.indexOf(tx);
+      for (let idx = 0; idx < result.transactions.length; idx++) {
         const cleanName = aiResults[String(idx)];
         if (cleanName && cleanName.length > 2) {
-          tx.description = cleanName;
+          result.transactions[idx].description = cleanName;
         }
       }
     }

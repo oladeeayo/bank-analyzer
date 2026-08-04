@@ -584,14 +584,14 @@ export default function UploadPage() {
 
       {/* Duplicate Modal */}
       {showDuplicate && (
-        <div className="fixed inset-0 bg-forest/40 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div role="dialog" aria-modal="true" aria-labelledby="duplicate-modal-title" className="fixed inset-0 bg-forest/40 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-paper-white w-full max-w-md rounded-cards overflow-hidden shadow-elevated p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-error-container rounded-full flex items-center justify-center shrink-0">
                 <ExclamationCircleIcon className="h-5 w-5 text-error" />
               </div>
               <div>
-                <h3 className="font-semibold text-ink-black">Duplicate Statement Detected</h3>
+                <h3 id="duplicate-modal-title" className="font-semibold text-ink-black">Duplicate Statement Detected</h3>
                 <p className="text-sm text-ash-gray">{duplicateInfo?.message || "A statement for this month already exists."}</p>
               </div>
             </div>
@@ -609,12 +609,13 @@ export default function UploadPage() {
 
       {/* Processing Modal */}
       {showProcessing && (
-        <div className="fixed inset-0 bg-ink-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div role="dialog" aria-modal="true" aria-labelledby="processing-modal-title" className="fixed inset-0 bg-ink-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-paper-white w-full max-w-md rounded-cards shadow-elevated p-8 relative">
             <button
               onClick={() => {
                 if (processingProgress === 100) setShowProcessing(false);
               }}
+              aria-label="Close modal"
               className={`absolute top-4 right-4 text-ash-gray hover:text-ink-black transition-colors ${processingProgress < 100 ? "invisible" : ""}`}
             >
               <XMarkIcon className="h-5 w-5" />
@@ -629,7 +630,7 @@ export default function UploadPage() {
                 </div>
               </div>
 
-              <h2 className="text-xl font-semibold text-ink-black mb-4">Processing your statement</h2>
+              <h2 id="processing-modal-title" className="text-xl font-semibold text-ink-black mb-4">Processing your statement</h2>
 
               <div className="w-full h-1.5 bg-mist-gray rounded-full overflow-hidden mb-2">
                 <div className="h-full bg-forest rounded-full transition-all duration-500 ease-out" style={{ width: `${processingProgress}%` }} />
@@ -656,11 +657,11 @@ export default function UploadPage() {
 
       {/* Add Bank Modal */}
       {bankModalOpen && (
-        <div className="fixed inset-0 bg-forest/40 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div role="dialog" aria-modal="true" aria-labelledby="bank-modal-title" className="fixed inset-0 bg-forest/40 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-paper-white w-full max-w-xl rounded-cards overflow-hidden shadow-elevated">
             <div className="p-6 border-b border-[#ececec] flex justify-between items-center bg-mist-gray">
               <div>
-                <h3 className="font-signifier text-lg text-ink-black">Connect New Account</h3>
+                <h3 id="bank-modal-title" className="font-signifier text-lg text-ink-black">Connect New Account</h3>
                 <p className="text-sm text-ash-gray">Select your bank from the list of Nigerian providers</p>
               </div>
               <button onClick={closeBankModal} className="p-2 hover:bg-paper-white rounded-full transition-colors">

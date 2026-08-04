@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { generateReport, type ReportData } from "@/lib/ai/report";
 import { getSessionUserId } from "@/lib/session";
+import { detectRecurringTransactions } from "@/lib/recurring-detector";
 
 export async function GET(request: NextRequest) {
   const userId = await getSessionUserId();
@@ -40,10 +41,7 @@ export async function GET(request: NextRequest) {
       include: { category: true },
     });
     const goals = await db.goal.findMany({ where: { userId } });
-    const recurringPatterns = await db.recurringTransaction.findMany({
-      where: { isActive: true },
-      include: { merchant: true },
-    });
+    const recurringPatterns = await detectRecurringTransactions(userId);
 
     const totalIncome = transactions.filter((t) => t.type === "credit").reduce((s, t) => s + t.amount, 0);
     const totalExpenses = transactions.filter((t) => t.type === "debit").reduce((s, t) => s + t.amount, 0);
@@ -142,7 +140,7 @@ export async function GET(request: NextRequest) {
       categoryBreakdown: categoryBreakdownMapped,
       merchantRanking: merchantRankingMapped,
       recurringExpenses: recurringPatterns.map((r) => ({
-        description: r.merchant?.displayName || r.merchant?.normalizedName || "Unknown",
+        description: r.description || "Unknown",
         avgAmount: r.avgAmount,
         frequency: r.frequency,
       })),

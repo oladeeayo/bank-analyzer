@@ -162,7 +162,7 @@ function cleanNarration(text: string): string {
   return cleaned || text.substring(0, 150).trim();
 }
 
-const UBA_BLACKLIST = ['OPENING BALANCE', 'CLOSING BALANCE', 'Africa\'s global bank', 'United Bank for Africa', 'OLADIPUPO', 'OLADAYO', 'ACCOUNT STATEMENT'];
+const UBA_BLACKLIST = ['OPENING BALANCE', 'CLOSING BALANCE', 'Africa\'s global bank', 'United Bank for Africa', 'ACCOUNT STATEMENT'];
 
 function parseUBARows(rows: string[][]): ParseResult {
   const transactions: ParsedTransaction[] = [];

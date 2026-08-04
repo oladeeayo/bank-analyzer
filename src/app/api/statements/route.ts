@@ -82,12 +82,6 @@ export async function DELETE(request: NextRequest) {
       where: { bankId, filename: statement.filename },
     });
 
-    // If the bank has no more statements, delete it too
-    const remainingStatements = await db.statement.count({ where: { bankId } });
-    if (remainingStatements === 0) {
-      await db.bank.delete({ where: { id: bankId } });
-    }
-
     return NextResponse.json({
       success: true,
       deleted: { id, transactionCount: statement._count.transactions },

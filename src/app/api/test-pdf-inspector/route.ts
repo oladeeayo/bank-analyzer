@@ -81,8 +81,15 @@ function reconstructFromPositions(positions: TextToken[]): string {
   return fullText.trim();
 }
 
+import { getSessionUserId } from "@/lib/session";
+
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
 
