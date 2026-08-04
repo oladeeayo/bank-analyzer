@@ -2,29 +2,40 @@ import { ParseResult, ParsedTransaction } from "./types";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-const EXTRACTION_PROMPT = `You are a Nigerian bank statement parser. Your ONLY job is to extract EXACTLY what you see in the raw text below.
+const CANDIDATE_MODELS = [
+  process.env.GEMINI_MODEL,
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
+].filter(Boolean) as string[];
+
+const EXTRACTION_PROMPT = `You are an expert Nigerian bank statement OCR parser. Your ONLY job is to extract EXACTLY what you see in the bank statement PDF / text below.
 
 CRITICAL RULES:
-- Only extract data that is EXPLICITLY present in the text. Do NOT generate, fabricate, or guess any data.
-- If you cannot find any transaction data in the text, return an empty transactions array: {"transactions": []}
+- Only extract transaction data that is EXPLICITLY present. Do NOT generate, fabricate, or guess any data.
+- If you cannot find any transaction data, return: {"transactions": []}
 - Do NOT use sample data, placeholder data, or invented examples.
-- Every transaction MUST come from an actual line in the provided text.
-- If the text contains metadata (account info, balances, headers), skip those and only extract transaction rows.
+- Every transaction MUST come from an actual line or table row in the statement.
+- Ignore headers, disclaimers, account summaries, and page footers.
+- Pay close attention to Nigerian Bank Statement layouts (Kuda Bank, GTBank, Zenith, Access, UBA, PalmPay, Moniepoint, OPay, Sterling).
+- For Kuda statements specifically: money in is credit, money out is debit. Combine To/From and Description into a clean Narration.
 
 For each transaction row you find, extract:
-1. Date (as YYYY-MM-DD)
-2. Description / Narration (exactly as written in the statement)
-3. Amount (the actual number, cleaned of currency symbols)
+1. Date (format as YYYY-MM-DD or ISO string)
+2. Description / Narration (the description, sender, receiver, or details)
+3. Amount (numeric value, strictly positive)
 4. Type: "debit" (money out) or "credit" (money in)
-5. Balance (if present)
+5. Balance (if present as a numeric value)
 6. Reference (if present)
 
-Output ONLY valid JSON:
+Output ONLY valid JSON matching this exact structure:
 {
   "transactions": [
     {
       "date": "YYYY-MM-DD",
-      "description": "exact text from statement",
+      "description": "exact narration text from statement",
       "amount": 15000.00,
       "type": "debit",
       "balance": 250000.00,
@@ -33,21 +44,41 @@ Output ONLY valid JSON:
   ]
 }
 
-If there are NO transactions in the text, output: {"transactions": []}
+If there are NO transactions, output: {"transactions": []}`;
 
-Raw statement data:
-`;
-
-async function callGemini(prompt: string): Promise<string> {
+async function callGeminiVision(parts: Array<any>): Promise<string> {
   if (!GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY not configured");
   }
 
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
-  const result = await model.generateContent(prompt);
-  return result.response.text();
+
+  let lastError: any = null;
+
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      console.log(`[GeminiVision] Attempting vision extraction with model: ${modelName}`);
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: "application/json",
+        },
+      });
+
+      const result = await model.generateContent(parts);
+      const text = result.response.text();
+      if (text && text.trim().length > 0) {
+        console.log(`[GeminiVision] Successfully received response from ${modelName}`);
+        return text;
+      }
+    } catch (err: any) {
+      console.warn(`[GeminiVision] Model ${modelName} failed: ${err?.message || err}`);
+      lastError = err;
+    }
+  }
+
+  throw new Error(`All Gemini candidate models failed. Last error: ${lastError?.message || lastError}`);
 }
 
 function isValidDate(dateStr: string): boolean {
@@ -56,34 +87,140 @@ function isValidDate(dateStr: string): boolean {
   return !isNaN(date.getTime()) && date.getFullYear() >= 2000 && date.getFullYear() <= 2030;
 }
 
-function isGenericDescription(desc: string): boolean {
-  const genericPatterns = [
-    /^(opening balance|closing balance)$/i,
-    /^(transfer to|transfer from)\s+\w+$/i,
-    /^(salary credit|salary payment)$/i,
-    /^(pos purchase|pos purchase \w+)$/i,
-    /^(airtime purchase|data purchase|recharge)$/i,
-    /^open$/i,
-  ];
-  return genericPatterns.some(p => p.test(desc.trim()));
+function parseAIResponse(text: string): ParsedTransaction[] {
+  let cleaned = text.trim();
+
+  // Strip markdown code fences if present
+  const jsonMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/) || cleaned.match(/(\{[\s\S]*\})/);
+  if (jsonMatch) {
+    cleaned = jsonMatch[1] || jsonMatch[0];
+  }
+
+  const parsed = JSON.parse(cleaned);
+  const rawList = parsed.transactions || parsed.results || (Array.isArray(parsed) ? parsed : []);
+
+  return rawList.map((tx: any) => {
+    const rawAmt = Math.abs(parseFloat(String(tx.amount || tx.Amount || tx.debit || tx.credit || 0)));
+    let dateStr = tx.date || tx.Date || "";
+    if (dateStr && !dateStr.includes("-") && dateStr.includes("/")) {
+      const parts = dateStr.split("/");
+      if (parts.length === 3) {
+        let [d, m, y] = parts;
+        if (y.length === 2) y = "20" + y;
+        dateStr = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+      }
+    }
+
+    const typeStr = String(tx.type || tx.Type || "").toLowerCase();
+    const isCredit = typeStr.includes("credit") || typeStr.includes("in") || (tx.credit && parseFloat(tx.credit) > 0);
+    const type: "debit" | "credit" = isCredit ? "credit" : "debit";
+
+    const description = String(tx.description || tx.Description || tx.narration || tx.Narration || tx.details || "Transaction").trim();
+
+    return {
+      date: dateStr,
+      description,
+      amount: isNaN(rawAmt) ? 0 : rawAmt,
+      type,
+      balance: tx.balance || tx.Balance ? parseFloat(String(tx.balance || tx.Balance)) : undefined,
+      reference: tx.reference || tx.Reference || tx.ref || tx.Ref || undefined,
+      narration: description,
+    };
+  });
 }
 
-function parseAIResponse(text: string): ParsedTransaction[] {
-  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/);
-  if (!jsonMatch) throw new Error("No JSON found in AI response");
+/**
+ * Direct Gemini Multimodal PDF Vision Extraction.
+ * Reads PDF buffer directly via inline Base64 data with application/pdf MIME type.
+ */
+export async function parsePdfWithGeminiVision(
+  pdfBuffer: Buffer | ArrayBuffer,
+  fileName: string
+): Promise<ParseResult> {
+  const transactions: ParsedTransaction[] = [];
+  const errors: string[] = [];
 
-  const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-  const transactions = parsed.transactions || parsed.results || [];
+  try {
+    const buffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
+    const base64Data = buffer.toString("base64");
 
-  return transactions.map((tx: any) => ({
-    date: tx.date || tx.Date || "",
-    description: tx.description || tx.Description || tx.narration || tx.Narration || tx.details || "",
-    amount: Math.abs(parseFloat(String(tx.amount || tx.Amount || tx.debit || tx.credit || 0))),
-    type: (tx.type || tx.Type || (tx.debit && parseFloat(tx.debit) > 0 ? "debit" : "credit") || "debit").toLowerCase() as "debit" | "credit",
-    balance: tx.balance || tx.Balance ? parseFloat(String(tx.balance || tx.Balance)) : undefined,
-    reference: tx.reference || tx.Reference || tx.ref || tx.Ref || tx["transaction id"] || undefined,
-    narration: tx.description || tx.Description || tx.narration || "",
-  }));
+    const parts = [
+      {
+        inlineData: {
+          data: base64Data,
+          mimeType: "application/pdf",
+        },
+      },
+      { text: EXTRACTION_PROMPT },
+    ];
+
+    const responseText = await callGeminiVision(parts);
+    const parsed = parseAIResponse(responseText);
+
+    for (const tx of parsed) {
+      if (!tx.date || !tx.description || tx.amount === 0) {
+        errors.push(`Skipped row: missing date (${tx.date}), description (${tx.description}), or amount (${tx.amount})`);
+        continue;
+      }
+      if (!isValidDate(tx.date)) {
+        errors.push(`Skipped row: invalid date "${tx.date}"`);
+        continue;
+      }
+      if (tx.description.length < 2) {
+        errors.push(`Skipped row: description too short "${tx.description}"`);
+        continue;
+      }
+      transactions.push(tx);
+    }
+
+    // Filter out obvious duplicate entries
+    const seen = new Set<string>();
+    const unique: ParsedTransaction[] = [];
+    for (const tx of transactions) {
+      const key = `${tx.date}_${tx.amount}_${tx.type}_${tx.description.substring(0, 30)}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(tx);
+      }
+    }
+
+    const dates = unique
+      .map((t) => new Date(t.date).getTime())
+      .filter((d) => !isNaN(d))
+      .sort((a, b) => a - b);
+
+    console.log(`[GeminiVision] Parsed ${unique.length} transactions from PDF ${fileName}`);
+
+    return {
+      transactions: unique,
+      errors,
+      metadata: {
+        fileName,
+        fileType: "pdf-ocr-vision",
+        detectedBank: "Gemini Vision OCR",
+        totalRows: unique.length,
+        parsedRows: unique.length,
+        dateRange:
+          dates.length > 0
+            ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() }
+            : undefined,
+      },
+    };
+  } catch (err: any) {
+    console.error("[GeminiVision] Failed to parse PDF via Gemini Vision:", err);
+    errors.push(`Gemini Vision OCR error: ${err?.message || err}`);
+  }
+
+  return {
+    transactions,
+    errors,
+    metadata: {
+      fileName,
+      fileType: "pdf-ocr-vision",
+      totalRows: 0,
+      parsedRows: 0,
+    },
+  };
 }
 
 export async function parseWithAI(
@@ -108,11 +245,10 @@ export async function parseWithAI(
     }
 
     for (const chunk of chunks) {
-      const prompt = EXTRACTION_PROMPT + bankHint + chunk;
-      const response = await callGemini(prompt);
+      const parts = [{ text: EXTRACTION_PROMPT + bankHint + chunk }];
+      const response = await callGeminiVision(parts);
       const parsed = parseAIResponse(response);
 
-      // Validate each transaction
       for (const tx of parsed) {
         if (!tx.date || !tx.description || tx.amount === 0) {
           errors.push(`Skipped row: missing date/description/amount`);
@@ -122,7 +258,7 @@ export async function parseWithAI(
           errors.push(`Skipped row: invalid date "${tx.date}"`);
           continue;
         }
-        if (tx.description.length < 3) {
+        if (tx.description.length < 2) {
           errors.push(`Skipped row: description too short "${tx.description}"`);
           continue;
         }
@@ -130,7 +266,6 @@ export async function parseWithAI(
       }
     }
 
-    // Validate uniqueness - filter out obvious duplicates
     const seen = new Set<string>();
     const unique: ParsedTransaction[] = [];
     for (const tx of transactions) {
@@ -141,16 +276,6 @@ export async function parseWithAI(
       }
     }
 
-    // Filter out rows where all dates are the same (fake data indicator)
-    if (unique.length > 3) {
-      const dates = new Set(unique.map(t => t.date));
-      if (dates.size === 1) {
-        errors.push("AI returned transactions with identical dates - likely fabricated data. Discarding all.");
-        return { transactions: [], errors, metadata: { fileName, fileType: "ai-fallback", totalRows: 0, parsedRows: 0 } };
-      }
-    }
-
-    // Replace with unique set
     return {
       transactions: unique,
       errors,
@@ -176,3 +301,4 @@ export async function parseWithAI(
     },
   };
 }
+
