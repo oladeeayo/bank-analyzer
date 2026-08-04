@@ -123,14 +123,16 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         </Link>
         <button
           onClick={toggleDarkMode}
-          className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest hover:bg-mist-gray transition-all active:scale-[0.97]"
+          aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+          className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest dark:hover:text-lime-vibrant hover:bg-mist-gray dark:hover:bg-[#252830] transition-all active:scale-[0.97]"
         >
-          {darkMode ? <SunIcon className="h-5 w-5 shrink-0" /> : <MoonIcon className="h-5 w-5 shrink-0" />}
+          {darkMode ? <SunIcon className="h-5 w-5 shrink-0 text-lime-vibrant" /> : <MoonIcon className="h-5 w-5 shrink-0" />}
           {darkMode ? "Light Mode" : "Dark Mode"}
         </button>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-forest hover:bg-mist-gray transition-all active:scale-[0.97]"
+          aria-label="Log out of account"
+          className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-gray hover:text-error hover:bg-error-container/20 transition-all active:scale-[0.97]"
         >
           <ArrowLeftOnRectangleIcon className="h-5 w-5 shrink-0" />
           Logout

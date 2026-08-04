@@ -296,7 +296,7 @@ export default function DashboardPage() {
           <div className="relative z-10 flex justify-between items-start">
             <div>
               <p className="text-white/60 text-xs uppercase tracking-wider mb-1">Current Balance</p>
-              <h3 className="font-mono text-[28px] font-medium">{formatCurrency(summary.currentBalance)}</h3>
+              <h3 className="font-mono tabular-nums text-[28px] font-medium">{formatCurrency(summary.currentBalance)}</h3>
             </div>
             <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
               <span className="text-lime-vibrant">💰</span>
@@ -314,42 +314,42 @@ export default function DashboardPage() {
         </div>
 
         {/* Money In */}
-        <div className="bg-paper-white border border-[#ececec] p-5 sm:p-6 rounded-cards flex flex-col justify-between h-40 sm:h-44 shadow-subtle">
+        <div className="bg-paper-white dark:bg-[#1a1d21] border border-[#ececec] dark:border-[#2a2d35] p-5 sm:p-6 rounded-cards flex flex-col justify-between h-40 sm:h-44 shadow-subtle">
           <div>
             <p className="text-ash-gray text-xs mb-1">Total Income</p>
-            <h3 className="font-mono text-[28px] font-medium text-forest">{formatCurrency(summary.totalIncome)}</h3>
+            <h3 className="font-mono tabular-nums text-[28px] font-medium text-forest dark:text-lime-vibrant">{formatCurrency(summary.totalIncome)}</h3>
           </div>
           <div className="flex items-center gap-2">
-            <ArrowTrendingUpIcon className="h-3 w-3 text-forest" />
+            <ArrowTrendingUpIcon className="h-3.5 w-3.5 text-forest dark:text-lime-vibrant" />
             <span className="text-xs text-ash-gray">{data.periodLabel}</span>
           </div>
         </div>
 
         {/* Money Out */}
-        <div className="bg-paper-white border border-[#ececec] p-5 sm:p-6 rounded-cards flex flex-col justify-between h-40 sm:h-44 shadow-subtle">
+        <div className="bg-paper-white dark:bg-[#1a1d21] border border-[#ececec] dark:border-[#2a2d35] p-5 sm:p-6 rounded-cards flex flex-col justify-between h-40 sm:h-44 shadow-subtle">
           <div>
             <p className="text-ash-gray text-xs mb-1">Total Expenses</p>
-            <h3 className="font-mono text-[28px] font-medium text-error">{formatCurrency(summary.totalExpenses)}</h3>
+            <h3 className="font-mono tabular-nums text-[28px] font-medium text-error">{formatCurrency(summary.totalExpenses)}</h3>
           </div>
           <div className="flex items-center gap-2">
-            <ArrowTrendingDownIcon className="h-3 w-3 text-error" />
+            <ArrowTrendingDownIcon className="h-3.5 w-3.5 text-error" />
             <span className="text-xs text-ash-gray">{data.periodLabel}</span>
           </div>
         </div>
 
         {/* Savings Rate */}
-        <div className="bg-paper-white border border-[#ececec] p-5 sm:p-6 rounded-cards flex flex-col justify-between h-40 sm:h-44 shadow-subtle">
+        <div className="bg-paper-white dark:bg-[#1a1d21] border border-[#ececec] dark:border-[#2a2d35] p-5 sm:p-6 rounded-cards flex flex-col justify-between h-40 sm:h-44 shadow-subtle">
           <div>
             <p className="text-ash-gray text-xs mb-1">Savings</p>
-            <h3 className="font-mono text-[28px] font-medium text-forest">{formatCurrency(summary.totalIncome - summary.totalExpenses)}</h3>
+            <h3 className="font-mono tabular-nums text-[28px] font-medium text-forest dark:text-lime-vibrant">{formatCurrency(summary.totalIncome - summary.totalExpenses)}</h3>
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-ash-gray">Savings rate</span>
-              <span className="text-xs font-semibold text-forest">{summary.savingsRate.toFixed(1)}%</span>
+              <span className="text-xs font-semibold text-forest dark:text-lime-vibrant">{summary.savingsRate.toFixed(1)}%</span>
             </div>
-            <div className="w-full bg-mist-gray h-2 rounded-full overflow-hidden">
-              <div className="bg-lime h-full rounded-full transition-all" style={{ width: `${Math.min(100, summary.savingsRate)}%` }}></div>
+            <div className="w-full bg-mist-gray dark:bg-[#252830] h-2 rounded-full overflow-hidden">
+              <div className="bg-lime dark:bg-lime-vibrant h-full rounded-full transition-all" style={{ width: `${Math.min(100, summary.savingsRate)}%` }}></div>
             </div>
           </div>
         </div>

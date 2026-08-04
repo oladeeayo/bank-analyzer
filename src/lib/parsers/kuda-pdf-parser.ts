@@ -1,4 +1,5 @@
 import { ParsedTransaction, ParseResult } from "./types";
+import { unspaceText } from "../utils/text-cleanup";
 
 interface Token {
   x: number;
@@ -285,3 +286,139 @@ export function parseKudaFromPdfData(pdfData: any, fileName: string): ParseResul
     },
   };
 }
+
+/**
+ * Fallback parser for Kuda Bank Statements extracted via Markdown / @firecrawl/pdf-inspector.
+ * Normalizes character-level spaces and parses transactions from Markdown tables or text lines.
+ */
+export function parseKudaFromMarkdown(markdownText: string, fileName: string): ParseResult {
+  const transactions: ParsedTransaction[] = [];
+  const errors: string[] = [];
+
+  if (!markdownText || markdownText.trim().length === 0) {
+    return { transactions: [], errors: ["Empty Markdown text"], metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 } };
+  }
+
+  // 1. Clean markdown pipe tables into space-separated text lines & un-space character spacing
+  const lines = markdownText
+    .split("\n")
+    .map((line) => {
+      let cleaned = line.replace(/\|/g, " ").trim();
+      return unspaceText(cleaned);
+    })
+    .filter((l) => l.length > 0);
+
+  const dateRegex = /\b(\d{2}\/\d{2}\/\d{2})\b/;
+  const skipPatterns = [
+    /^summary$/i, /^spend account$/i, /^type$/i,
+    /^opening balance$/i, /^closing balance$/i, /^all statements$/i,
+    /^account number/i, /^account date$/i, /^page \d/i,
+    /Kuda MF Bank/i, /NDIC/i, /licensed by the Central Bank/i,
+  ];
+
+  let currentTx: {
+    dateStr: string;
+    amount: number;
+    type: "debit" | "credit";
+    descParts: string[];
+    balance?: number;
+  } | null = null;
+
+  const commitTx = () => {
+    if (!currentTx) return;
+    if (currentTx.amount > 0 && currentTx.dateStr) {
+      const description = formatName(currentTx.descParts.join(" "));
+      const date = parseDateDDMMYY(currentTx.dateStr);
+
+      if (!isNaN(date.getTime()) && description.length >= 2) {
+        transactions.push({
+          date: date.toISOString(),
+          description,
+          amount: currentTx.amount,
+          type: currentTx.type,
+          balance: currentTx.balance,
+          narration: description,
+        });
+      }
+    }
+    currentTx = null;
+  };
+
+  for (const line of lines) {
+    if (skipPatterns.some((p) => p.test(line))) continue;
+
+    const dateMatch = line.match(dateRegex);
+
+    if (dateMatch) {
+      commitTx();
+
+      const dateStr = dateMatch[1];
+
+      // Match amount: e.g. ₦50,000.00, ₦4,340.08, ₦15,000.00, ₦8,000.00
+      const amounts = line.match(/[₦#][+\-]?[\d,]+\.\d{2}/g) || line.match(/[\d,]+\.\d{2}/g) || [];
+      const parsedAmounts = amounts.map((s: string) => parseAmount(s)).filter((a: number) => a > 0);
+
+      const isCredit = /inward|credit|\+|received/i.test(line);
+      const isDebit = /outward|debit|loan|charges|interest|\-/i.test(line);
+
+      let amount = 0;
+      let balance: number | undefined = undefined;
+
+      if (parsedAmounts.length >= 2) {
+        amount = parsedAmounts[0];
+        balance = parsedAmounts[parsedAmounts.length - 1];
+      } else if (parsedAmounts.length === 1) {
+        amount = parsedAmounts[0];
+      }
+
+      const type: "debit" | "credit" = isCredit ? "credit" : isDebit ? "debit" : "debit";
+
+      // Clean narration text from date & amount tokens
+      let descText = line
+        .replace(dateRegex, "")
+        .replace(/\d{2}:\d{2}:\d{2}/, "")
+        .replace(/[₦#][+\-]?[\d,]+\.\d{2}/g, "")
+        .replace(/inward|outward|transfer|loan|airtime|bills/gi, "")
+        .trim();
+
+      currentTx = {
+        dateStr,
+        amount,
+        type,
+        descParts: descText ? [descText] : [],
+        balance,
+      };
+    } else if (currentTx) {
+      // Continuation line for active transaction narration
+      let lineCleaned = line
+        .replace(/[₦#][+\-]?[\d,]+\.\d{2}/g, "")
+        .replace(/inward|outward|transfer|loan|airtime|bills/gi, "")
+        .trim();
+
+      if (lineCleaned && !skipPatterns.some((p) => p.test(lineCleaned))) {
+        currentTx.descParts.push(lineCleaned);
+      }
+    }
+  }
+
+  commitTx();
+
+  const dates = transactions.map((t) => new Date(t.date).getTime()).sort((a, b) => a - b);
+
+  return {
+    transactions,
+    errors,
+    metadata: {
+      fileName,
+      fileType: "pdf",
+      detectedBank: "Kuda Bank (Markdown)",
+      totalRows: transactions.length,
+      parsedRows: transactions.length,
+      dateRange:
+        dates.length > 0
+          ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() }
+          : undefined,
+    },
+  };
+}
+

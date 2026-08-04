@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script dangerouslySetInnerHTML={{__html: "if(localStorage.getItem('theme)==='dark'||(!localStorage.getItem('theme)&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')"}} />
+        <script dangerouslySetInnerHTML={{__html: "if(localStorage.getItem('theme')==='dark'||(!localStorage.getItem('theme')&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')"}} />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#003527" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

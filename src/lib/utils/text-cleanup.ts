@@ -67,23 +67,38 @@ export function cleanupBankText(text: string): string {
 
 function hasCharacterLevelSpacing(text: string): boolean {
   const tokens = text.split(/\s+/);
-  if (tokens.length < 5) return false;
+  if (tokens.length < 3) return false;
 
   const singleCharTokens = tokens.filter(
-    (t) => t.length === 1 && /[A-Za-z0-9₦.,\-/:().]/.test(t)
+    (t) => t.length === 1 && /[A-Za-z0-9₦#.,\-/:().]/.test(t)
   );
 
-  return singleCharTokens.length / tokens.length > 0.4;
+  return singleCharTokens.length / tokens.length > 0.35;
+}
+
+export function unspaceText(text: string): string {
+  if (!text) return "";
+  let result = text;
+  
+  // 1. Un-space dates: e.g. "0 2 /0 2 /2 6" or "0 2 / 0 2 / 2 6" -> "02/02/26"
+  result = result.replace(/(\d)\s+(\d)\s*\/\s*(\d)\s+(\d)\s*\/\s*(\d)\s+(\d)/g, "$1$2/$3$4/$5$6");
+  
+  // 2. Un-space currency amounts: e.g. "₦ 5 0 ,0 0 0 .0 0" -> "₦50,000.00"
+  result = result.replace(/([₦#])\s*([+\-]?)\s*([\d\s,.]+)/g, (match, curr, sign, num) => {
+    const cleanedNum = num.replace(/\s+/g, "");
+    return `${curr}${sign}${cleanedNum}`;
+  });
+
+  // 3. Un-space character-level text strings
+  let previous;
+  do {
+    previous = result;
+    result = result.replace(/(?<=[A-Za-z0-9₦#.,\-/:().]) (?=[A-Za-z0-9₦#.,\-/:().])/g, "");
+  } while (result !== previous);
+
+  return result;
 }
 
 function mergeCharacterLevelText(text: string): string {
-  let result = text;
-  let previous;
-  
-  do {
-    previous = result;
-    result = result.replace(/(?<=[A-Za-z0-9₦.,\-/:().]) (?=[A-Za-z0-9₦.,\-/:().])/g, "");
-  } while (result !== previous);
-  
-  return result;
+  return unspaceText(text);
 }

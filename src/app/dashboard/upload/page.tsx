@@ -376,7 +376,7 @@ export default function UploadPage() {
                     </div>
                   </div>
 
-                  <p className="text-[28px] leading-tight font-mono font-medium tracking-tight mb-1">
+                  <p className="text-[28px] leading-tight font-mono tabular-nums font-medium tracking-tight mb-1">
                     {formatCurrency(bank.openingBalance)}
                   </p>
 
@@ -396,17 +396,18 @@ export default function UploadPage() {
                     ) : (
                       <span
                         className={`text-[10px] font-medium px-2.5 py-1 rounded-full ${
-                          idx === 0 ? "bg-white/15 text-white/70" : "bg-error-container text-error"
+                          idx === 0 ? "bg-white/15 text-white/70" : "bg-mist-gray text-ash-gray border border-[#ececec]"
                         }`}
                       >
-                        Syncing Required
+                        No statements yet
                       </span>
                     )}
 
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleDeleteBank(bank.id)}
-                        className={`text-[11px] font-medium hover:underline ${idx === 0 ? "text-white/50" : "text-ash-gray hover:text-error"}`}
+                        aria-label={`Remove ${bank.nickname || bank.bankName} account`}
+                        className={`text-[11px] font-medium hover:underline ${idx === 0 ? "text-white/70 hover:text-white" : "text-ash-gray hover:text-error"}`}
                       >
                         Remove
                       </button>
@@ -584,14 +585,14 @@ export default function UploadPage() {
 
       {/* Duplicate Modal */}
       {showDuplicate && (
-        <div role="dialog" aria-modal="true" aria-labelledby="duplicate-modal-title" className="fixed inset-0 bg-forest/40 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-paper-white w-full max-w-md rounded-cards overflow-hidden shadow-elevated p-6">
+        <div role="dialog" aria-modal="true" aria-labelledby="duplicate-modal-title" className="fixed inset-0 bg-forest/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-paper-white dark:bg-[#1a1d21] w-full max-w-md rounded-cards overflow-hidden shadow-elevated p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-error-container rounded-full flex items-center justify-center shrink-0">
                 <ExclamationCircleIcon className="h-5 w-5 text-error" />
               </div>
               <div>
-                <h3 id="duplicate-modal-title" className="font-semibold text-ink-black">Duplicate Statement Detected</h3>
+                <h3 id="duplicate-modal-title" className="font-semibold text-ink-black dark:text-foreground">Duplicate Statement Detected</h3>
                 <p className="text-sm text-ash-gray">{duplicateInfo?.message || "A statement for this month already exists."}</p>
               </div>
             </div>
@@ -609,20 +610,20 @@ export default function UploadPage() {
 
       {/* Processing Modal */}
       {showProcessing && (
-        <div role="dialog" aria-modal="true" aria-labelledby="processing-modal-title" className="fixed inset-0 bg-ink-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-paper-white w-full max-w-md rounded-cards shadow-elevated p-8 relative">
+        <div role="dialog" aria-modal="true" aria-labelledby="processing-modal-title" className="fixed inset-0 bg-ink-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-paper-white dark:bg-[#1a1d21] w-full max-w-md rounded-cards shadow-elevated p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => {
                 if (processingProgress === 100) setShowProcessing(false);
               }}
               aria-label="Close modal"
-              className={`absolute top-4 right-4 text-ash-gray hover:text-ink-black transition-colors ${processingProgress < 100 ? "invisible" : ""}`}
+              className={`absolute top-4 right-4 text-ash-gray hover:text-ink-black dark:hover:text-foreground transition-colors ${processingProgress < 100 ? "invisible" : ""}`}
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
 
             <div className="flex flex-col items-center">
-              <div className="w-20 h-20 rounded-[20px] bg-forest flex items-center justify-center mb-6 shadow-lg">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[20px] bg-forest flex items-center justify-center mb-6 shadow-lg">
                 <div className="flex flex-col gap-1.5">
                   <div className="w-2 h-2 bg-white rounded-full" />
                   <div className="w-2 h-2 bg-white rounded-full" />
@@ -630,23 +631,23 @@ export default function UploadPage() {
                 </div>
               </div>
 
-              <h2 id="processing-modal-title" className="text-xl font-semibold text-ink-black mb-4">Processing your statement</h2>
+              <h2 id="processing-modal-title" className="text-lg sm:text-xl font-semibold text-ink-black dark:text-foreground mb-4">Processing your statement</h2>
 
-              <div className="w-full h-1.5 bg-mist-gray rounded-full overflow-hidden mb-2">
-                <div className="h-full bg-forest rounded-full transition-all duration-500 ease-out" style={{ width: `${processingProgress}%` }} />
+              <div className="w-full h-1.5 bg-mist-gray dark:bg-[#252830] rounded-full overflow-hidden mb-2">
+                <div className="h-full bg-forest dark:bg-lime-vibrant rounded-full transition-all duration-500 ease-out" style={{ width: `${processingProgress}%` }} />
               </div>
 
-              <p className="text-sm font-medium text-forest mb-6">{processingProgress}% completed</p>
+              <p className="text-sm font-medium text-forest dark:text-lime-vibrant mb-6">{processingProgress}% completed</p>
 
               <div className="w-full space-y-3">
                 {processingSteps.map((step, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div
                       className={`w-2.5 h-2.5 rounded-full shrink-0 transition-colors duration-300 ${
-                        step.status === "completed" ? "bg-forest" : step.status === "active" ? "bg-forest" : "bg-mist-gray"
+                        step.status === "completed" ? "bg-forest dark:bg-lime-vibrant" : step.status === "active" ? "bg-forest dark:bg-lime-vibrant" : "bg-mist-gray dark:bg-[#252830]"
                       }`}
                     />
-                    <span className={`text-sm transition-colors duration-300 ${step.status === "pending" ? "text-ash-gray" : "text-ink-black"}`}>{step.label}</span>
+                    <span className={`text-sm transition-colors duration-300 ${step.status === "pending" ? "text-ash-gray" : "text-ink-black dark:text-foreground"}`}>{step.label}</span>
                   </div>
                 ))}
               </div>
@@ -657,14 +658,14 @@ export default function UploadPage() {
 
       {/* Add Bank Modal */}
       {bankModalOpen && (
-        <div role="dialog" aria-modal="true" aria-labelledby="bank-modal-title" className="fixed inset-0 bg-forest/40 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-paper-white w-full max-w-xl rounded-cards overflow-hidden shadow-elevated">
-            <div className="p-6 border-b border-[#ececec] flex justify-between items-center bg-mist-gray">
+        <div role="dialog" aria-modal="true" aria-labelledby="bank-modal-title" className="fixed inset-0 bg-forest/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-paper-white dark:bg-[#1a1d21] w-full max-w-xl rounded-cards overflow-hidden shadow-elevated max-h-[90vh] flex flex-col">
+            <div className="p-4 sm:p-6 border-b border-[#ececec] dark:border-[#2a2d35] flex justify-between items-center bg-mist-gray dark:bg-[#252830]">
               <div>
-                <h3 id="bank-modal-title" className="font-signifier text-lg text-ink-black">Connect New Account</h3>
-                <p className="text-sm text-ash-gray">Select your bank from the list of Nigerian providers</p>
+                <h3 id="bank-modal-title" className="font-signifier text-lg text-ink-black dark:text-foreground">Connect New Account</h3>
+                <p className="text-xs sm:text-sm text-ash-gray">Select your bank from the list of Nigerian providers</p>
               </div>
-              <button onClick={closeBankModal} className="p-2 hover:bg-paper-white rounded-full transition-colors">
+              <button onClick={closeBankModal} aria-label="Close dialog" className="p-2 hover:bg-paper-white dark:hover:bg-[#1a1d21] rounded-full transition-colors">
                 <XMarkIcon className="h-5 w-5 text-slate-gray" />
               </button>
             </div>
@@ -683,17 +684,19 @@ export default function UploadPage() {
                     />
                   </div>
                 </div>
-                <div className="p-6 grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4 max-h-[300px] overflow-y-auto">
+                <div className="p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 max-h-[320px] overflow-y-auto">
                   {filteredBanks.map((bank) => (
                     <button
                       key={bank}
                       onClick={() => selectBank(bank)}
-                      className="flex flex-col items-center gap-2 p-4 border border-[#ececec] rounded-xl hover:border-lime hover:bg-mist-gray transition-all group"
+                      title={bank}
+                      aria-label={`Select ${bank}`}
+                      className="flex flex-col items-center gap-2 p-3.5 border border-[#ececec] rounded-xl hover:border-lime hover:bg-mist-gray transition-all group text-center"
                     >
-                      <div className="w-12 h-12 bg-paper-white rounded-lg flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform text-2xl">
+                      <div className="w-12 h-12 bg-paper-white rounded-lg flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform text-2xl shrink-0">
                         {BANK_ICONS[bank] || "\u{1F3E6}"}
                       </div>
-                      <span className="text-[10px] font-semibold text-ash-gray">{bank}</span>
+                      <span className="text-[11px] font-semibold text-ash-gray truncate max-w-full px-1">{bank}</span>
                     </button>
                   ))}
                 </div>

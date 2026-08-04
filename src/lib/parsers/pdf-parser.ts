@@ -2,7 +2,7 @@
 const PDFParser = require("pdf2json");
 import { ParsedTransaction, ParseResult, BankFormat } from "./types";
 import { detectBankNameFromFormat, extractAccountNumber, extractAccountName } from "./bank-detection";
-import { parseKudaFromPdfData } from "./kuda-pdf-parser";
+import { parseKudaFromPdfData, parseKudaFromMarkdown } from "./kuda-pdf-parser";
 
 export interface PDF2JsonTextItem {
   T?: string;
@@ -1007,6 +1007,10 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
           if (bankFormat === "kuda-pdf") {
             console.log(`[PDFParser] Using Kuda dedicated parser`);
             result = parseKudaFromPdfData(pdfData, fileName);
+            if (result.transactions.length === 0) {
+              console.log(`[PDFParser] Kuda coordinate parser returned 0 transactions, trying Markdown fallback`);
+              result = parseKudaFromMarkdown(text, fileName);
+            }
           } else if (bankFormat === "palmpay-pdf") {
             console.log(`[PDFParser] Using PalmPay text-block parser`);
             result = parsePalmPayText(text);
