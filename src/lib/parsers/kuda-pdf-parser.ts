@@ -27,11 +27,13 @@ function mergeCloseTexts(items: { x: number; text: string }[]): { x: number; tex
 
   for (let i = 1; i < sorted.length; i++) {
     const prev = merged[merged.length - 1];
-    const prevEnd = prev.x + prev.text.length * 2.5;
+    // In pdf2json, 1 character width is roughly 0.45 to 0.6 grid units
+    const prevEnd = prev.x + (prev.text.length * 0.5);
     const gap = sorted[i].x - prevEnd;
 
-    if (gap < 6) {
-      prev.text += sorted[i].text;
+    // Only merge if gap between text fragments is very small (< 1.5 grid units)
+    if (gap < 1.5) {
+      prev.text += (gap > 0.4 ? " " : "") + sorted[i].text;
     } else {
       merged.push({ x: sorted[i].x, text: sorted[i].text });
     }
@@ -69,7 +71,7 @@ function extractTextLines(pdfData: any): TextLine[] {
 }
 
 function mergeMultilineTransactions(lines: TextLine[]): string[][] {
-  const datePattern = /^\d{2}\/\d{2}\/\d{2}$/;
+  const datePattern = /(\d{2}\/\d{2}\/\d{2})/;
   const result: string[][] = [];
   let currentCells: string[] = [];
   let currentY = 0;
@@ -79,15 +81,18 @@ function mergeMultilineTransactions(lines: TextLine[]): string[][] {
     const combined = cells.join(" ");
 
     const hasDate = cells.some((c) => datePattern.test(c));
-    const hasAmount = /₦[\d,]+/.test(combined) || /^\d[\d,]*\.\d{2}$/.test(combined);
+    const hasAmount = /[₦#][\d,]+/.test(combined) || /[\d,]+\.\d{2}/.test(combined);
 
-    if (hasDate || (hasAmount && currentCells.length === 0)) {
+    if (hasDate) {
       if (currentCells.length > 0) {
         result.push(currentCells);
       }
       currentCells = [...cells];
       currentY = line.y;
-    } else if (currentCells.length > 0 && Math.abs(line.y - currentY) < 8) {
+    } else if (hasAmount && currentCells.length === 0) {
+      currentCells = [...cells];
+      currentY = line.y;
+    } else if (currentCells.length > 0 && Math.abs(line.y - currentY) < 12) {
       currentCells.push(...cells);
     } else if (currentCells.length > 0) {
       result.push(currentCells);
@@ -116,14 +121,14 @@ function findColumnIndices(headerCells: string[]): Record<string, number> {
     if (h.includes("to") && h.includes("from")) map.toFrom = i;
     if (h.includes("description") || h.includes("desc")) map.description = i;
     if (h.includes("balance") || h.includes("bal")) map.balance = i;
-    if (h === "type" || h === "money out") map.type = i;
+    if (h === "type") map.type = i;
   }
   return map;
 }
 
 function parseAmount(text: string): number {
-  const cleaned = text.replace(/[^0-9.\-]/g, "").replace(/,/g, "");
-  if (!cleaned || cleaned === ".") return 0;
+  const cleaned = text.replace(/[^0-9.\-]/g, "");
+  if (!cleaned || cleaned === "." || cleaned === "-" || cleaned === "--") return 0;
   const num = parseFloat(cleaned);
   return isNaN(num) ? 0 : Math.abs(num);
 }
@@ -200,8 +205,20 @@ function parseKudaRows(rows: string[][]): ParseResult {
         amount = moneyOut;
         type = "debit";
       } else {
-        continue;
+        // Fallback: search row for any amount cell (excluding date & balance)
+        for (let j = 0; j < row.length; j++) {
+          if (j === colMap.date || j === colMap.balance) continue;
+          const cell = row[j].trim();
+          const val = parseAmount(cell);
+          if (val > 0 && /[₦#\d]/.test(cell)) {
+            amount = val;
+            type = cell.includes("+") || combined.toLowerCase().includes("inward") ? "credit" : "debit";
+            break;
+          }
+        }
       }
+
+      if (amount === 0) continue;
 
       let description = "";
       if (colMap.description !== undefined && row[colMap.description]) {

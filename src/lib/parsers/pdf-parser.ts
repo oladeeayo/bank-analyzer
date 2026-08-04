@@ -625,11 +625,11 @@ function mergeCloseTexts(items: { x: number; text: string }[]): { x: number; tex
 
   for (let i = 1; i < sorted.length; i++) {
     const prev = merged[merged.length - 1];
-    const prevEnd = prev.x + prev.text.length * 2.5;
+    const prevEnd = prev.x + (prev.text.length * 0.5);
     const gap = sorted[i].x - prevEnd;
 
-    if (gap < 4) {
-      prev.text += sorted[i].text;
+    if (gap < 1.5) {
+      prev.text += (gap > 0.4 ? " " : "") + sorted[i].text;
     } else {
       merged.push({ x: sorted[i].x, text: sorted[i].text });
     }
