@@ -589,28 +589,72 @@ const AMOUNT_PATTERN = /^[+-]?[\d,]+\.?\d*$/;
 
 const PALMPAY_TIMESTAMP_REGEX = /\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}\s+(?:AM|PM)/gi;
 
+interface PDFToken {
+  x: number;
+  y: number;
+  text: string;
+}
+
+function groupPageTokensByY(page: PDF2JsonPage, yTolerance = 0.55): { x: number; text: string }[][] {
+  if (!page || !page.Texts) return [];
+
+  const tokens: PDFToken[] = [];
+  for (const textObj of page.Texts) {
+    if (!textObj.R || textObj.R.length === 0) continue;
+    for (const r of textObj.R) {
+      if (!r.T) continue;
+      try {
+        const decoded = decodeURIComponent(r.T).trim();
+        if (decoded) {
+          tokens.push({
+            x: textObj.x,
+            y: textObj.y,
+            text: decoded,
+          });
+        }
+      } catch {
+        const raw = r.T.trim();
+        if (raw) tokens.push({ x: textObj.x, y: textObj.y, text: raw });
+      }
+    }
+  }
+
+  if (tokens.length === 0) return [];
+
+  // Sort by Y first (top to bottom), then by X (left to right)
+  tokens.sort((a, b) => a.y - b.y || a.x - b.x);
+
+  const lineGroups: PDFToken[][] = [];
+  let currentGroup: PDFToken[] = [tokens[0]];
+
+  for (let i = 1; i < tokens.length; i++) {
+    const tok = tokens[i];
+    const avgY = currentGroup.reduce((sum, t) => sum + t.y, 0) / currentGroup.length;
+
+    if (Math.abs(tok.y - avgY) <= yTolerance) {
+      currentGroup.push(tok);
+    } else {
+      currentGroup.sort((a, b) => a.x - b.x);
+      lineGroups.push(currentGroup);
+      currentGroup = [tok];
+    }
+  }
+
+  if (currentGroup.length > 0) {
+    currentGroup.sort((a, b) => a.x - b.x);
+    lineGroups.push(currentGroup);
+  }
+
+  return lineGroups.map(group => group.map(t => ({ x: t.x, text: t.text })));
+}
+
 function extractTextFromPDF2Json(pdfData: PDF2JsonData): string {
   const lines: string[] = [];
   if (pdfData.Pages) {
     for (const page of pdfData.Pages) {
-      if (!page.Texts) continue;
-      const textsByY: Record<number, { x: number; text: string }[]> = {};
-      for (const text of page.Texts) {
-        if (text.R) {
-          for (const r of text.R) {
-            if (r.T) {
-              const y = Math.round(text.y * 10) / 10;
-              const x = Math.round(text.x * 10) / 10;
-              const decoded = decodeURIComponent(r.T);
-              if (!textsByY[y]) textsByY[y] = [];
-              textsByY[y].push({ x, text: decoded });
-            }
-          }
-        }
-      }
-      const sortedYs = Object.keys(textsByY).map(Number).sort((a, b) => a - b);
-      for (const y of sortedYs) {
-        const merged = mergeCloseTexts(textsByY[y]);
+      const lineGroups = groupPageTokensByY(page);
+      for (const lineTokens of lineGroups) {
+        const merged = mergeCloseTexts(lineTokens);
         lines.push(merged.map((m) => m.text).join(" "));
       }
     }
@@ -625,11 +669,11 @@ function mergeCloseTexts(items: { x: number; text: string }[]): { x: number; tex
 
   for (let i = 1; i < sorted.length; i++) {
     const prev = merged[merged.length - 1];
-    const prevEnd = prev.x + (prev.text.length * 0.5);
+    const prevEnd = prev.x + (prev.text.length * 0.45);
     const gap = sorted[i].x - prevEnd;
 
-    if (gap < 1.5) {
-      prev.text += (gap > 0.4 ? " " : "") + sorted[i].text;
+    if (gap < 1.8) {
+      prev.text += (gap > 0.3 ? " " : "") + sorted[i].text;
     } else {
       merged.push({ x: sorted[i].x, text: sorted[i].text });
     }
@@ -642,26 +686,9 @@ function extractTableRows(pdfData: PDF2JsonData): string[][] {
 
   if (pdfData.Pages) {
     for (const page of pdfData.Pages) {
-      if (!page.Texts) continue;
-
-      const textsByY: Record<number, { x: number; text: string }[]> = {};
-
-      for (const text of page.Texts) {
-        if (!text.R || text.R.length === 0) continue;
-        const decoded = decodeURIComponent(text.R[0].T || "").trim();
-        if (!decoded) continue;
-        const y = Math.round(text.y * 10) / 10;
-        const x = Math.round(text.x * 10) / 10;
-        if (!textsByY[y]) textsByY[y] = [];
-        textsByY[y].push({ x, text: decoded });
-      }
-
-      const sortedYs = Object.keys(textsByY)
-        .map(Number)
-        .sort((a, b) => a - b);
-
-      for (const y of sortedYs) {
-        const cells = mergeCloseTexts(textsByY[y]);
+      const lineGroups = groupPageTokensByY(page);
+      for (const lineTokens of lineGroups) {
+        const cells = mergeCloseTexts(lineTokens);
         if (cells.length > 0) {
           allRows.push(cells.map(c => c.text));
         }
