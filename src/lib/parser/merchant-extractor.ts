@@ -45,7 +45,7 @@ const LEGAL_SUFFIXES = [
 ];
 
 export class ExactMerchantExtractor {
-  private static PREFIX_REGEX = /^(received from|send to|transfer (to|from)|paid to|payment to|third-party merchant order\s*\|\s*)/i;
+  private static PREFIX_REGEX = /^(received from|send to|transfer (to|from)|paid to|payment to|third-party merchant order\s*\|\s*|kuda transfer (to|from)\s*|inward transfer from\s*|outward transfer to\s*)/i;
   private static GATEWAY_PREFIX_REGEX = /^(gfs\/|gfs|pos transfer\s*-\s*|pos transfer\s*|pos\s*-\s*)/i;
   private static ACRONYMS = new Set([
     'LTD', 'PLC', 'MFB', 'POS', 'NIG', 'LIMITED', 'NIGERIA', 'GTB', 'UBA',
@@ -128,14 +128,37 @@ export class ExactMerchantExtractor {
       return this.buildPayload(raw, entityBySuffix, null, null, false, null, 'DIRECT_TRANSFER');
     }
 
-    // Stage 5: Structure Delimitation
+    // Stage 5: Structure Delimitation & Slash Parsing
     let candidateName = '';
     let institution: string | null = null;
     let accountOrPhone: string | null = null;
     let memo: string | null = null;
     let channelTag: 'POS_AGENT' | 'DIRECT_TRANSFER' | 'GATEWAY' = 'DIRECT_TRANSFER';
 
-    if (raw.includes('|')) {
+    // Handle Kuda slash-separated format ("Name/Account/Bank | Memo" or "Name/Bank | Memo")
+    if (raw.includes('/')) {
+      const pipeSplit = raw.split('|').map(p => p.trim());
+      const counterpartyPart = pipeSplit[0];
+      if (pipeSplit.length > 1) {
+        memo = pipeSplit.slice(1).join(' | ');
+      }
+
+      const slashParts = counterpartyPart.split('/').map(p => p.trim());
+      if (slashParts.length >= 3) {
+        candidateName = slashParts[0];
+        accountOrPhone = slashParts[1].replace(/\*/g, '');
+        institution = slashParts.slice(2).join(' / ').toUpperCase();
+      } else if (slashParts.length === 2) {
+        candidateName = slashParts[0];
+        if (/^\d{6,}$/.test(slashParts[1])) {
+          accountOrPhone = slashParts[1];
+        } else {
+          institution = slashParts[1].toUpperCase();
+        }
+      } else {
+        candidateName = counterpartyPart;
+      }
+    } else if (raw.includes('|')) {
       const parts = raw.split('|').map(p => p.trim());
       candidateName = parts[0];
 
@@ -160,9 +183,10 @@ export class ExactMerchantExtractor {
       channelTag = 'POS_AGENT';
     }
 
-    // Stage 6: Prefix Cleaning
+    // Stage 6: Prefix & Suffix Cleaning
     candidateName = candidateName.replace(this.PREFIX_REGEX, '').trim();
     candidateName = candidateName.replace(this.GATEWAY_PREFIX_REGEX, '').trim();
+    candidateName = candidateName.replace(/\s*-\s*(inward|outward|transfer|card purchase|ussd|airtime|bills|loan)$/i, '').trim();
 
     // Stage 7: Outlet, Branch & Terminal Suffix Cleaning
     if (candidateName.includes(' - ')) {
@@ -188,6 +212,11 @@ export class ExactMerchantExtractor {
 
   private static extractByGrammar(narration: string): string | null {
     const patterns = [
+      // Kuda hypenated patterns: "OLADEJI ISAIAH OLADIPUPO - Inward Transfer", "SportyBet - Outward Transfer"
+      /^([A-Za-z0-9_\s.\-&]+?)\s*-\s*(?:Inward|Outward|Transfer|Card Purchase|USSD|POS|Airtime|Bills|Loan)/i,
+      // "Inward Transfer from OLADEJI ISAIAH OLADIPUPO", "Transfer to SPORTYBET"
+      /(?:Inward|Outward|Transfer|Card Purchase|USSD Payment)\s+(?:from|to)\s+([A-Za-z0-9_\s.\-&]+?)(?=\s+REF|\s+VIA|\d{10}|$)/i,
+      // "POS/WEB - Merchant Name"
       /(?:POS\/WEB|WEB PURCHASE|PURCHASE TRANSACTION)[^\-]*\-[^\-]*\-([A-Za-z0-9_\s\&]+?)(?:\s+LANG|\s+NG|\s+LA|$)/i,
       /\b(?:TO|TRF TO|TRANSFER TO)\s+([A-Za-z0-9_\s.\-&]+?)(?:\s+VIA|\s+REF|\s+FROM|\/|\d{10}|$)/i,
       /\b(?:FROM|TRF FROM)\s+([A-Za-z0-9_\s.\-&]+?)(?:\s+TO|\s+REF|\/|\d{10}|$)/i,

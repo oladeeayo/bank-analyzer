@@ -20,11 +20,15 @@ CRITICAL RULES:
 - Every transaction MUST come from an actual line or table row in the statement.
 - Ignore headers, disclaimers, account summaries, and page footers.
 - Pay close attention to Nigerian Bank Statement layouts (Kuda Bank, GTBank, Zenith, Access, UBA, PalmPay, Moniepoint, OPay, Sterling).
-- For Kuda statements specifically: money in is credit, money out is debit. Combine To/From and Description into a clean Narration.
+- For Kuda statements specifically:
+  * Money in is credit, money out is debit.
+  * Extract BOTH Date AND Time from column 1! If date is '28/07/26' and time is '11:47:40', COMBINE them into ISO date time: '2026-07-28T11:47:40'. DO NOT drop the time!
+  * If the statement has 'To / From' column (e.g. 'Interswitch/Lead City University Ibadan/6671844006/9psb' or 'Faith Erezioghene Awenede/7036202938/Opay Digital Services Limited') AND 'Description' column (e.g. 'statement of result', 'printing', 'bike', '500mb for 1 day purchase', 'pos', 'payment'), COMBINE them as:
+    "ToFrom_Text | Description_Text" (for example: "Interswitch/Lead City University Ibadan/6671844006/9psb | statement of result" or "Peter Bamigboye/8030737527/Opay | bike").
 
 For each transaction row you find, extract:
-1. Date (format as YYYY-MM-DD or ISO string)
-2. Description / Narration (the description, sender, receiver, or details)
+1. Date (format strictly as ISO string or YYYY-MM-DDTHH:mm:ss if time is present, e.g. "2026-07-28T11:47:40" or "2026-02-02T14:50:32". Include time whenever visible!)
+2. Description / Narration (the full narration combining To/From counterparty, bank, account, and description memo)
 3. Amount (numeric value, strictly positive)
 4. Type: "debit" (money out) or "credit" (money in)
 5. Balance (if present as a numeric value)
@@ -34,7 +38,7 @@ Output ONLY valid JSON matching this exact structure:
 {
   "transactions": [
     {
-      "date": "YYYY-MM-DD",
+      "date": "2026-07-28T11:47:40",
       "description": "exact narration text from statement",
       "amount": 15000.00,
       "type": "debit",
@@ -101,13 +105,34 @@ function parseAIResponse(text: string): ParsedTransaction[] {
 
   return rawList.map((tx: any) => {
     const rawAmt = Math.abs(parseFloat(String(tx.amount || tx.Amount || tx.debit || tx.credit || 0)));
-    let dateStr = tx.date || tx.Date || "";
-    if (dateStr && !dateStr.includes("-") && dateStr.includes("/")) {
-      const parts = dateStr.split("/");
-      if (parts.length === 3) {
-        let [d, m, y] = parts;
-        if (y.length === 2) y = "20" + y;
-        dateStr = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    let dateStr = String(tx.date || tx.Date || "").trim();
+    
+    // Parse DD/MM/YY HH:mm:ss or DD/MM/YYYY HH:mm:ss or YYYY-MM-DD HH:mm:ss
+    if (dateStr) {
+      const match = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:\s+[T]?(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+      if (match) {
+        let [_, p1, p2, p3, hh = "00", mm = "00", ss = "00"] = match;
+        let day: string, month: string, year: string;
+        
+        if (p1.length === 4) {
+          // YYYY-MM-DD
+          year = p1;
+          month = p2.padStart(2, "0");
+          day = p3.padStart(2, "0");
+        } else {
+          // DD/MM/YY or DD/MM/YYYY
+          day = p1.padStart(2, "0");
+          month = p2.padStart(2, "0");
+          year = p3.length === 2 ? "20" + p3 : p3;
+        }
+        
+        dateStr = `${year}-${month}-${day}T${hh.padStart(2, "0")}:${mm.padStart(2, "0")}:${ss.padStart(2, "0")}.000Z`;
+      } else {
+        // Fallback: try parsing directly into ISO string if valid
+        const dObj = new Date(dateStr);
+        if (!isNaN(dObj.getTime())) {
+          dateStr = dObj.toISOString();
+        }
       }
     }
 

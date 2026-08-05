@@ -37,13 +37,16 @@ function formatName(str: string): string {
 }
 
 function parseDateDDMMYY(dateStr: string): Date {
-  const match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{2})/);
+  const match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
   if (match) {
     const day = parseInt(match[1]);
     const month = parseInt(match[2]);
     let year = parseInt(match[3]);
     if (year < 100) year += 2000;
-    return new Date(year, month - 1, day);
+    const hours = match[4] ? parseInt(match[4]) : 0;
+    const minutes = match[5] ? parseInt(match[5]) : 0;
+    const seconds = match[6] ? parseInt(match[6]) : 0;
+    return new Date(year, month - 1, day, hours, minutes, seconds);
   }
   return new Date(dateStr);
 }
