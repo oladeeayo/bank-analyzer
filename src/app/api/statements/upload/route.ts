@@ -114,10 +114,16 @@ export async function POST(request: NextRequest) {
     const maxPast = new Date(now.getFullYear() - MAX_DATE_RANGE_YEARS, now.getMonth(), 1);
     const maxFuture = new Date(now.getFullYear() + 1, 11, 31);
 
-    const firstDate = new Date(result.transactions[0].date);
-    const lastDate = new Date(result.transactions[result.transactions.length - 1].date);
+    const txDates = result.transactions
+      .map(t => new Date(t.date).getTime())
+      .filter(d => !isNaN(d));
 
-    if (firstDate < maxPast || lastDate > maxFuture) {
+    const minTime = txDates.length > 0 ? Math.min(...txDates) : Date.now();
+    const maxTime = txDates.length > 0 ? Math.max(...txDates) : Date.now();
+    const firstDate = new Date(minTime);
+    const lastDate = new Date(maxTime);
+
+    if (minTime < maxPast.getTime() || maxTime > maxFuture.getTime()) {
       return NextResponse.json(
         {
           error: "invalid_date_range",

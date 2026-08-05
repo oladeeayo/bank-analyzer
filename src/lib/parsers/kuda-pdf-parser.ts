@@ -64,7 +64,7 @@ function parseDateDDMMYY(dateStr: string): Date {
 export function parseKudaFromPdfData(pdfData: any, fileName: string): ParseResult {
   const transactions: ParsedTransaction[] = [];
   const errors: string[] = [];
-  const dateRegex = /\b(\d{2}\/\d{2}\/\d{2})\b/;
+  const dateRegex = /\b(\d{1,2}\/\d{1,2}\/\d{2,4})\b/;
 
   const skipPatterns = [
     /^summary$/i, /^spend account$/i, /^type$/i,
@@ -331,7 +331,7 @@ export function parseKudaFromMarkdown(markdownText: string, fileName: string): P
     })
     .filter((l) => l.length > 0);
 
-  const dateRegex = /\b(\d{2}\/\d{2}\/\d{2})\b/;
+  const dateRegex = /\b(\d{1,2}\/\d{1,2}\/\d{2,4})\b/;
   const skipPatterns = [
     /^summary$/i, /^spend account$/i, /^type$/i,
     /^opening balance$/i, /^closing balance$/i, /^all statements$/i,

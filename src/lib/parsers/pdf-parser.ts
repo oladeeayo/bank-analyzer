@@ -662,7 +662,7 @@ function extractTextFromPDF2Json(pdfData: PDF2JsonData): string {
   return lines.join("\n");
 }
 
-function mergeCloseTexts(items: { x: number; text: string }[]): { x: number; text: string }[] {
+function mergeCloseTexts(items: { x: number; text: string }[], maxGap = 0.85): { x: number; text: string }[] {
   if (items.length === 0) return [];
   const sorted = [...items].sort((a, b) => a.x - b.x);
   const merged: { x: number; text: string }[] = [{ x: sorted[0].x, text: sorted[0].text }];
@@ -672,7 +672,7 @@ function mergeCloseTexts(items: { x: number; text: string }[]): { x: number; tex
     const prevEnd = prev.x + (prev.text.length * 0.45);
     const gap = sorted[i].x - prevEnd;
 
-    if (gap < 1.8) {
+    if (gap < maxGap) {
       prev.text += (gap > 0.3 ? " " : "") + sorted[i].text;
     } else {
       merged.push({ x: sorted[i].x, text: sorted[i].text });
