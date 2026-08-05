@@ -1,15 +1,20 @@
 import { ParseResult, ParsedTransaction } from "./types";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+function getGeminiApiKey(): string | undefined {
+  return process.env.GEMINI_API_KEY;
+}
 
-const CANDIDATE_MODELS = [
-  process.env.GEMINI_MODEL,
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-3.1-flash-lite",
-  "gemini-flash-latest",
-].filter(Boolean) as string[];
+function getCandidateModels(): string[] {
+  const models = [
+    process.env.GEMINI_MODEL,
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-pro",
+    "gemini-2.5-flash",
+  ];
+  return Array.from(new Set(models.filter(Boolean))) as string[];
+}
 
 const EXTRACTION_PROMPT = `You are an expert Nigerian bank statement OCR parser. Your ONLY job is to extract EXACTLY what you see in the bank statement PDF / text below.
 
@@ -57,16 +62,18 @@ Output ONLY valid JSON matching this exact structure:
 If there are NO transactions, output: {"bankName": null, "accountName": null, "accountNumber": null, "transactions": []}`;
 
 async function callGeminiVision(parts: Array<any>): Promise<string> {
-  if (!GEMINI_API_KEY) {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
     throw new Error("GEMINI_API_KEY not configured");
   }
 
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const genAI = new GoogleGenerativeAI(apiKey);
 
   let lastError: any = null;
+  const candidateModels = getCandidateModels();
 
-  for (const modelName of CANDIDATE_MODELS) {
+  for (const modelName of candidateModels) {
     try {
       console.log(`[GeminiVision] Attempting vision extraction with model: ${modelName}`);
       const model = genAI.getGenerativeModel({

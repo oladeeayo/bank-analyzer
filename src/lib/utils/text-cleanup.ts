@@ -79,22 +79,20 @@ function hasCharacterLevelSpacing(text: string): boolean {
 export function unspaceText(text: string): string {
   if (!text) return "";
   let result = text;
-  
+
   // 1. Un-space dates: e.g. "0 2 /0 2 /2 6" or "0 2 / 0 2 / 2 6" -> "02/02/26"
   result = result.replace(/(\d)\s+(\d)\s*\/\s*(\d)\s+(\d)\s*\/\s*(\d)\s+(\d)/g, "$1$2/$3$4/$5$6");
-  
+
   // 2. Un-space currency amounts: e.g. "₦ 5 0 ,0 0 0 .0 0" -> "₦50,000.00"
   result = result.replace(/([₦#])\s*([+\-]?)\s*([\d\s,.]+)/g, (match, curr, sign, num) => {
     const cleanedNum = num.replace(/\s+/g, "");
     return `${curr}${sign}${cleanedNum}`;
   });
 
-  // 3. Un-space character-level text strings
-  let previous;
-  do {
-    previous = result;
-    result = result.replace(/(?<=[A-Za-z0-9₦#.,\-/:().]) (?=[A-Za-z0-9₦#.,\-/:().])/g, "");
-  } while (result !== previous);
+  // 3. Un-space character-level text strings ONLY when single isolated characters are spaced out:
+  // e.g. "F a i t h   E r e z i o g h e n e" -> "Faith Erezioghene"
+  // DO NOT strip single spaces between whole multi-letter words (e.g. "Faith Erezioghene Awenede" remains "Faith Erezioghene Awenede")
+  result = result.replace(/(?<=\b[A-Za-z0-9]) (?=[A-Za-z0-9]\b)/g, "");
 
   return result;
 }
