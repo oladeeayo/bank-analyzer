@@ -329,26 +329,29 @@ export async function validateRecurringPatterns(
   return allResults;
 }
 
-const NARRATION_EXTRACTION_PROMPT = `You are an expert Nigerian bank transaction analyzer. For each raw bank narration, extract the clean merchant name, counterparty name, or business entity.
+const NARRATION_EXTRACTION_PROMPT = `You are an expert Nigerian bank transaction analyzer. For each raw bank narration, extract the clean merchant name, counterparty person/business name, or service entity.
 
-RULES:
-1. Remove all reference numbers (15+ digits), terminal IDs, location codes (LANG, NG, LA)
-2. Extract the actual person or business name
-3. For transfers: extract the recipient/sender name
-4. For POS/WEB purchases: extract the merchant name
-5. For bank charges: return the charge type
-6. For airtime/data: return the telecom provider
-7. Keep it short - max 40 characters
-8. Return ONLY a JSON object mapping index to clean name
+CRITICAL NIGERIAN BANK RULES:
+1. For transfers formatted as 'Name/Account/Bank' (e.g. 'Faith Erezioghene Awenede/7036202938/Opay Digital Services Limited' or 'Peter Bamigboye/8030737527/Opay Digital Services Limited'):
+   * The counterparty IS THE PERSON'S NAME ('Faith Erezioghene Awenede', 'Peter Bamigboye').
+   * NEVER return 'OPay', 'OPay Digital Services Limited', 'GTBank', or 'Access Bank' as the merchant/person name when a person or company name is present! 'OPay' is just the destination bank.
+2. Remove all reference numbers (15+ digits), terminal IDs, location codes (LANG, NG, LA)
+3. For POS/WEB purchases: extract the merchant name
+4. For bank charges: return the charge type (e.g. 'CBN Stamp Duty', 'SMS Charge')
+5. For airtime/data: return the telecom provider (e.g. 'MTN', 'Airtel')
+6. Keep it short - max 40 characters
+7. Return ONLY a JSON object mapping index to clean name
 
 EXAMPLE INPUT:
 [
-  {"index": "0", "rawText": "TRANSFER BETWEEN CUSTOMERS 110006221228234130022175621301||220928203625puid0 0305637msport.comMSPORT0022175621301||Paystack"},
-  {"index": "1", "rawText": "FUNDS TRANSFER -005228 -030156-T Adedamola Enterpr 005228 2TGTATUS LANG"}
+  {"index": "0", "rawText": "Faith Erezioghene Awenede/7036202938/Opay Digital Services Limited | payment"},
+  {"index": "1", "rawText": "Peter Bamigboye/8030737527/Opay Digital Services Limited | bike"},
+  {"index": "2", "rawText": "Cbn//Opay Digital Services Limited | stamp duty on electronic funds transfer - 2003792641"},
+  {"index": "3", "rawText": "Interswitch/Lead City University Ibadan/6671844006/9psb | statement of result"}
 ]
 
 EXAMPLE OUTPUT:
-{"0": "MSport", "1": "Adedamola Enterprise"}
+{"0": "Faith Erezioghene Awenede", "1": "Peter Bamigboye", "2": "CBN Stamp Duty", "3": "Lead City University Ibadan"}
 
 Respond with ONLY the JSON object, no explanations.`;
 

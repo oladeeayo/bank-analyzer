@@ -250,7 +250,13 @@ export async function POST(request: NextRequest) {
       for (let idx = 0; idx < result.transactions.length; idx++) {
         const cleanName = aiResults[String(idx)];
         if (cleanName && cleanName.length > 2) {
-          result.transactions[idx].description = cleanName;
+          const isGenericBankName = /^(opay|palmpay|gtb|gtbank|access bank|zenith bank|kuda bank|moniepoint|opay digital services limited)$/i.test(cleanName.trim());
+          const original = result.transactions[idx].description || "";
+          const hasPersonOrBusinessName = /[A-Za-z]{3,}\s+[A-Za-z]{3,}/.test(original);
+
+          if (!isGenericBankName || !hasPersonOrBusinessName) {
+            result.transactions[idx].description = cleanName;
+          }
         }
       }
     }
