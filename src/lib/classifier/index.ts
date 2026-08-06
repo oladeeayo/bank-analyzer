@@ -73,7 +73,7 @@ const KEYWORD_PATTERNS: Array<{
 ];
 
 function matchKeywords(tx: NormalizedTransaction, cache: ClassificationCache): ClassificationResult | null {
-  const desc = tx.description;
+  const desc = `${tx.description} ${tx.memo || ""} ${tx.normalizedDescription || ""}`;
   const isCredit = tx.type === "credit";
 
   // Spending categories: never match these on credits (refunds/reversals would misfire)

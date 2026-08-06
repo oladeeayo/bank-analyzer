@@ -1,0 +1,64 @@
+=== MERCHANT EXTRACTION & CONTEXT TEST ===
+
+Input: "outward transfer Toluwalope Odunayo Olasupo/8106699691/Opay Digital Services Limited" [Memo: "dee"]
+  -> Exact Merchant Name: "Toluwalope Odunayo Olasupo"
+  -> Channel Tag: DIRECT_TRANSFER
+  -> Institution: Opay Digital Services Limited
+  -> Account/Phone: 8106699691
+  -> Context Category: None (drops to keyword/merchant match)
+
+Input: "Gyv Commercial Business Services - Gbenga Pos/8247887511/Moniepoint" [Memo: "pos"]
+  -> Exact Merchant Name: "Gyv Commercial Business Services - Gbenga POS"
+  -> Channel Tag: DIRECT_TRANSFER
+  -> Institution: Moniepoint
+  -> Account/Phone: 8247887511
+  -> Context Category: Banking & Financial (POS Cash Withdrawal) [Confidence: 0.88]
+
+Input: "bills 500mb for 1 day purchase" [Memo: "500mb for 1 day purchase"]
+  -> Exact Merchant Name: "DATA SERVICE Data Purchase"
+  -> Channel Tag: UTILITY
+  -> Institution: DATA SERVICE
+  -> Account/Phone: null
+  -> Context Category: None (drops to keyword/merchant match)
+
+Input: "outward transfer Cbn//Opay Digital Services Limited" [Memo: "stamp duty on electronic funds transfer - 2003792641"]
+  -> Exact Merchant Name: "CBN"
+  -> Channel Tag: DIRECT_TRANSFER
+  -> Institution: Opay Digital Services Limited
+  -> Account/Phone: null
+  -> Context Category: Banking & Financial (Stamp Duty) [Confidence: 1]
+
+Input: "outward transfer Oladayo Isaac Oladipupo/8136167673/Opay Digital Services Limited" [Memo: "dee"]
+  -> Exact Merchant Name: "Oladayo Isaac Oladipupo"
+  -> Channel Tag: DIRECT_TRANSFER
+  -> Institution: Opay Digital Services Limited
+  -> Account/Phone: 8136167673
+  -> Context Category: Banking & Financial (Self Transfer) [Confidence: 1]
+
+Input: "outward transfer Interswitch/Lead City University Ibadan/6671844006/9 Payment Service Bank (9psb)" [Memo: "statement of result"]
+  -> Exact Merchant Name: "Lead City University Ibadan"
+  -> Channel Tag: DIRECT_TRANSFER
+  -> Institution: Interswitch
+  -> Account/Phone: 6671844006
+  -> Context Category: None (drops to keyword/merchant match)
+
+Input: "outward transfer Olatunji Oyinlola Omolola/0142720946/Gtbank Plc" [Memo: "printing"]
+  -> Exact Merchant Name: "Olatunji Oyinlola Omolola"
+  -> Channel Tag: DIRECT_TRANSFER
+  -> Institution: Gtbank Plc
+  -> Account/Phone: 0142720946
+  -> Context Category: None (drops to keyword/merchant match)
+
+Input: "outward transfer Peter Bamigboye/8030737527/Opay Digital Services Limited" [Memo: "bike"]
+  -> Exact Merchant Name: "Peter Bamigboye"
+  -> Channel Tag: DIRECT_TRANSFER
+  -> Institution: Opay Digital Services Limited
+  -> Account/Phone: 8030737527
+  -> Context Category: None (drops to keyword/merchant match)
+
+Input: "loan charges" [Memo: "smart overdraft interest application"]
+  -> Exact Merchant Name: "Loan Charges"
+  -> Channel Tag: DIRECT_TRANSFER
+  -> Institution: null
+  -> Account/Phone: null
+  -> Context Category: Banking & Financial (Interest & Loan Charges) [Confidence: 0.95]

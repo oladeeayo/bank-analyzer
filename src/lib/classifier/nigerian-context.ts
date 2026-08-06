@@ -33,6 +33,7 @@ const STATUTORY_PATTERNS: Array<{ pattern: RegExp; name: string; confidence: num
   { pattern: /LEDGER\s*FEE/i, name: "Ledger Fee", confidence: 0.95 },
   { pattern: /COMMISSION/i, name: "Commission", confidence: 0.9 },
   { pattern: /SERVICE\s*CHARGE/i, name: "Service Charge", confidence: 0.9 },
+  { pattern: /OVERDRAFT\s*INTEREST|SMART\s*OVERDRAFT|LOAN\s*CHARGES/i, name: "Interest & Loan Charges", confidence: 0.95 },
 ];
 
 const SAVINGS_PATTERNS: Array<{ pattern: RegExp; name: string; confidence: number }> = [
@@ -61,10 +62,10 @@ export function extractCounterparty(description: string): {
 
   // Detect transfer direction
   let transferDirection: "inbound" | "outbound" | null = null;
-  if (/Transfer\s+to|Send\s+to|Payment\s+to/i.test(raw)) transferDirection = "outbound";
-  else if (/Transfer\s+from|Received?\s+from|Funded?\s+by/i.test(raw)) transferDirection = "inbound";
+  if (/Transfer\s+to|Send\s+to|Payment\s+to|outward/i.test(raw)) transferDirection = "outbound";
+  else if (/Transfer\s+from|Received?\s+from|Funded?\s+by|inward/i.test(raw)) transferDirection = "inbound";
 
-  const isTransfer = /transfer|send|received|funded/i.test(raw);
+  const isTransfer = /transfer|send|received|funded|outward|inward/i.test(raw);
 
   let counterparty: string | null = null;
   let institution: string | null = null;
@@ -77,7 +78,7 @@ export function extractCounterparty(description: string): {
 
     // Extract counterparty from first part (strip prefix)
     const namePart = parts[0]
-      .replace(/^(Transfer\s+(to|from)|Send\s+to|Received?\s+from|Payment\s+to|Funded\s+by)\s+/i, "")
+      .replace(/^(Transfer\s+(to|from)|Send\s+to|Received?\s+from|Payment\s+to|Funded\s+by|outward\s+transfer|inward\s+transfer|local\s+funds\s+transfer)\s+/i, "")
       .replace(/\s+/g, " ")
       .trim();
     counterparty = namePart || null;
@@ -95,7 +96,7 @@ export function extractCounterparty(description: string): {
   // Sentence format (PalmPay / GTB / Access)
   else {
     const match = raw.match(
-      /(?:Send\s+to|Received?\s+from|Transfer\s+(to|from)|Payment\s+to|Funded\s+by)\s+(.+)/i
+      /(?:Send\s+to|Received?\s+from|Transfer\s+(to|from)|Payment\s+to|Funded\s+by|outward\s+transfer|inward\s+transfer)\s+(.+)/i
     );
     if (match) {
       counterparty = match[1]
@@ -118,6 +119,7 @@ export function matchSelfTransfer(
   const cleanUser = user.fullName.toUpperCase().replace(/\s+/g, " ").trim();
   const descUpper = description.toUpperCase();
 
+  // 1. Direct match on full name
   if (descUpper.includes(cleanUser)) {
     return {
       categoryName: "Banking & Financial",
@@ -125,6 +127,21 @@ export function matchSelfTransfer(
       confidence: 1.0,
       reason: "Matched user full name",
     };
+  }
+
+  // 2. Token overlap: check if first and last name both match in description
+  const nameParts = cleanUser.split(" ").filter(w => w.length > 2);
+  if (nameParts.length >= 2) {
+    const firstName = nameParts[0];
+    const lastName = nameParts[nameParts.length - 1];
+    if (descUpper.includes(firstName) && descUpper.includes(lastName)) {
+      return {
+        categoryName: "Banking & Financial",
+        subCategoryName: "Self Transfer",
+        confidence: 0.98,
+        reason: "Matched user first and last name",
+      };
+    }
   }
 
   return null;
