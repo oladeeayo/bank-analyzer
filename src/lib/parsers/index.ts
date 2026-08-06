@@ -67,8 +67,20 @@ export async function parseStatement(
 
     if (ext === "pdf" && pdfArrayBuffer) {
       const visionResult = await parsePdfWithGeminiVision(pdfArrayBuffer, fileName);
-      if (visionResult.transactions.length > result.transactions.length || (isKuda && visionResult.transactions.length > 0)) {
+      if (visionResult.transactions.length > result.transactions.length) {
         console.log(`[Parser] Gemini Vision OCR produced ${visionResult.transactions.length} transactions (vs ${result.transactions.length} from heuristic)`);
+        
+        // Inherit detected bank/account metadata if vision result is generic
+        if ((!visionResult.metadata.detectedBank || visionResult.metadata.detectedBank === "Gemini Vision OCR") && result.metadata.detectedBank) {
+          visionResult.metadata.detectedBank = result.metadata.detectedBank;
+        }
+        if (!visionResult.metadata.detectedAccountName && result.metadata.detectedAccountName) {
+          visionResult.metadata.detectedAccountName = result.metadata.detectedAccountName;
+        }
+        if (!visionResult.metadata.detectedAccountNumber && result.metadata.detectedAccountNumber) {
+          visionResult.metadata.detectedAccountNumber = result.metadata.detectedAccountNumber;
+        }
+
         visionResult.errors = [
           ...result.errors,
           ...visionResult.errors,

@@ -302,6 +302,15 @@ function extractMerchant(cleaned: string): string {
     }
   }
 
+  // Handle Kuda hyphenated patterns ("OLADEJI ISAIAH OLADIPUPO - Inward Transfer", "SportyBet - Outward Transfer")
+  const kudaHyphenMatch = cleaned.match(/^(.+?)\s*-\s*(?:Inward|Outward|Transfer|Card Purchase|USSD|POS|Airtime|Bills|Loan)$/i);
+  if (kudaHyphenMatch) {
+    const name = kudaHyphenMatch[1].trim();
+    if (name.length >= 3) {
+      return name.toUpperCase();
+    }
+  }
+
   // Handle non-pipe transfer descriptions (OPay)
   // "Transfer from OLADEJI ISAIAH OLADIPUPO | OPay"
   const transferMatch = cleaned.match(/^Transfer\s+(to|from)\s+(.+?)$/i);

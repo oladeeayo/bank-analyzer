@@ -1,30 +1,42 @@
 import { ParseResult, ParsedTransaction } from "./types";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+function getGeminiApiKey(): string | undefined {
+  return process.env.GEMINI_API_KEY;
+}
 
-const CANDIDATE_MODELS = [
-  process.env.GEMINI_MODEL,
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-3.1-flash-lite",
-  "gemini-flash-latest",
-].filter(Boolean) as string[];
+function getCandidateModels(): string[] {
+  const models = [
+    process.env.GEMINI_MODEL,
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-pro",
+    "gemini-2.5-flash",
+  ];
+  return Array.from(new Set(models.filter(Boolean))) as string[];
+}
 
 const EXTRACTION_PROMPT = `You are an expert Nigerian bank statement OCR parser. Your ONLY job is to extract EXACTLY what you see in the bank statement PDF / text below.
 
 CRITICAL RULES:
 - Only extract transaction data that is EXPLICITLY present. Do NOT generate, fabricate, or guess any data.
-- If you cannot find any transaction data, return: {"transactions": []}
+- If you cannot find any transaction data, return: {"bankName": null, "accountName": null, "accountNumber": null, "transactions": []}
 - Do NOT use sample data, placeholder data, or invented examples.
 - Every transaction MUST come from an actual line or table row in the statement.
-- Ignore headers, disclaimers, account summaries, and page footers.
 - Pay close attention to Nigerian Bank Statement layouts (Kuda Bank, GTBank, Zenith, Access, UBA, PalmPay, Moniepoint, OPay, Sterling).
-- For Kuda statements specifically: money in is credit, money out is debit. Combine To/From and Description into a clean Narration.
+- Extract Statement Header details if present:
+  * "bankName": Bank issuing the statement (e.g. "Kuda Bank", "GTBank", "Zenith Bank", "Access Bank", "OPay", "PalmPay", "Moniepoint", "UBA", "First Bank")
+  * "accountName": Full name of account holder (e.g. "OLADAYO ISAAC OLADIPUPO")
+  * "accountNumber": Account number string (e.g. "2003792641")
+- For Kuda statements specifically:
+  * Money in is credit, money out is debit.
+  * Extract BOTH Date AND Time from column 1! If date is '28/07/26' and time is '11:47:40', COMBINE them into ISO date time: '2026-07-28T11:47:40'. DO NOT drop the time!
+  * If the statement has 'To / From' column (e.g. 'Interswitch/Lead City University Ibadan/6671844006/9psb' or 'Faith Erezioghene Awenede/7036202938/Opay Digital Services Limited') AND 'Description' column (e.g. 'statement of result', 'printing', 'bike', '500mb for 1 day purchase', 'pos', 'payment'), COMBINE them as:
+    "ToFrom_Text | Description_Text" (for example: "Interswitch/Lead City University Ibadan/6671844006/9psb | statement of result" or "Peter Bamigboye/8030737527/Opay Digital Services Limited | bike").
 
 For each transaction row you find, extract:
-1. Date (format as YYYY-MM-DD or ISO string)
-2. Description / Narration (the description, sender, receiver, or details)
+1. Date (format strictly as ISO string or YYYY-MM-DDTHH:mm:ss if time is present, e.g. "2026-07-28T11:47:40" or "2026-02-02T14:50:32". Include time whenever visible!)
+2. Description / Narration (the full narration combining To/From counterparty, bank, account, and description memo)
 3. Amount (numeric value, strictly positive)
 4. Type: "debit" (money out) or "credit" (money in)
 5. Balance (if present as a numeric value)
@@ -32,9 +44,12 @@ For each transaction row you find, extract:
 
 Output ONLY valid JSON matching this exact structure:
 {
+  "bankName": "Kuda Bank",
+  "accountName": "OLADAYO ISAAC OLADIPUPO",
+  "accountNumber": "2003792641",
   "transactions": [
     {
-      "date": "YYYY-MM-DD",
+      "date": "2026-07-28T11:47:40",
       "description": "exact narration text from statement",
       "amount": 15000.00,
       "type": "debit",
@@ -44,19 +59,21 @@ Output ONLY valid JSON matching this exact structure:
   ]
 }
 
-If there are NO transactions, output: {"transactions": []}`;
+If there are NO transactions, output: {"bankName": null, "accountName": null, "accountNumber": null, "transactions": []}`;
 
 async function callGeminiVision(parts: Array<any>): Promise<string> {
-  if (!GEMINI_API_KEY) {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
     throw new Error("GEMINI_API_KEY not configured");
   }
 
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const genAI = new GoogleGenerativeAI(apiKey);
 
   let lastError: any = null;
+  const candidateModels = getCandidateModels();
 
-  for (const modelName of CANDIDATE_MODELS) {
+  for (const modelName of candidateModels) {
     try {
       console.log(`[GeminiVision] Attempting vision extraction with model: ${modelName}`);
       const model = genAI.getGenerativeModel({
@@ -87,7 +104,14 @@ function isValidDate(dateStr: string): boolean {
   return !isNaN(date.getTime()) && date.getFullYear() >= 2000 && date.getFullYear() <= 2030;
 }
 
-function parseAIResponse(text: string): ParsedTransaction[] {
+interface AIResponsePayload {
+  bankName?: string | null;
+  accountName?: string | null;
+  accountNumber?: string | null;
+  transactions: ParsedTransaction[];
+}
+
+function parseAIResponse(text: string): AIResponsePayload {
   let cleaned = text.trim();
 
   // Strip markdown code fences if present
@@ -99,15 +123,36 @@ function parseAIResponse(text: string): ParsedTransaction[] {
   const parsed = JSON.parse(cleaned);
   const rawList = parsed.transactions || parsed.results || (Array.isArray(parsed) ? parsed : []);
 
-  return rawList.map((tx: any) => {
+  const transactions = rawList.map((tx: any) => {
     const rawAmt = Math.abs(parseFloat(String(tx.amount || tx.Amount || tx.debit || tx.credit || 0)));
-    let dateStr = tx.date || tx.Date || "";
-    if (dateStr && !dateStr.includes("-") && dateStr.includes("/")) {
-      const parts = dateStr.split("/");
-      if (parts.length === 3) {
-        let [d, m, y] = parts;
-        if (y.length === 2) y = "20" + y;
-        dateStr = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    let dateStr = String(tx.date || tx.Date || "").trim();
+    
+    // Parse DD/MM/YY HH:mm:ss or DD/MM/YYYY HH:mm:ss or YYYY-MM-DD HH:mm:ss
+    if (dateStr) {
+      const match = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:\s+[T]?(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+      if (match) {
+        let [_, p1, p2, p3, hh = "00", mm = "00", ss = "00"] = match;
+        let day: string, month: string, year: string;
+        
+        if (p1.length === 4) {
+          // YYYY-MM-DD
+          year = p1;
+          month = p2.padStart(2, "0");
+          day = p3.padStart(2, "0");
+        } else {
+          // DD/MM/YY or DD/MM/YYYY
+          day = p1.padStart(2, "0");
+          month = p2.padStart(2, "0");
+          year = p3.length === 2 ? "20" + p3 : p3;
+        }
+        
+        dateStr = `${year}-${month}-${day}T${hh.padStart(2, "0")}:${mm.padStart(2, "0")}:${ss.padStart(2, "0")}.000Z`;
+      } else {
+        // Fallback: try parsing directly into ISO string if valid
+        const dObj = new Date(dateStr);
+        if (!isNaN(dObj.getTime())) {
+          dateStr = dObj.toISOString();
+        }
       }
     }
 
@@ -127,6 +172,13 @@ function parseAIResponse(text: string): ParsedTransaction[] {
       narration: description,
     };
   });
+
+  return {
+    bankName: parsed.bankName || parsed.bank || null,
+    accountName: parsed.accountName || parsed.account_name || null,
+    accountNumber: parsed.accountNumber || parsed.account_number || null,
+    transactions,
+  };
 }
 
 /**
@@ -155,9 +207,9 @@ export async function parsePdfWithGeminiVision(
     ];
 
     const responseText = await callGeminiVision(parts);
-    const parsed = parseAIResponse(responseText);
+    const parsedPayload = parseAIResponse(responseText);
 
-    for (const tx of parsed) {
+    for (const tx of parsedPayload.transactions) {
       if (!tx.date || !tx.description || tx.amount === 0) {
         errors.push(`Skipped row: missing date (${tx.date}), description (${tx.description}), or amount (${tx.amount})`);
         continue;
@@ -191,13 +243,19 @@ export async function parsePdfWithGeminiVision(
 
     console.log(`[GeminiVision] Parsed ${unique.length} transactions from PDF ${fileName}`);
 
+    const detectedBank = parsedPayload.bankName || (fileName.toLowerCase().includes("kuda") ? "Kuda Bank" : "Kuda Bank");
+    const detectedAccountName = parsedPayload.accountName || undefined;
+    const detectedAccountNumber = parsedPayload.accountNumber || undefined;
+
     return {
       transactions: unique,
       errors,
       metadata: {
         fileName,
         fileType: "pdf-ocr-vision",
-        detectedBank: "Gemini Vision OCR",
+        detectedBank,
+        detectedAccountName,
+        detectedAccountNumber,
         totalRows: unique.length,
         parsedRows: unique.length,
         dateRange:
@@ -249,7 +307,7 @@ export async function parseWithAI(
       const response = await callGeminiVision(parts);
       const parsed = parseAIResponse(response);
 
-      for (const tx of parsed) {
+      for (const tx of parsed.transactions) {
         if (!tx.date || !tx.description || tx.amount === 0) {
           errors.push(`Skipped row: missing date/description/amount`);
           continue;

@@ -37,13 +37,16 @@ function formatName(str: string): string {
 }
 
 function parseDateDDMMYY(dateStr: string): Date {
-  const match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{2})/);
+  const match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
   if (match) {
     const day = parseInt(match[1]);
     const month = parseInt(match[2]);
     let year = parseInt(match[3]);
     if (year < 100) year += 2000;
-    return new Date(year, month - 1, day);
+    const hours = match[4] ? parseInt(match[4]) : 0;
+    const minutes = match[5] ? parseInt(match[5]) : 0;
+    const seconds = match[6] ? parseInt(match[6]) : 0;
+    return new Date(year, month - 1, day, hours, minutes, seconds);
   }
   return new Date(dateStr);
 }
@@ -61,7 +64,7 @@ function parseDateDDMMYY(dateStr: string): Date {
 export function parseKudaFromPdfData(pdfData: any, fileName: string): ParseResult {
   const transactions: ParsedTransaction[] = [];
   const errors: string[] = [];
-  const dateRegex = /\b(\d{2}\/\d{2}\/\d{2})\b/;
+  const dateRegex = /\b(\d{1,2}\/\d{1,2}\/\d{2,4})\b/;
 
   const skipPatterns = [
     /^summary$/i, /^spend account$/i, /^type$/i,
@@ -75,25 +78,45 @@ export function parseKudaFromPdfData(pdfData: any, fileName: string): ParseResul
   ];
 
   for (const page of pdfData.Pages || []) {
-    // 1. Group tokens on page by Y coordinate (line threshold ~0.6 units)
-    const yMap: Record<number, Token[]> = {};
-
+    // 1. Group tokens on page by Y coordinate with tolerance (~0.55 units)
+    const rawTokens: Token[] = [];
     for (const textObj of page.Texts || []) {
       if (!textObj.R || textObj.R.length === 0) continue;
       const rawText = decodeText(textObj.R[0].T || "").trim();
       if (!rawText) continue;
-
-      const y = Math.round(textObj.y * 10) / 10;
-      const x = Math.round(textObj.x * 10) / 10;
-
-      if (!yMap[y]) yMap[y] = [];
-      yMap[y].push({ x, y, text: rawText });
+      rawTokens.push({
+        x: textObj.x,
+        y: textObj.y,
+        text: rawText,
+      });
     }
 
-    const sortedYs = Object.keys(yMap).map(Number).sort((a, b) => a - b);
-    const lines: Line[] = sortedYs.map((y) => ({
-      y,
-      tokens: yMap[y].sort((a, b) => a.x - b.x),
+    if (rawTokens.length === 0) continue;
+
+    rawTokens.sort((a, b) => a.y - b.y || a.x - b.x);
+
+    const lineGroups: Token[][] = [];
+    let currentGroup: Token[] = [rawTokens[0]];
+
+    for (let i = 1; i < rawTokens.length; i++) {
+      const tok = rawTokens[i];
+      const avgY = currentGroup.reduce((sum, t) => sum + t.y, 0) / currentGroup.length;
+      if (Math.abs(tok.y - avgY) <= 0.55) {
+        currentGroup.push(tok);
+      } else {
+        currentGroup.sort((a, b) => a.x - b.x);
+        lineGroups.push(currentGroup);
+        currentGroup = [tok];
+      }
+    }
+    if (currentGroup.length > 0) {
+      currentGroup.sort((a, b) => a.x - b.x);
+      lineGroups.push(currentGroup);
+    }
+
+    const lines: Line[] = lineGroups.map((tokens) => ({
+      y: tokens[0].y,
+      tokens,
     }));
 
     // 2. Detect column boundaries dynamically from transaction table header on this page
@@ -308,7 +331,7 @@ export function parseKudaFromMarkdown(markdownText: string, fileName: string): P
     })
     .filter((l) => l.length > 0);
 
-  const dateRegex = /\b(\d{2}\/\d{2}\/\d{2})\b/;
+  const dateRegex = /\b(\d{1,2}\/\d{1,2}\/\d{2,4})\b/;
   const skipPatterns = [
     /^summary$/i, /^spend account$/i, /^type$/i,
     /^opening balance$/i, /^closing balance$/i, /^all statements$/i,
