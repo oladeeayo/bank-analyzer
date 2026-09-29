@@ -22,6 +22,11 @@ export const BANK_FORMAT_TO_NAME: Record<string, string> = {
   "firstbank-pdf": "First Bank",
   "zenith-csv": "Zenith Bank",
   "zenith-pdf": "Zenith Bank",
+  "ecobank-pdf": "Ecobank",
+  "fidelity-pdf": "Fidelity Bank",
+  "globus-pdf": "Globus Bank",
+  "providus-pdf": "Providus Bank",
+  "wema-pdf": "Wema Bank",
 };
 
 const KNOWN_BANK_NAMES = [
@@ -75,11 +80,12 @@ export function extractBankNameFromText(text: string): string | null {
 }
 
 export function extractAccountNumber(text: string): string | null {
-  // NUBAN: 10-digit number that usually starts with 0-3, 8
   const patterns = [
     /account\s*(?:number|no|#|:)\s*[#:]?\s*(\d{10})/i,
     /acct\s*(?:number|no|#|:)\s*[#:]?\s*(\d{10})/i,
     /a\/c\s*(?:number|no|#|:)\s*[#:]?\s*(\d{10})/i,
+    /acc\.\s*no\.\s*(\d{10})/i,
+    /account:\s*(\d{10})/i,
     /\b(\d{10})\b/,
   ];
 
@@ -93,17 +99,19 @@ export function extractAccountNumber(text: string): string | null {
 
 export function extractAccountName(text: string): string | null {
   const patterns = [
-    /account\s*(?:name|holder)\s*[#:]?\s*(.+?)(?:\n|$)/i,
-    /acct\s*(?:name|holder)\s*[#:]?\s*(.+?)(?:\n|$)/i,
-    /customer\s*(?:name|:)\s*(.+?)(?:\n|$)/i,
-    /name\s*[#:]\s*(.+?)(?:\n|$)/i,
+    /account\s*(?:name|holder)\s*[#:]?\s*([A-Z0-9\s.,&\'-]+?)(?:\n|\r|Opening|Currency|Branch|Total|Account|$)/i,
+    /cust\.\s*name\s*([A-Z0-9\s.,&\'-]+?)(?:\n|\r|ADDRESS|START|END|$)/i,
+    /customer\s*(?:name|:)\s*([A-Z0-9\s.,&\'-]+?)(?:\n|\r|$)/i,
+    /dear\s+([A-Z0-9\s.,&\'-]+?)(?:\n|\r|PLOT|Please|$)/i,
+    /acct\s*(?:name|holder)\s*[#:]?\s*([A-Z0-9\s.,&\'-]+?)(?:\n|\r|$)/i,
   ];
 
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
-      const name = match[1].trim();
-      if (name.length >= 3 && name.length <= 100) {
+      let name = match[1].trim();
+      name = name.replace(/^(is|was|for)\s+/i, "");
+      if (name.length >= 3 && name.length <= 100 && !name.toLowerCase().includes("opening balance")) {
         return name;
       }
     }
@@ -111,3 +119,4 @@ export function extractAccountName(text: string): string | null {
 
   return null;
 }
+

@@ -46,6 +46,11 @@ export type BankFormat =
   | "zenith-csv"
   | "zenith-pdf"
   | "sterling-pdf"
+  | "ecobank-pdf"
+  | "fidelity-pdf"
+  | "globus-pdf"
+  | "providus-pdf"
+  | "wema-pdf"
   | "generic-csv"
   | "generic-excel"
   | "generic-pdf";

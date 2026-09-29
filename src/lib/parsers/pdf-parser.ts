@@ -24,6 +24,31 @@ export interface PDF2JsonData {
 
 function detectBankFormat(text: string): BankFormat {
   const lower = text.toLowerCase();
+  const headerText = lower.substring(0, 1500);
+
+  if (headerText.includes("providus")) return "providus-pdf";
+  if (headerText.includes("globus")) return "globus-pdf";
+  if (headerText.includes("ecobank") || headerText.includes("eco bank")) return "ecobank-pdf";
+  if (headerText.includes("fidelity")) return "fidelity-pdf";
+  if (headerText.includes("wema") || headerText.includes("alat")) return "wema-pdf";
+  if (headerText.includes("zenith")) return "zenith-pdf";
+  if (headerText.includes("first bank") || headerText.includes("firstbank")) return "firstbank-pdf";
+  if (headerText.includes("gtbank") || headerText.includes("gtb") || headerText.includes("gtco") || headerText.includes("guaranty trust")) return "gtbank-pdf";
+  if (headerText.includes("sterling") || headerText.includes("onebank")) return "sterling-pdf";
+  if (headerText.includes("access bank") || headerText.includes("accessbank")) return "access-pdf";
+  if (headerText.includes("uba") || headerText.includes("united bank for africa")) return "uba-pdf";
+  if (headerText.includes("opay")) return "opay-pdf";
+  if (headerText.includes("kuda")) return "kuda-pdf";
+  if (headerText.includes("moniepoint")) return "moniepoint-pdf";
+  if (headerText.includes("palmpay") || headerText.includes("palm pay")) return "palmpay-pdf";
+
+  if (lower.includes("providus")) return "providus-pdf";
+  if (lower.includes("globus")) return "globus-pdf";
+  if (lower.includes("ecobank") || lower.includes("eco bank")) return "ecobank-pdf";
+  if (lower.includes("fidelity")) return "fidelity-pdf";
+  if (lower.includes("wema") || lower.includes("alat")) return "wema-pdf";
+  if (lower.includes("zenith")) return "zenith-pdf";
+  if (lower.includes("first bank") || lower.includes("firstbank")) return "firstbank-pdf";
   if (lower.includes("gtbank") || lower.includes("gtb") || lower.includes("gtco") || lower.includes("guaranty trust")) return "gtbank-pdf";
   if (lower.includes("sterling") || lower.includes("onebank")) return "sterling-pdf";
   if (lower.includes("access bank")) return "access-pdf";
@@ -31,12 +56,7 @@ function detectBankFormat(text: string): BankFormat {
   if (lower.includes("opay") || lower.includes("owealth") || lower.includes("paycom")) return "opay-pdf";
   if (lower.includes("kuda") || lower.includes("kuda microfinance")) return "kuda-pdf";
   if (lower.includes("moniepoint")) return "moniepoint-pdf";
-  if (lower.includes("first bank") || lower.includes("firstbank")) return "firstbank-pdf";
-  if (lower.includes("zenith") || lower.includes("zenithbank")) return "zenith-pdf";
   if (lower.includes("palmpay") || lower.includes("palm pay")) return "palmpay-pdf";
-  if (lower.includes("wema") || lower.includes("alat")) return "generic-pdf";
-  if (lower.includes("fidelity")) return "generic-pdf";
-  if (lower.includes("fcmb")) return "generic-pdf";
   return "generic-pdf";
 }
 
@@ -996,6 +1016,92 @@ function parseGenericRows(rows: string[][]): ParseResult {
   };
 }
 
+function parseStandardTableRows(rows: string[][]): ParseResult {
+  const transactions: ParsedTransaction[] = [];
+  const errors: string[] = [];
+
+  const datePattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}[\/\-][A-Za-z]{3,9}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/;
+
+  for (let i = 0; i < rows.length; i++) {
+    try {
+      const row = rows[i];
+      const lineStr = row.join(" ");
+      const lower = lineStr.toLowerCase();
+      if (lower.includes("opening balance") && !lower.includes("ref") && !lower.includes("trf") && !lower.includes("int.pd")) continue;
+      if (lower.includes("statement of account") || lower.includes("closing balance") || lower.includes("total withdrawals") || lower.includes("total deposits") || lower.includes("total credit") || lower.includes("total debit")) continue;
+
+      const dateMatch = lineStr.match(datePattern);
+      if (!dateMatch) continue;
+
+      const dateStr = dateMatch[1];
+      const date = parseDate(dateStr);
+      if (isNaN(date.getTime())) continue;
+
+      const amountMatches = lineStr.match(/[\d,]+\.\d{2}/g);
+      if (!amountMatches || amountMatches.length === 0) continue;
+
+      const numericVals = amountMatches.map(s => parseFloat(s.replace(/,/g, ""))).filter(n => !isNaN(n));
+      if (numericVals.length === 0) continue;
+
+      let debit = 0;
+      let credit = 0;
+      let balance: number | undefined = undefined;
+
+      if (numericVals.length >= 3) {
+        debit = numericVals[0];
+        credit = numericVals[1];
+        balance = numericVals[2];
+      } else if (numericVals.length === 2) {
+        const amt = numericVals[0];
+        balance = numericVals[1];
+        if (lower.includes("credit") || lower.includes("deposit") || lower.includes("inflow") || lower.includes("trf from") || lower.includes("interest") || lower.includes("reversal") || lower.includes("lodgement") || lower.includes("pay in")) {
+          credit = amt;
+        } else {
+          debit = amt;
+        }
+      } else if (numericVals.length === 1) {
+        debit = numericVals[0];
+      }
+
+      const amount = debit > 0 ? debit : credit;
+      const type: "debit" | "credit" = debit > 0 ? "debit" : "credit";
+      if (amount === 0) continue;
+
+      let narration = lineStr;
+      narration = narration.replace(new RegExp(datePattern, "g"), "");
+      for (const m of amountMatches) {
+        narration = narration.replace(m, "");
+      }
+      narration = cleanNarration(narration);
+      if (!narration || narration.length < 2) narration = "Transaction";
+
+      transactions.push({
+        date: date.toISOString(),
+        description: narration,
+        amount,
+        type,
+        balance,
+        narration
+      });
+    } catch (err) {
+      errors.push(`Row ${i + 1}: ${err}`);
+    }
+  }
+
+  const dates = transactions.map(t => new Date(t.date).getTime()).sort((a, b) => a - b);
+  return {
+    transactions,
+    errors,
+    metadata: {
+      fileName: "",
+      fileType: "pdf",
+      totalRows: rows.length,
+      parsedRows: transactions.length,
+      dateRange: dates.length > 0 ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() } : undefined,
+    },
+  };
+}
+
 export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<ParseResult> {
   return new Promise((resolve) => {
     try {
@@ -1061,9 +1167,16 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
             } else if (bankFormat === "sterling-pdf") {
               console.log(`[PDFParser] Using Sterling parser`);
               result = parseSterlingRows(rows);
+            } else if (["ecobank-pdf", "fidelity-pdf", "globus-pdf", "providus-pdf", "wema-pdf", "zenith-pdf", "firstbank-pdf"].includes(bankFormat)) {
+              console.log(`[PDFParser] Using standard table parser for ${bankFormat}`);
+              result = parseStandardTableRows(rows);
             } else {
               console.log(`[PDFParser] Using generic parser`);
               result = parseGenericRows(rows);
+              if (result.transactions.length === 0) {
+                console.log(`[PDFParser] Generic parser returned 0, trying standard table parser fallback`);
+                result = parseStandardTableRows(rows);
+              }
             }
           }
 
