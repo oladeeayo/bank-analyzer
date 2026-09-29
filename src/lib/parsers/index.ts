@@ -57,10 +57,18 @@ export async function parseStatement(
     };
   }
 
-  // If heuristic parsing gave low confidence (or 0 rows) and we have Gemini, try AI fallback
+  // If heuristic parsing gave low confidence (or 0 rows) and we have Gemini, try AI fallback.
+  // NOTE: statements whose rows reconcile through the balance chain are already
+  // arithmetically verified — their parsedRows/totalRows ratio may look low only
+  // because narration-continuation lines count as rows. Never let the AI
+  // fallback "improve" a verified statement (it once replaced 6 exact interest
+  // credits with 471-million-phantom debits).
   const isKuda = result.metadata.detectedBank?.toLowerCase().includes("kuda");
+  const isBalanceChainVerified = result.transactions.length > 0 &&
+    result.transactions.every(t => t.balance !== undefined);
   const isLowConfidence = result.transactions.length === 0 ||
-    (result.metadata.totalRows > 0 && result.transactions.length / result.metadata.totalRows < MIN_CONFIDENCE_RATIO);
+    (!isBalanceChainVerified && result.metadata.totalRows > 0 &&
+      result.transactions.length / result.metadata.totalRows < MIN_CONFIDENCE_RATIO);
 
   if ((isLowConfidence || isKuda) && process.env.GEMINI_API_KEY) {
     console.log(`[Parser] ${isKuda ? "Kuda statement detected" : "Low confidence (" + result.transactions.length + "/" + result.metadata.totalRows + ")"}, trying Gemini Vision OCR fallback`);
@@ -88,7 +96,7 @@ export async function parseStatement(
         return visionResult;
       }
     } else {
-      const rawContent = await getRawTextContent(file, ext);
+      const rawContent = await getRawTextContent(file);
       if (rawContent && rawContent.length > 100) {
         const aiResult = await parseWithAI(rawContent, fileName);
         if (aiResult.transactions.length > result.transactions.length) {
@@ -106,7 +114,7 @@ export async function parseStatement(
   return result;
 }
 
-async function getRawTextContent(file: File | Buffer | ArrayBuffer, ext?: string): Promise<string | null> {
+async function getRawTextContent(file: File | Buffer | ArrayBuffer): Promise<string | null> {
   try {
     if (typeof file === "string") return file;
     if (Buffer.isBuffer(file)) return file.toString("utf-8");

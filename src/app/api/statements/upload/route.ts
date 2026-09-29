@@ -9,7 +9,10 @@ import { extractMerchantFromNarration } from "@/lib/ai";
 import crypto from "crypto";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
-const MAX_DATE_RANGE_YEARS = 5;
+// Nigerian banks happily issue statements covering several years (and some
+// archives go back a decade). 15 years accommodates those without letting
+// nonsense dates (1900s, far future) through.
+const MAX_DATE_RANGE_YEARS = 15;
 
 async function findOrCreateBank(userId: string, detected: {
   bankName?: string | null;
@@ -347,10 +350,11 @@ export async function POST(request: NextRequest) {
         transactionIndices: g.transactionIndices,
       })),
     }, { status: 201 });
-  } catch (error: any) {
-    console.error("Upload error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Upload error:", message);
     return NextResponse.json(
-      { error: "Failed to upload statement", details: error?.message },
+      { error: "Failed to upload statement", details: message },
       { status: 500 }
     );
   }

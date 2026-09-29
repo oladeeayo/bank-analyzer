@@ -235,7 +235,7 @@ function parseUBARows(rows: string[][]): ParseResult {
         narrationRaw = row[2] || row[1] || "";
       }
 
-      let description = cleanNarration(narrationRaw);
+      const description = cleanNarration(narrationRaw);
       if (!description) continue;
 
       // Skip if description is just a number or too short
@@ -1102,12 +1102,473 @@ function parseStandardTableRows(rows: string[][]): ParseResult {
   };
 }
 
+// ── Balance-chain parser for glued-column Nigerian bank PDFs ─────────────
+// Ecobank, Fidelity, First Bank, Globus, Providus, Wema and Zenith export
+// PDF statements whose table rows render as one glued string:
+//     <trans date><value date><narration><debit><credit><balance>
+// e.g. "03-Aug-2601-Aug-26Others SMS ALERT...50.000.001,873,768,651.86".
+// Narration reference numbers frequently glue into the amount columns, so a
+// plain regex split is unreliable (it once produced a 2.3e27 phantom debit).
+// Because every row must satisfy   prevBalance - debit + credit = balance,
+// we enumerate plausible splits of the numeric tail and keep the one that
+// reconciles with the running balance. Printed balances act as anchors, so
+// one odd row can never poison the rest of the statement.
+
+const LEDGER_DATE_PREFIXES = [
+  /\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/,          // 03/12/2012, 26-04-2024
+  /\d{1,2}[\/-][A-Za-z]{3,9}[\/-]\d{2,4}/, // 03-Aug-26, 26-Jan-2026
+];
+
+const LEDGER_MONTHS: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+function ledgerRound2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function parseLedgerDate(s: string): Date | null {
+  let m = s.match(/^(\d{1,2})[\/-]([A-Za-z]{3,9})[\/-](\d{2,4})$/);
+  if (m) {
+    const monthIdx = LEDGER_MONTHS[m[2].toLowerCase().slice(0, 3)];
+    if (monthIdx !== undefined) {
+      let year = parseInt(m[3], 10);
+      if (year < 100) year += 2000;
+      return new Date(year, monthIdx, parseInt(m[1], 10));
+    }
+  }
+  m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if (m) return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+  return null;
+}
+
+export function stripLeadingLedgerDates(s: string): { text: string; date: Date | null; dateCount: number } {
+  let working = s.replace(/\x01/g, " ");
+  let date: Date | null = null;
+  let dateCount = 0;
+  for (let i = 0; i < 3; i++) {
+    const trimmed = working.replace(/^\s+/, "");
+    let consumed = false;
+    for (const pattern of LEDGER_DATE_PREFIXES) {
+      const m4 = trimmed.match(new RegExp("^" + pattern.source.replace("\\d{2,4}", "\\d{4}").replace("\\d{4}", "\\d{4}")));
+      // Glued dates: "03-Aug-2601-Aug-26" — a greedy 4-digit year grab would
+      // swallow the next date's day ("2601"). If what follows a 4-digit-year
+      // match looks like the tail of a second glued date, retry with a
+      // 2-digit year.
+      let matchText: string | null = m4 ? m4[0] : null;
+      const mAny = trimmed.match(new RegExp("^" + pattern.source));
+      if (mAny && /[\/\-][A-Za-z]{3,9}[\/\-]/.test(mAny[0]) && m4 && /^[\/\-][A-Za-z]{3,9}[\/\-]\d/.test(trimmed.slice(m4[0].length))) {
+        const m2 = trimmed.match(new RegExp("^" + pattern.source.replace("\\d{2,4}", "\\d{2}").replace("\\d{4}", "\\d{2}")));
+        if (m2) matchText = m2[0];
+      } else if (mAny) {
+        matchText = mAny[0];
+      }
+      if (matchText) {
+        if (dateCount === 0) date = parseLedgerDate(matchText);
+        working = trimmed.slice(matchText.length);
+        dateCount++;
+        consumed = true;
+        break;
+      }
+    }
+    if (!consumed) {
+      working = trimmed;
+      break;
+    }
+  }
+  return { text: working, date, dateCount };
+}
+
+interface LedgerAmountToken {
+  start: number;
+  end: number;
+  value: number;
+}
+
+// Enumerate every plausible amount token (with all split variants) in the
+// numeric tail. Narration digits glue into amounts, so the same character
+// range can be read several ways — the balance chain disambiguates later.
+function enumerateLedgerAmounts(s: string): LedgerAmountToken[] {
+  const tokens: LedgerAmountToken[] = [];
+  const n = s.length;
+  for (let start = 0; start < n; start++) {
+    if (!/\d/.test(s[start])) continue;
+    for (let end = start + 2; end <= n; end++) {
+      const candidate = s.slice(start, end);
+      if (candidate.length > 17) break;
+      if (!/^\d[\d,]*(\.\d{2})?$/.test(candidate)) continue;
+      const value = parseFloat(candidate.replace(/,/g, ""));
+      if (!Number.isFinite(value) || value > 1e13) continue;
+      tokens.push({ start, end, value });
+    }
+  }
+  tokens.sort((a, b) => b.end - a.end || b.start - a.start);
+  return tokens;
+}
+
+// The balance is the final amount of the row, but greedy suffix matching can
+// eat the cents of the preceding amount ("...412,192.00412,440.67" yields
+// 19200412440.67). Return the last few numeric tokens as balance candidates;
+// the balance chain disambiguates.
+export function extractLedgerBalanceCandidates(s: string): { balance: number; rest: string }[] {
+  const candidates: { balance: number; rest: string }[] = [];
+  const seenRest = new Set<number>();
+  const global = [...s.matchAll(/\d[\d,]*(?:\.\d{1,2})?/g)];
+  for (let k = global.length - 1; k >= 0 && k >= global.length - 3; k--) {
+    const g = global[k];
+    const value = parseFloat(g[0].replace(/,/g, ""));
+    if (!Number.isFinite(value) || value > 1e13) continue;
+    const rest = s.slice(0, g.index);
+    if (seenRest.has(rest.length)) continue;
+    seenRest.add(rest.length);
+    candidates.push({ balance: value, rest });
+  }
+  return candidates;
+}
+
+export interface LedgerSolvedAmounts {
+  debit: number;
+  credit: number;
+  narrationEnd: number;
+  reconciled: boolean;
+  // Some statements pack several movements into one printed row (e.g. Wema
+  // prints "10.00 412,192.00" for a fee plus salary). Extra movements are
+  // emitted so no real money movement is lost.
+  extraMovements?: { amount: number; type: "debit" | "credit" }[];
+}
+
+export function solveLedgerAmounts(
+  rest: string,
+  balance: number | null,
+  prevBalance: number | null
+): LedgerSolvedAmounts | null {
+  const zone = rest.length > 80 ? rest.slice(rest.length - 80) : rest;
+  const offset = rest.length - zone.length;
+  const tokens = enumerateLedgerAmounts(zone);
+
+  if (prevBalance !== null && balance !== null) {
+    const diff = ledgerRound2(balance - prevBalance);
+    const net = Math.abs(diff);
+    if (net > 0.005) {
+      // 1) The printed amounts immediately before the balance must sum to
+      //    the balance change. Try spans of 1-3 adjacent amount tokens,
+      //    closest to the balance first. The direction comes from the SIGN
+      //    of the balance change, never from column order: these PDFs glue
+      //    debit and credit into one string, so column positions cannot be
+      //    trusted, but arithmetic cannot lie.
+      for (const last of tokens) {
+        if (last.start < zone.length - 22) continue;
+        for (const first of tokens) {
+          if (first.end > last.start) continue;
+          if (first.start < last.end - 45) continue;
+          const span = zone.slice(first.start, last.end);
+          const printed = [...span.matchAll(/\d[\d,]*(?:\.\d{1,2})?/g)]
+            .map(m => parseFloat(m[0].replace(/,/g, "")))
+            .filter(v => Number.isFinite(v) && v <= 1e13);
+          if (printed.length === 0 || printed.length > 3) continue;
+          const total = ledgerRound2(printed.reduce((s, v) => s + v, 0));
+          if (Math.abs(total - net) > 0.005) continue;
+          const type: "debit" | "credit" = diff < 0 ? "debit" : "credit";
+          const movements = printed
+            .filter(v => v > 0.004)
+            .map(v => ({ amount: v, type }));
+          return {
+            debit: type === "debit" ? net : 0,
+            credit: type === "credit" ? net : 0,
+            narrationEnd: offset + first.start,
+            reconciled: true,
+            extraMovements: movements.length > 1 ? movements.slice(0, -1) : undefined,
+          };
+        }
+      }
+
+      // 2) Single printed amount with an implicit gap: a withdrawal row is
+      //    missing from the PDF, so only the credit survived. The debit
+      //    equals credit minus the balance change.
+      for (const token of [...tokens].sort((a, b) => b.value - a.value)) {
+        const debit = ledgerRound2(token.value - diff);
+        if (token.value > 0.005 && debit > 0.005 && token.value <= 1e10 && debit <= 1e10) {
+          return {
+            debit,
+            credit: token.value,
+            narrationEnd: offset + token.start,
+            reconciled: true,
+          };
+        }
+      }
+    }
+  }
+
+  // 3) Unreconciled fallback (typically the first row when no header
+  //    opening balance was found): classic print order, last two dotted
+  //    amounts are debit and credit.
+  const dotted = [...zone.matchAll(/[\d,]+\.\d{2}/g)];
+  if (dotted.length >= 2) {
+    const debit = parseFloat(dotted[dotted.length - 2][0].replace(/,/g, ""));
+    const credit = parseFloat(dotted[dotted.length - 1][0].replace(/,/g, ""));
+    return {
+      debit,
+      credit,
+      narrationEnd: offset + (dotted[dotted.length - 2].index ?? 0),
+      reconciled: false,
+    };
+  }
+  if (dotted.length === 1) {
+    return {
+      debit: parseFloat(dotted[0][0].replace(/,/g, "")),
+      credit: 0,
+      narrationEnd: offset + (dotted[0].index ?? 0),
+      reconciled: false,
+    };
+  }
+  return null;
+}
+
+export function parseNigerianStandardRows(rows: string[][]): ParseResult {
+  const transactions: ParsedTransaction[] = [];
+  const errors: string[] = [];
+  let chainMismatchCount = 0;
+  // Unreconciled row interpretations are collected while parsing; once all
+  // rows are read we test each against the header totals to pick the right
+  // one (all interpretations are individually chain-consistent).
+  const ambiguousEntries: {
+    index: number;
+    alternatives: { debit: number; credit: number }[];
+    balance: number;
+    narration: string;
+    date: Date;
+  }[] = [];
+
+  // Opening balance from the statement header anchors the first row.
+  let prevBalance: number | null = null;
+  for (const row of rows.slice(0, 15)) {
+    const joined = row.join(" ");
+    const m = joined.match(/(?:Opening|Beginning)\s*Balance:\s*([\d,]+(?:\.\d+)?)/i);
+    if (m) {
+      const value = parseFloat(m[1].replace(/,/g, ""));
+      if (Number.isFinite(value)) {
+        prevBalance = value;
+        break;
+      }
+    }
+  }
+
+  // Header totals (when printed) settle rows whose split cannot be verified
+  // against the balance chain (e.g. a first row whose opening balance is
+  // missing from the PDF).
+  let headerCreditTotal: number | null = null;
+  let headerDebitTotal: number | null = null;
+  for (const row of rows.slice(0, 15)) {
+    const joined = row.join(" ");
+    const creditMatch = joined.match(/Total\s+Credits?\s*:\s*([\d,]+(?:\.\d+)?)/i);
+    if (creditMatch) {
+      const value = parseFloat(creditMatch[1].replace(/,/g, ""));
+      if (Number.isFinite(value)) headerCreditTotal = value;
+    }
+    const debitMatch = joined.match(/Total\s+Debits?\s*:\s*([\d,]+(?:\.\d+)?)/i);
+    if (debitMatch) {
+      const value = parseFloat(debitMatch[1].replace(/,/g, ""));
+      if (Number.isFinite(value)) headerDebitTotal = value;
+    }
+  }
+
+  let lastDate: Date | null = null;
+
+  for (let i = 0; i < rows.length; i++) {
+    try {
+      const rawLine = rows[i].join("\x01");
+      const { text, date: leadingDate } = stripLeadingLedgerDates(rawLine);
+      if (!/\d/.test(text)) continue;
+
+      const balanceCandidates = extractLedgerBalanceCandidates(text);
+      if (balanceCandidates.length === 0) continue;
+
+      // Try (balance candidate, solved split) pairs — the balance chain
+      // decides which candidate is the true printed balance.
+      let accepted: {
+        balance: number;
+        rest: string;
+        solved: LedgerSolvedAmounts;
+      } | null = null;
+      for (const cand of balanceCandidates) {
+        const solved = solveLedgerAmounts(cand.rest, cand.balance, prevBalance);
+        if (!solved) continue;
+        if (solved.reconciled) { accepted = { balance: cand.balance, rest: cand.rest, solved }; break; }
+        if (!accepted) accepted = { balance: cand.balance, rest: cand.rest, solved };
+      }
+      if (!accepted) continue;
+
+      const solved = accepted.solved;
+      const balance = accepted.balance;
+      const rest = accepted.rest;
+
+      // Dateless rows that reconcile are real transactions whose date
+      // failed to render (e.g. Providus stamp-duty lines); they inherit the
+      // previous transaction's date. Unreconciled dateless rows are headers,
+      // totals or narration continuations — skip them.
+      let date = leadingDate;
+      if (!date) {
+        if (!solved.reconciled || !lastDate) continue;
+        date = lastDate;
+      }
+
+      const amount = solved.debit > 0 ? solved.debit : solved.credit;
+      if (amount <= 0) continue;
+
+      let narration = rest.slice(0, solved.narrationEnd);
+      narration = narration
+        .replace(/\x01/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      // Strip leading channel tags, month-glue headers and reference glue
+      narration = narration
+        .replace(/^(?:Others|OnlineBanking|Online Banking|Internet Banking|Mobile App|ATM|POS|USSD)\b\s*/i, "")
+        .replace(/^[A-Za-z]{3,9}-\d{2,4}(?=\s|$|[A-Za-z])/, "")
+        .replace(/^[SM]\d{6,9}\d{10}:\s*/, "")
+        .replace(/\bRef\s*\d{6,}/gi, " ")
+        .replace(/\s*[SM]\d{5,}\s*$/, "")
+        .replace(/^[\s|:\-']+/g, "")
+        .trim();
+      if (narration.length > 150) narration = narration.slice(0, 150).trim();
+      if (!narration) narration = "Transaction";
+
+      // Reconciled rows with several printed amounts carry several real
+      // movements. Unreconciled rows with a debit AND a credit (e.g. the
+      // very first row when the opening balance is missing from the PDF)
+      // are ambiguous — could be both movements, or a single credit whose
+      // preceding "debit" is narration glue — so defer them and settle
+      // against the printed header totals after the loop.
+      if (!solved.reconciled && solved.debit > 0 && solved.credit > 0) {
+        ambiguousEntries.push({
+          index: transactions.length,
+          alternatives: [
+            { debit: solved.debit, credit: solved.credit },
+            { debit: 0, credit: solved.credit },
+          ],
+          balance,
+          narration,
+          date,
+        });
+        lastDate = date;
+        prevBalance = balance;
+        continue;
+      }
+      const type: "debit" | "credit" = solved.debit > 0 ? "debit" : "credit";
+      const movements: { amount: number; type: "debit" | "credit" }[] = [
+        { amount, type },
+        ...(solved.extraMovements ?? []),
+      ];
+      for (const mv of movements) {
+        if (mv.amount <= 0) continue;
+        transactions.push({
+          date: date.toISOString(),
+          description: narration,
+          amount: mv.amount,
+          type: mv.type,
+          balance: solved.reconciled ? balance : undefined,
+          narration,
+        });
+      }
+      const reference = narration.match(/^[SM]\d{6,9}(?!\d)/);
+      if (reference && transactions.length > 0) {
+        transactions[transactions.length - 1].reference = reference[0];
+      }
+      lastDate = date;
+
+      // Printed balances are authoritative anchors for the next row even
+      // when this row's own split could not be verified.
+      prevBalance = balance;
+      if (!solved.reconciled && chainMismatchCount < 20) {
+        chainMismatchCount++;
+        errors.push(`Row ${i + 1}: could not reconcile balance chain (debit ${solved.debit}, credit ${solved.credit}, printed balance ${balance})`);
+      }
+    } catch (err) {
+      errors.push(`Row ${i + 1}: ${err}`);
+    }
+  }
+
+  // Settle ambiguous rows (first rows without a verifiable opening balance)
+  // against the printed header totals: pick the interpretation whose credits
+  // (or, failing that, debits) bring the running total closest to the
+  // header's printed total.
+  if (ambiguousEntries.length > 0) {
+    const settleOn = headerCreditTotal !== null ? "credit" : headerDebitTotal !== null ? "debit" : null;
+    if (settleOn) {
+      const headerTotal = settleOn === "credit" ? headerCreditTotal! : headerDebitTotal!;
+      let running = transactions
+        .filter(t => t.type === settleOn)
+        .reduce((s, t) => s + t.amount, 0);
+      for (const entry of ambiguousEntries) {
+        let best = entry.alternatives[0];
+        let bestErr = Infinity;
+        for (const alt of entry.alternatives) {
+          const altValue = settleOn === "credit" ? alt.credit : alt.debit;
+          const err = Math.abs(running + altValue - headerTotal);
+          if (err < bestErr) { bestErr = err; best = alt; }
+        }
+        running += settleOn === "credit" ? best.credit : best.debit;
+        const first = best.credit > 0
+          ? { amount: best.credit, type: "credit" as const }
+          : { amount: best.debit, type: "debit" as const };
+        transactions.splice(entry.index, 0, {
+          date: entry.date.toISOString(),
+          description: entry.narration,
+          amount: first.amount,
+          type: first.type,
+          narration: entry.narration,
+        });
+      }
+    }
+  }
+
+  const dates = transactions.map(t => new Date(t.date).getTime()).sort((a, b) => a - b);
+  return {
+    transactions,
+    errors,
+    metadata: {
+      fileName: "",
+      fileType: "pdf",
+      totalRows: rows.length,
+      parsedRows: transactions.length,
+      dateRange: dates.length > 0 ? { start: new Date(dates[0]).toISOString(), end: new Date(dates[dates.length - 1]).toISOString() } : undefined,
+    },
+  };
+}
+
+// Exported entry point: retries transient pdf2json XRef failures (some bank
+// PDFs, e.g. First Bank, fail intermittently on a cold parse) and guards
+// against hung parses so uploads never wedge.
 export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<ParseResult> {
+  const MAX_ATTEMPTS = 3;
+  let lastResult: ParseResult | null = null;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const result = await Promise.race([
+      parsePDFInternal(buffer, fileName),
+      new Promise<ParseResult>((resolve) =>
+        setTimeout(() => resolve({
+          transactions: [],
+          errors: ["PDF parsing timed out"],
+          metadata: { fileName, fileType: "pdf", totalRows: 0, parsedRows: 0 },
+        }), 90_000)
+      ),
+    ]);
+
+    const transientFailure = result.transactions.length === 0 &&
+      result.errors.some(e => /PDF parse error|timed out/i.test(e));
+    if (!transientFailure) return result;
+    lastResult = result;
+  }
+  return lastResult!;
+}
+
+async function parsePDFInternal(buffer: ArrayBuffer, fileName: string): Promise<ParseResult> {
   return new Promise((resolve) => {
     try {
       const pdfParser = new PDFParser();
 
-      pdfParser.on("pdfParser_dataError", (errData: any) => {
+      pdfParser.on("pdfParser_dataError", (errData: { parserError?: unknown }) => {
         console.error("[PDFParser] Error:", errData.parserError);
         resolve({
           transactions: [],
@@ -1116,7 +1577,7 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
         });
       });
 
-      pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
+      pdfParser.on("pdfParser_dataReady", (pdfData: PDF2JsonData) => {
         try {
           const text = extractTextFromPDF2Json(pdfData);
           const pageCount = pdfData.Pages ? pdfData.Pages.length : 0;
@@ -1168,8 +1629,12 @@ export async function parsePDF(buffer: ArrayBuffer, fileName: string): Promise<P
               console.log(`[PDFParser] Using Sterling parser`);
               result = parseSterlingRows(rows);
             } else if (["ecobank-pdf", "fidelity-pdf", "globus-pdf", "providus-pdf", "wema-pdf", "zenith-pdf", "firstbank-pdf"].includes(bankFormat)) {
-              console.log(`[PDFParser] Using standard table parser for ${bankFormat}`);
-              result = parseStandardTableRows(rows);
+              console.log(`[PDFParser] Using balance-chain parser for ${bankFormat}`);
+              result = parseNigerianStandardRows(rows);
+              if (result.transactions.length === 0) {
+                console.log(`[PDFParser] Balance-chain parser returned 0, trying standard table parser fallback`);
+                result = parseStandardTableRows(rows);
+              }
             } else {
               console.log(`[PDFParser] Using generic parser`);
               result = parseGenericRows(rows);
