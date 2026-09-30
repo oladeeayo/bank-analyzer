@@ -11,6 +11,7 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:reset": "npx prisma migrate reset --force && npx tsx prisma/seed.ts",
     "verify:pdfs": "tsx scripts/verify-bank-pdfs.ts",
+    "verify:all": "tsx scripts/verify-all.ts",
     "e2e:pdfs": "tsx scripts/e2e-check.ts"
   },
   "prisma": {

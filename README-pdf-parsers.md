@@ -1,63 +1,54 @@
-# PDF Statement Parsing — Balance-Chain Design
+# PDF Statement Parsing — Markdown-First, Balance-Chain Verified
 
 How CONYEST parses the glued-column PDF statements that Nigerian banks
 generate, and why the parser is built the way it is.
 
-## The core problem
+## Architecture: markdown first, arithmetic decides
 
-Ecobank, Fidelity, First Bank, Globus, Providus, Wema and Zenith all export
-PDFs whose table rows lose their column boundaries. A row renders as one
-glued string:
+The parser never trusts either of two unreliable sources on its own:
 
-```
-03-Aug-2601-Aug-26OthersSMS ALERT CHARGES 31JUL 26 72.000.002,123,768,947.11
-\___trans date__/                      \debit/credit/\___balance___/
-          \_value date_/
-```
+1. **The printed columns** — banks misplace movements. Ecobank prints
+   fixed-deposit debits nowhere at all; Fidelity prints credits in the
+   Debit column (`NPDC OML 42` rows); Globus tears whole credit cells away.
+2. **Text extraction order** — the PDFs draw overlapping tokens, so text
+   extraction glues debit+credit+balance into one string.
 
-Narration reference numbers frequently glue into the amount columns
-(Providus: `...TRF/...4305,429,235.28` — the trailing `5` belongs to the
-narration, making a phantom `5,429,235,280.00`). Coordinate-based splitting
-fails because these PDFs draw overlapping tokens, and a plain regex split
-once produced a 2.3e27 phantom debit.
+Instead:
 
-## The balance-chain solution
+1. `@firecrawl/pdf-inspector` (Rust, napi-rs) converts each page to
+   **Markdown with real pipe-tables** — amounts land in separate columns.
+2. Wide statements render as **two strip tables per page** (dates+
+   description | amounts+balance). A zipper pairs them row-by-row, with a
+   DP alignment that maximizes chain-closing adjacencies when counts differ.
+3. Every row is re-verified against the **balance chain**
+   (prev − debit + credit = balance, to the cent). The printed column is
+   only a hypothesis; the sign of the balance change decides direction.
+4. Rows that cannot be verified are settled against the printed header
+   totals (Total Credit/Debit/Lodgements/Withdrawals) by brute-force over
+   per-row interpretation options — never silently accepted.
+5. Anything still unresolved is **reported in `result.errors`**, not
+   guessed at.
 
-Every row of a real statement satisfies:
+## The core problem (why the legacy parser exists)
 
-```
-prevBalance - debit + credit = balance   (exactly, to the cent)
-```
+Narration reference numbers glue into amount columns (Providus:
+`...TRF/...4305,429,235.28` — a phantom 5,429,235,280.00). Coordinate
+splitting fails on overlapping tokens. The legacy `parseNigerianStandardRows`
+(pdf2json rows + chain solver) remains as a fallback for text PDFs the
+markdown engine cannot handle.
 
-`parseNigerianStandardRows` in `src/lib/parsers/pdf-parser.ts` exploits this:
+## Bank-specific quirks (8 real statements)
 
-1. Read the header's **Opening Balance** to anchor the chain.
-2. For each row, strip leading glued dates, then enumerate *all* plausible
-   numeric tokens in the row tail (the same characters can read as several
-   different amounts).
-3. Try spans of 1–3 adjacent printed amounts whose **sum** equals the
-   balance change. The **sign of the balance change decides debit vs
-   credit** — never column order, which cannot be trusted.
-4. The printed balance anchors the next row, so a single odd row cannot
-   poison the rest of the statement.
-5. Rows that cannot be anchored (usually the first, when the opening
-   balance is missing from the PDF) are settled against the header's
-   printed **Total Credit / Total Debit**.
-6. Rows with several printed amounts that all sum to the balance change
-   emit several transactions — Wema packs a ₦10 fee and a ₦412,192 salary
-   into one printed row.
-
-## Bank-specific quirks (7 real statements)
-
-| Bank | Quirks |
-|---|---|
-| **Ecobank** | `DD/MM/YYYYDD/MM/YYYY` glued dates; no narration on some rows; separate cells `4310786`, `0.00`, `2`; 3-year statement (2012–2015) |
-| **Fidelity** | `DD-Mon-YY` glued dates ×2–3 (`03-Aug-2603-Aug-2603-Aug-26`); channel words (`Others`, `OnlineBanking`); fee rows between transfers; narration glued to amounts |
-| **First Bank** | `DD-Mon-YYYY` ×2 glued; ref+account glue `S471432672008523309:`; `Ref26012026` glue; USD statement; 6 interest credits totaling exactly 0.26 |
-| **Globus** | `DD-MM-YYYY` ×2 glued; narration refs glue `MARIN0.00`; `VAT BG`/`BG Charges` rows; 2.5-year statement |
-| **Providus** | `DD-MM-YYYY` ×2 glued; 4,400+ rows; narration continuation lines; dateless stamp-duty lines that inherit the previous row's date |
-| **Wema** | Single `DD-Mon-YYYY`; ref `S96444838` glued; **fee+salary in one printed row**; stamp-duty rows in separate cells |
-| **Zenith** | `DD/MM/YYYY` ×2 glued; separate cells for narration/amounts/balance on some rows; `FGN Stamp Duty//` prefix |
+| Bank | Quirks | Result |
+|---|---|---|
+| **Ecobank** | 5-page layout where pages tear into 3 strips (D/C table, dates+description table, bare balance list); first row garbled in the PDF itself — resolved as a forced zero-net 125.09 pair (presented-and-returned cheque) against printed totals | 223 tx, all anchors PASS |
+| **Fidelity** | Balances tear mid-number onto the next row (`...947.1` + `1`); credits printed in Debit column; 10 pages of strips | 455 tx, closing PASS, chain closes |
+| **First Bank** | Entire table collapses into one prose paragraph; account number interleaves every record; dates glue to narration refs | 6 tx, all anchors PASS |
+| **Globus** | Credit column cells tear away entirely (dropped credits); trailing numeric paragraph holds the real lodgements | 18 tx, all anchors PASS |
+| **Providus** | 107 pages, 106 strip pairs, 4,483 rows; narration continuation lines; dateless stamp-duty rows | 3,963 tx, closing PASS |
+| **Wema** | Fee+salary in one printed row; header cells tear into the first table | 85 tx, all anchors PASS |
+| **Zenith** | Cleanest layout; credit-list + balance-list paragraphs interleave with the table | 50 tx, all anchors PASS |
+| **Kuda** | Text shattered to **single glyphs** with overlapping baselines; narration letters interleave digit-by-digit (`4,340.lo0a8n`); minus signs tear anywhere (`o-l2a3da,1y8o5.20`); each printed row is its own chain step | `kuda-positional-parser.ts`: glyph de-interleaving + chain walk; closing balance exact; 1 garbled row reported, not fabricated |
 
 ## Safety nets
 
@@ -69,12 +60,41 @@ prevBalance - debit + credit = balance   (exactly, to the cent)
   credits with 471-million phantom debits.
 - Upload route date range widened to 15 years (Ecobank's archive statements).
 
+## Merchant + categorisation pipeline
+
+Correct narrations flow downstream into the existing extraction stack, in
+order:
+
+1. `lib/parser/merchant-extractor.ts` — rule-based exact-merchant extraction
+   (prefixes like `TRF TO`, slash patterns `NAME/ACCOUNT/BANK`, Paystack/
+   Interswitch/Flutterwave markers).
+2. `lib/counterparty-matcher/index.ts` — counterparty profiles, fuzzy
+   matching and dedupe across uploads.
+3. `lib/normalizer/index.ts` — ~200-key Nigerian merchant DB (supermarkets,
+   food, transport, utilities…) with category guesses.
+4. `lib/ai/index.ts` (Gemini, optional via `GEMINI_API_KEY`) — only
+   classifies; `parseStatement`'s AI-fallback guard ensures it can never
+   rewrite a balance-chain-verified transaction set.
+
+Because every transaction now carries the bank's own printed narration
+(intact, not truncated by glued-amount parsing), merchant extraction and
+categorisation receive dramatically cleaner input than before.
+
 ## Verification
 
 ```bash
-npm run verify:pdfs   # parse raw rows directly, check sums + closing balances
+npm run verify:all    # all 8 statements through parseStatement vs every printed anchor
+npm run verify:pdfs   # legacy raw-row parser, check sums + closing balances
 npm run e2e:pdfs      # full pipeline through parseStatement (routing, AI guard)
+npx tsx scripts/dump-markdown.ts "Bank Name"   # inspect firecrawl markdown
 ```
 
-Both scripts read the PDFs in `C:\Users\User\Desktop\bank statement` and
+All scripts read the PDFs in `C:\Users\User\Desktop\bank statement` and
 print PASS/FAIL per bank against the statements' own printed header totals.
+`verify:all` also walks the balance chain across the emitted transactions
+and reports any break.
+
+Latest full-suite result: 7 of 8 statements match every printed anchor
+exactly; Kuda matches its printed closing balance (−37,049.58) and reports
+its two unreadable (garbled-in-the-PDF) figures as errors instead of
+inventing figures for them.

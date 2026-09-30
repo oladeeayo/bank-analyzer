@@ -3,6 +3,8 @@ const PDFParser = require("pdf2json");
 import { ParsedTransaction, ParseResult, BankFormat } from "./types";
 import { detectBankNameFromFormat, extractAccountNumber, extractAccountName } from "./bank-detection";
 import { parseKudaFromPdfData, parseKudaFromMarkdown } from "./kuda-pdf-parser";
+import { parseMarkdownLedger } from "./markdown-ledger-parser";
+import { parseKudaPositional } from "./kuda-positional-parser";
 
 export interface PDF2JsonTextItem {
   T?: string;
@@ -25,6 +27,18 @@ export interface PDF2JsonData {
 function detectBankFormat(text: string): BankFormat {
   const lower = text.toLowerCase();
   const headerText = lower.substring(0, 1500);
+
+  // Kuda's glyph-shattered PDFs never contain a contiguous "kuda", but the
+  // squashed text still carries its unique phrases ("Sp end A cco unt" →
+  // "spendaccount").
+  const squash = text.replace(/\s+/g, "").toLowerCase();
+  if (
+    squash.includes("kudamfbank") ||
+    squash.includes("kudatechnologies") ||
+    squash.includes("spendaccount")
+  ) {
+    return "kuda-pdf";
+  }
 
   if (headerText.includes("providus")) return "providus-pdf";
   if (headerText.includes("globus")) return "globus-pdf";
@@ -1599,15 +1613,35 @@ async function parsePDFInternal(buffer: ArrayBuffer, fileName: string): Promise<
           let result: ParseResult;
 
           if (bankFormat === "kuda-pdf") {
-            console.log(`[PDFParser] Using Kuda dedicated parser`);
-            result = parseKudaFromPdfData(pdfData, fileName);
+            // Positional parser first: Kuda's glyph-shattered layout bleeds
+            // columns together in every text-order extraction, but the
+            // geometric column layout (₦-anchored amounts) is stable and the
+            // result is balance-chain verified.
+            console.log(`[PDFParser] Using Kuda positional-column parser`);
+            result = parseKudaPositional(Buffer.from(buffer), fileName);
             if (result.transactions.length === 0) {
-              console.log(`[PDFParser] Kuda coordinate parser returned 0 transactions, trying Markdown fallback`);
-              result = parseKudaFromMarkdown(text, fileName);
+              console.log(`[PDFParser] Using Kuda dedicated parser`);
+              result = parseKudaFromPdfData(pdfData, fileName);
+              if (result.transactions.length === 0) {
+                console.log(`[PDFParser] Kuda coordinate parser returned 0 transactions, trying Markdown fallback`);
+                result = parseKudaFromMarkdown(text, fileName);
+              }
             }
           } else if (bankFormat === "palmpay-pdf") {
             console.log(`[PDFParser] Using PalmPay text-block parser`);
             result = parsePalmPayText(text);
+          } else if (
+            ["ecobank-pdf", "fidelity-pdf", "globus-pdf", "providus-pdf", "wema-pdf", "zenith-pdf", "firstbank-pdf"].includes(bankFormat)
+          ) {
+            // Markdown-first pipeline: firecrawl converts pages to markdown
+            // pipe-tables, then the balance-chain ledger parser reads them.
+            console.log(`[PDFParser] Using markdown-ledger parser for ${bankFormat}`);
+            result = parseMarkdownLedger(Buffer.from(buffer), fileName);
+            if (result.transactions.length === 0) {
+              console.log(`[PDFParser] Markdown-ledger parser returned 0, falling back to legacy row parsers`);
+              const rows = extractTableRows(pdfData);
+              result = parseNigerianStandardRows(rows);
+            }
           } else {
             const rows = extractTableRows(pdfData);
             console.log(`[PDFParser] Extracted ${rows.length} table rows`);
@@ -1628,13 +1662,6 @@ async function parsePDFInternal(buffer: ArrayBuffer, fileName: string): Promise<
             } else if (bankFormat === "sterling-pdf") {
               console.log(`[PDFParser] Using Sterling parser`);
               result = parseSterlingRows(rows);
-            } else if (["ecobank-pdf", "fidelity-pdf", "globus-pdf", "providus-pdf", "wema-pdf", "zenith-pdf", "firstbank-pdf"].includes(bankFormat)) {
-              console.log(`[PDFParser] Using balance-chain parser for ${bankFormat}`);
-              result = parseNigerianStandardRows(rows);
-              if (result.transactions.length === 0) {
-                console.log(`[PDFParser] Balance-chain parser returned 0, trying standard table parser fallback`);
-                result = parseStandardTableRows(rows);
-              }
             } else {
               console.log(`[PDFParser] Using generic parser`);
               result = parseGenericRows(rows);
