@@ -48,7 +48,7 @@ markdown engine cannot handle.
 | **Providus** | 107 pages, 106 strip pairs, 4,483 rows; narration continuation lines; dateless stamp-duty rows | 3,963 tx, closing PASS |
 | **Wema** | Fee+salary in one printed row; header cells tear into the first table | 85 tx, all anchors PASS |
 | **Zenith** | Cleanest layout; credit-list + balance-list paragraphs interleave with the table | 50 tx, all anchors PASS |
-| **Kuda** | Text shattered to **single glyphs** with overlapping baselines; narration letters interleave digit-by-digit (`4,340.lo0a8n`); minus signs tear anywhere (`o-l2a3da,1y8o5.20`); each printed row is its own chain step | `kuda-positional-parser.ts`: glyph de-interleaving + chain walk; closing balance exact; 1 garbled row reported, not fabricated |
+| **Kuda** | Text shattered to **single glyphs** with overlapping baselines; narration letters interleave digit-by-digit (`4,340.lo0a8n`); minus signs tear anywhere (`o-l2a3da,1y8o5.20`); two text streams overprinted at the *identical* baseline get merged in x-order; Chrome-printed `[Image: ImN]` alt-text rows at page top/bottom; each printed row is its own chain step | `kuda-positional-parser.ts`: glyph de-interleaving + chain walk; `[Image:…]` and `AllStatements` furniture rows dropped; tight letter+digit mixes de-woven in narrations; `transfeXr` → `transferX` repair; closing balance exact; residual Money In/Out mismatch (2 rows illegible in the PDF) reported, not fabricated |
 
 ## Safety nets
 

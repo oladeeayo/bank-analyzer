@@ -176,6 +176,11 @@ export function parseKudaPositional(buffer: Buffer, fileName: string): ParseResu
   }
   if (items.length === 0) return empty(["Kuda positional parser found no text items"]);
 
+  // Broken-image alt text (Chrome prints "[Image: Im9]" for unloaded logo
+  // images at the page top/bottom). Never real content — drop it, otherwise
+  // the footer row is appended to the last transaction's narration.
+  items = items.filter((i) => !/^\s*\[Image/i.test(i.text));
+
   // Build rows per page (y ordering restarts per page).
   const pages = [...new Set(items.map((i) => i.page))].sort();
   const allRows: KudaRow[] = [];
@@ -200,12 +205,23 @@ export function parseKudaPositional(buffer: Buffer, fileName: string): ParseResu
 
   const narrOf = (row: KudaRow): string => {
     const narrFrags = row.frags.filter((f) => !f.text.includes(NAIRA) && !/^[\d.,:\-/]+$/.test(f.text));
-    return narrFrags.map((f) => f.text).join("");
+    return narrFrags
+      .map((f) => {
+        // Tight letter+digit mixes are two overprinted streams woven in
+        // x-order ("lo0a8n" = "loan" + "08"): the digits belong to the
+        // amount stream, the letters to the narration. Spaced mixes
+        // ("7 b3 i7k 5e 2") are the row's own second line — kept verbatim.
+        if (/[a-z]/i.test(f.text) && /\d/.test(f.text) && !f.text.includes(" ")) {
+          return f.text.replace(/\d+/g, "");
+        }
+        return f.text;
+      })
+      .join("");
   };
 
   for (const row of allRows) {
     const joinedText = row.frags.map((f) => f.text).join("");
-    if (/Kuda|NDIC|Finsbury|deposit.*insured|licen/i.test(joinedText) && row.amounts.length === 0) continue;
+    if (/Kuda|NDIC|Finsbury|deposit.*insured|licen|allstatements/i.test(joinedText) && row.amounts.length === 0) continue;
 
     // Skip the account/summary header block (dates torn, mixed columns).
     if (/OpeningBa|SpendAccount|MoneyIn|Summary|Date\/Ti/i.test(joinedText) || /ELEYELE|OLOGUN|IBADAN/i.test(joinedText)) continue;
@@ -274,7 +290,13 @@ export function parseKudaPositional(buffer: Buffer, fileName: string): ParseResu
   const modalYear = [...yearCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
 
   for (const g of groups) {
-    const narration = g.narration.replace(/\s+/g, " ").trim() || "Transaction";
+    // "transfeOrmolola" = "transferOmolola": the trailing r of the constant
+    // Kuda word "transfer" is overprinted one glyph to the right of the
+    // next word's capital (always the pattern capital-then-r in this PDF).
+    const narration = (g.narration.replace(/\s+/g, " ").trim() || "Transaction").replace(
+      /transfe([A-Z])r/g,
+      "transfer$1"
+    );
     if (prev === null) break;
     if (modalYear !== undefined && g.date.getFullYear() !== modalYear) continue;
     if (g.candidates.length === 0) continue;
